@@ -66,7 +66,7 @@ install(TARGETS ${PROJECT_NAME}   RUNTIME DESTINATION bin)
 
 #---------------------------------------------------------------------
 # GLSL to SPIR-V
-# from: https://gist.github.com/vlsh/a0d191701cb48f157b05be7f74d79396
+# based on the code from: https://gist.github.com/vlsh/a0d191701cb48f157b05be7f74d79396
 
 if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64")
   set(GLSL_VALIDATOR "$ENV{VULKAN_SDK}/Bin/glslangValidator.exe")
@@ -93,6 +93,7 @@ add_custom_target(
 add_dependencies(${PROJECT_NAME} Shaders)
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E remove_directory "$<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders/"
     COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders/"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${PROJECT_BINARY_DIR}/shaders"
