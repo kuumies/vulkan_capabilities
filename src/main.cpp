@@ -12,6 +12,25 @@
 #include <glm/vec3.hpp>
 #include <vulkan/vulkan.h>
 
+/* ---------------------------------------------------------------- *
+   Globals.
+ * ---------------------------------------------------------------- */
+
+// Window
+static const char* WINDOW_NAME = "Vulkan test";
+static const int WINDOW_WIDTH  = 720;
+static const int WINDOW_HEIGHT = 576;
+
+// Surface
+static const VkFormat SURFACE_FORMAT             = VK_FORMAT_R8G8B8A8_UNORM;
+static const VkColorSpaceKHR SURFACE_COLOR_SPACE = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+
+// Presentation
+static const VkPresentModeKHR PRESENT_MODE = VK_PRESENT_MODE_FIFO_KHR; // v-sync
+
+// Swap chain
+static const int SWAP_CHAIN_IMAGE_COUNT = 2;
+
 int main()
 {
     /* ------------------------------------------------------------ *
@@ -22,7 +41,8 @@ int main()
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE,  GLFW_FALSE);
     GLFWwindow* window = glfwCreateWindow(
-        800, 600, "Vulkan test", nullptr, nullptr);
+        WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_NAME,
+        nullptr, nullptr);
 
     /* ------------------------------------------------------------ *
        Vulkan extensions.
@@ -79,7 +99,7 @@ int main()
     // use any famous 3rd party engine.
     VkApplicationInfo appInfo = {};
     appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName   = "Vulkan test";
+    appInfo.pApplicationName   = WINDOW_NAME;
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName        = "kuuEngine";
     appInfo.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
@@ -145,31 +165,146 @@ int main()
     }
 
     // Get the devices.
-    std::vector<VkPhysicalDevice> physicsDevices(physicalDeviceCount);
+    std::vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
     vkEnumeratePhysicalDevices(instance,
                                &physicalDeviceCount,
-                               physicsDevices.data());
+                               physicalDevices.data());
 
-    // Print the found device names.
-    for (const VkPhysicalDevice& physicalDevice : physicsDevices)
+    // Device is valid if it has VK_KHR_swapchain extension and
+    // supports the global surface format and present mode.
+    std::vector<const char*> physicalDeviceExtensionNames;
+    physicalDeviceExtensionNames.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
+    // Search the valid physical devices.
+    std::vector<VkPhysicalDevice> validPhysicsDevices;
+    for (const VkPhysicalDevice& physicalDevice : physicalDevices)
     {
+#if 0
         VkPhysicalDeviceProperties deviceProperties;
         vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
 
         VkPhysicalDeviceFeatures deviceFeatures;
         vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
+#endif
+        // Get the surface format count.
+        uint32_t formatCount;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice,
+                                             surface,
+                                             &formatCount,
+                                             nullptr);
+        if (formatCount == 0)
+            continue;
 
-        std::cout << __FUNCTION__
-                  << ": "
-                  << deviceProperties.deviceName
+        // Get the surface formats.
+        std::vector<VkSurfaceFormatKHR> formats(formatCount);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice,
+                                             surface,
+                                             &formatCount,
+                                             formats.data());
+
+        // Check that the device supports the surface mode.
+        const auto it = std::find_if(
+            formats.begin(),
+            formats.end(),
+            [SURFACE_FORMAT](const vkSurfaceFormatKHR& fmt)
+        { return fmt == SURFACE_FORMAT; });
+        if (it == formats.end())
+            continue;
+
+        // Get the present modes count.
+        uint32_t presentModeCount;
+        vkGetPhysicalDeviceSurfacePresentModesKHR(
+            physicalDevice,
+            surface,
+            &presentModeCount,
+            nullptr);
+
+        if (presentModeCount == 0)
+            continue;
+
+        // Get the present modes.
+        std::vector<VkPresentModeKHR> presentModes(presentModeCount);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice,
+                                                  surface,
+                                                  &presentModeCount,
+                                                  presentModes.data());
+
+        // Check that the device supports the preset mode.
+        const auto it2 = std::find_if(
+            presentModes.begin(),
+            presentModes.end(),
+            [PRESENT_MODE](const VkPresentModeKHR& mode)
+        { return mode == PRESENT_MODE; });
+        if (it2 == presentModes.end())
+            continue;
+
+        // Get the surface capabilites.
+        VkSurfaceCapabilitiesKHR capabilities;
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice,
+                                                  surface,
+                                                  &capabilities);
+
+        // Check the window extent is supported.
+        if (WINDOW_WIDTH  < capabilities.minImageExtent.width  ||
+            WINDOW_WIDTH  > capabilities.maxImageExtent.width  ||
+            WINDOW_HEIGHT < capabilities.minImageExtent.height ||
+            WINDOW_HEIGHT > capabilities.maxImageExtent.height)
+        {
+            continue;
+        }
+
+        // Check the image count is supported.
+        if (SWAP_CHAIN_IMAGE_COUNT < capabilities.minImageExtent.minImageCount ||
+            SWAP_CHAIN_IMAGE_COUNT > capabilities.minImageExtent.maxImageCount)
+        {
+            continue;
+        }
+
+        // Get the extension count
+        uint32_t extensionCount;
+        vkEnumerateDeviceExtensionProperties(physicalDevice,
+                                             nullptr,
+                                             &extensionCount,
+                                             nullptr);
+
+        // Get the extensions
+        std::vector<VkExtensionProperties> extensions(extensionCount);
+        vkEnumerateDeviceExtensionProperties(physicalDevice,
+                                             nullptr,
+                                             &extensionCount,
+                                             extensions.data());
+
+        // Check that the device supports all the extensions.
+        int found = 0;
+        for (const VkExtensionProperties& ex : extensions)
+        {
+            for (const char* name : physicalDeviceExtensionNames.size())
+                if (ex.extensionName == name)
+                    found++;
+        }
+
+        if (found != physicalDeviceExtensionNames.size())
+            continue;
+
+        // OK, device is valid.
+        validPhysicsDevices.push_back(physicalDevice);
+    }
+
+    if (validPhysicsDevices.size() == 0)
+    {
+        std::cerr << __FUNCTION__
+                  << ": none of the devices support required "
+                  << "extensions"
                   << std::endl;
+
+        return EXIT_FAILURE;
     }
 
     // Auto-select the first device.
-    VkPhysicalDevice physicalDevice = physicsDevices.front();
+    VkPhysicalDevice physicalDevice = validPhysicsDevices.front();
 
     /* ------------------------------------------------------------ *
-       Vulkan graphics and present queue families
+       Vulkan queue families (graphics and present)
      * ------------------------------------------------------------ */
 
     // Get the queue family count.
@@ -194,8 +329,8 @@ int main()
                                              queueFamilies.data());
 
     // Find the graphics and present queue family indices.
-    int graphicsQueueFamilyIndex = -1;
-    int presentQueueFamilyIndex  = -1;
+    uint32_t graphicsQueueFamilyIndex = -1;
+    uint32_t presentQueueFamilyIndex  = -1;
     for (int i = 0; i < queueFamilies.size(); ++i)
     {
         const VkQueueFamilyProperties& queueFamily = queueFamilies[i];
@@ -253,12 +388,13 @@ int main()
     // Logical device with graphics and present queues.
     VkPhysicalDeviceFeatures deviceFeatures = {};
     VkDeviceCreateInfo deviceInfo = {};
-    deviceInfo.sType                 = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    deviceInfo.pQueueCreateInfos     = queueInfos.data();
-    deviceInfo.queueCreateInfoCount  = 2;
-    deviceInfo.pEnabledFeatures      = &deviceFeatures;
-    deviceInfo.enabledExtensionCount = 0;
-    deviceInfo.enabledLayerCount     = 0;
+    deviceInfo.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    deviceInfo.pQueueCreateInfos       = queueInfos.data();
+    deviceInfo.queueCreateInfoCount    = 2;
+    deviceInfo.pEnabledFeatures        = &deviceFeatures;
+    deviceInfo.enabledExtensionCount   = static_cast<uint32_t>(physicalDeviceExtensionNames.size());
+    deviceInfo.ppEnabledExtensionNames = physicalDeviceExtensionNames.data();
+    deviceInfo.enabledLayerCount       = 0;
 
     // Create the logical device.
     VkDevice device;
@@ -270,6 +406,56 @@ int main()
         std::cerr << __FUNCTION__
                   << ": failed to create vulkan logical device"
                   << std::endl;
+
+    /* ------------------------------------------------------------ *
+       Vulkan swap chain
+     * ------------------------------------------------------------ */
+
+    const uint32_t queueFamilyIndices[] =
+    {
+        graphicsQueueFamilyIndex,
+        presentQueueFamilyIndex
+    };
+
+    VkSwapchainCreateInfoKHR createInfo = {};
+    createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    createInfo.surface          = surface;
+    createInfo.minImageCount    = SWAP_CHAIN_IMAGE_COUNT;
+    createInfo.imageFormat      = SURFACE_FORMAT;
+    createInfo.imageColorSpace  = SURFACE_COLOR_SPACE;
+    createInfo.imageExtent      = VkExtent2D(WINDOW_WIDTH, WINDOW_HEIGHT);
+    createInfo.imageArrayLayers = 1;
+    createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    createInfo.compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    createInfo.presentMode      = PRESENT_MODE;
+    createInfo.clipped          = VK_TRUE;
+    createInfo.oldSwapchain     = VK_NULL_HANDLE;
+    createInfo.preTransform     = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+
+    if (graphicsQueueFamilyIndex != presentQueueFamilyIndex)
+    {
+        createInfo.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
+        createInfo.queueFamilyIndexCount = 2;
+        createInfo.pQueueFamilyIndices   = queueFamilyIndices;
+    }
+    else
+    {
+        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    }
+
+    VkSwapchainKHR swapChain;
+    result = vkCreateSwapchainKHR(device,
+                                  &createInfo,
+                                  nullptr,
+                                  &swapChain);
+    if (result != VK_SUCCESS)
+    {
+        std::cerr << __FUNCTION__
+                  << ": failed to create vulkan swap chain"
+                  << std::endl;
+
+        return EXIT_FAILURE;
+    }
 
     /* ------------------------------------------------------------ *
        Vulkan logical device queues
@@ -302,6 +488,7 @@ int main()
 
     glfwDestroyWindow(window);
     glfwTerminate();
+    vkDestroySwapchainKHR(device, swapChain, nullptr);
     vkDestroySurfaceKHR(instance, surface, nullptr);
     vkDestroyDevice(device, nullptr);
     vkDestroyInstance(instance, nullptr);
