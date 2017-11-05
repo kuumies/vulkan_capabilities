@@ -813,12 +813,22 @@ int main()
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments    = &colorAttachmentRef;
 
+    VkSubpassDependency dependency = {};
+    dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass    = 0;
+    dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
     VkRenderPassCreateInfo renderPassInfo = {};
     renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     renderPassInfo.attachmentCount = 1;
     renderPassInfo.pAttachments    = &colorAttachment;
     renderPassInfo.subpassCount    = 1;
     renderPassInfo.pSubpasses      = &subpass;
+    renderPassInfo.dependencyCount = 1;
+    renderPassInfo.pDependencies   = &dependency;
 
     VkRenderPass renderPass;
     result = vkCreateRenderPass(device,
@@ -929,6 +939,126 @@ int main()
     }
 
     /* ------------------------------------------------------------ *
+       Vulkan command pool
+     * ------------------------------------------------------------ */
+
+    VkCommandPoolCreateInfo poolInfo = {};
+    poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.queueFamilyIndex = graphicsQueueFamilyIndex;
+    poolInfo.flags            = 0;
+
+    // Create command pool.
+    VkCommandPool commandPool;
+    result = vkCreateCommandPool(device,
+                                 &poolInfo,
+                                 nullptr,
+                                 &commandPool);
+
+    if (result != VK_SUCCESS)
+    {
+        std::cerr << __FUNCTION__
+                  << ": failed to create vulkan command pool"
+                  << std::endl;
+
+        return EXIT_FAILURE;
+    }
+
+    // Allocate the command buffers.
+    std::vector<VkCommandBuffer> commandBuffers(swapChainFramebuffers.size());
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool        = commandPool;
+    allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = (uint32_t) commandBuffers.size();
+
+    result = vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data());
+    if (result != VK_SUCCESS)
+    {
+        std::cerr << __FUNCTION__
+                  << ": failed to allocate command buffers"
+                  << std::endl;
+
+        return EXIT_FAILURE;
+    }
+
+    // Record commands
+    for (size_t i = 0; i < commandBuffers.size(); i++)
+    {
+        VkCommandBufferBeginInfo beginInfo = {};
+        beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags            = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+        beginInfo.pInheritanceInfo = nullptr;
+
+        vkBeginCommandBuffer(commandBuffers[i], &beginInfo);
+
+        VkRenderPassBeginInfo renderPassInfo = {};
+        renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass        = renderPass;
+        renderPassInfo.framebuffer       = swapChainFramebuffers[i];
+        renderPassInfo.renderArea.offset = {0, 0};
+        renderPassInfo.renderArea.extent = VkExtent2D { WINDOW_WIDTH, WINDOW_HEIGHT };
+
+        VkClearValue clearColor = { 0.2f, 0.2f, 0.2f, 1.0f };
+        renderPassInfo.clearValueCount = 1;
+        renderPassInfo.pClearValues    = &clearColor;
+
+        vkCmdBeginRenderPass(commandBuffers[i],
+                             &renderPassInfo,
+                             VK_SUBPASS_CONTENTS_INLINE);
+
+        vkCmdBindPipeline(commandBuffers[i],
+                          VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          graphicsPipeline);
+        vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+        vkCmdEndRenderPass(commandBuffers[i]);
+
+        result = vkEndCommandBuffer(commandBuffers[i]);
+        if (result != VK_SUCCESS)
+        {
+            std::cerr << __FUNCTION__
+                      << ": failed to end command buffer"
+                      << std::endl;
+
+            return EXIT_FAILURE;
+        }
+    }
+
+    /* ------------------------------------------------------------ *
+       Sync
+     * ------------------------------------------------------------ */
+
+    VkSemaphoreCreateInfo semaphoreInfo = {};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkSemaphore imageAvailableSemaphore;
+    result = vkCreateSemaphore(device,
+                               &semaphoreInfo,
+                               nullptr,
+                               &imageAvailableSemaphore);
+    if (result != VK_SUCCESS)
+    {
+        std::cerr << __FUNCTION__
+                  << ": failed to create semaphore for image availability"
+                  << std::endl;
+
+        return EXIT_FAILURE;
+    }
+
+    VkSemaphore renderFinishedSemaphore;
+    result = vkCreateSemaphore(device,
+                               &semaphoreInfo,
+                               nullptr,
+                               &renderFinishedSemaphore);
+    if (result != VK_SUCCESS)
+    {
+        std::cerr << __FUNCTION__
+                  << ": failed to create semaphore for render finished"
+                  << std::endl;
+
+        return EXIT_FAILURE;
+    }
+
+    /* ------------------------------------------------------------ *
        Vulkan logical device queues
      * ------------------------------------------------------------ */
 
@@ -945,6 +1075,64 @@ int main()
                      &presentQueue);
 
     /* ------------------------------------------------------------ *
+       Vulkan draw
+     * ------------------------------------------------------------ */
+
+    // Get the swap chain image index to select the correct command
+    // buffer. Timeout is disabled. TODO: find out what  the fence
+    // handle parameter is.
+    uint32_t imageIndex;
+    vkAcquireNextImageKHR(device,
+                          swapChain,
+                          std::numeric_limits<uint64_t>::max(),
+                          imageAvailableSemaphore,
+                          VK_NULL_HANDLE,
+                          &imageIndex);
+
+    VkSemaphore waitSemaphores[]    = { imageAvailableSemaphore };
+    VkSemaphore signalSemaphores[]  = { renderFinishedSemaphore };
+    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.waitSemaphoreCount   = 1;
+    submitInfo.pWaitSemaphores      = waitSemaphores;
+    submitInfo.pWaitDstStageMask    = waitStages;
+    submitInfo.commandBufferCount   = 1;
+    submitInfo.pCommandBuffers      = &commandBuffers[imageIndex];
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores    = signalSemaphores;
+
+    // Submit the command buffer into queue
+    result = vkQueueSubmit(graphicsQueue,
+                           1,
+                           &submitInfo,
+                           VK_NULL_HANDLE);
+    if (result != VK_SUCCESS)
+    {
+        std::cerr << __FUNCTION__
+                  << ": failed to submit into graphics queue"
+                  << std::endl;
+
+        return EXIT_FAILURE;
+    }
+
+    VkPresentInfoKHR presentInfo = {};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signalSemaphores;
+
+    VkSwapchainKHR swapChains[] = {swapChain};
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+    presentInfo.pImageIndices = &imageIndex;
+    presentInfo.pResults = nullptr; // Optional
+
+    vkQueuePresentKHR(presentQueue, &presentInfo);
+
+
+    /* ------------------------------------------------------------ *
        Start the "event" loop.
      * ------------------------------------------------------------ */
 
@@ -953,6 +1141,8 @@ int main()
         glfwPollEvents();
     }
 
+    vkDeviceWaitIdle(device);
+
     /* ------------------------------------------------------------ *
        Clean up
      * ------------------------------------------------------------ */
@@ -960,10 +1150,15 @@ int main()
     glfwDestroyWindow(window);
     glfwTerminate();
 
+    vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
+    vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
+
     for (uint32_t i = 0; i < swapChainFramebuffers.size(); i++)
         vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
     for (uint32_t i = 0; i < swapChainImageViews.size(); i++)
         vkDestroyImageView(device, swapChainImageViews[i], nullptr);
+
+    vkDestroyCommandPool(device, commandPool, nullptr);
     vkDestroyPipeline(device, graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyRenderPass(device, renderPass, nullptr);
