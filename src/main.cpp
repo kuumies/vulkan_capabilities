@@ -43,6 +43,14 @@ int main()
     GLFWwindow* window = glfwCreateWindow(
         WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_NAME,
         nullptr, nullptr);
+    if (!window)
+    {
+        std::cerr << __FUNCTION__
+                  << ": Failed to create Vulkan GLFW window"
+                  << std::endl;
+
+        return EXIT_FAILURE;
+    }
 
     /* ------------------------------------------------------------ *
        Vulkan extensions.
@@ -206,8 +214,11 @@ int main()
         const auto it = std::find_if(
             formats.begin(),
             formats.end(),
-            [SURFACE_FORMAT](const vkSurfaceFormatKHR& fmt)
-        { return fmt == SURFACE_FORMAT; });
+            [](const VkSurfaceFormatKHR& fmt)
+        {
+            return fmt.format     == SURFACE_FORMAT &&
+                   fmt.colorSpace == SURFACE_COLOR_SPACE;
+        });
         if (it == formats.end())
             continue;
 
@@ -233,7 +244,7 @@ int main()
         const auto it2 = std::find_if(
             presentModes.begin(),
             presentModes.end(),
-            [PRESENT_MODE](const VkPresentModeKHR& mode)
+            [](const VkPresentModeKHR& mode)
         { return mode == PRESENT_MODE; });
         if (it2 == presentModes.end())
             continue;
@@ -254,8 +265,8 @@ int main()
         }
 
         // Check the image count is supported.
-        if (SWAP_CHAIN_IMAGE_COUNT < capabilities.minImageExtent.minImageCount ||
-            SWAP_CHAIN_IMAGE_COUNT > capabilities.minImageExtent.maxImageCount)
+        if (SWAP_CHAIN_IMAGE_COUNT < capabilities.minImageCount ||
+            SWAP_CHAIN_IMAGE_COUNT > capabilities.maxImageCount)
         {
             continue;
         }
@@ -278,8 +289,8 @@ int main()
         int found = 0;
         for (const VkExtensionProperties& ex : extensions)
         {
-            for (const char* name : physicalDeviceExtensionNames.size())
-                if (ex.extensionName == name)
+            for (const char* name : physicalDeviceExtensionNames)
+                if (std::string(ex.extensionName) == std::string(name))
                     found++;
         }
 
@@ -293,8 +304,7 @@ int main()
     if (validPhysicsDevices.size() == 0)
     {
         std::cerr << __FUNCTION__
-                  << ": none of the devices support required "
-                  << "extensions"
+                  << ": failed to find valid physics device "
                   << std::endl;
 
         return EXIT_FAILURE;
@@ -423,7 +433,7 @@ int main()
     createInfo.minImageCount    = SWAP_CHAIN_IMAGE_COUNT;
     createInfo.imageFormat      = SURFACE_FORMAT;
     createInfo.imageColorSpace  = SURFACE_COLOR_SPACE;
-    createInfo.imageExtent      = VkExtent2D(WINDOW_WIDTH, WINDOW_HEIGHT);
+    createInfo.imageExtent      = VkExtent2D { WINDOW_WIDTH, WINDOW_HEIGHT };
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     createInfo.compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
