@@ -636,7 +636,7 @@ int main()
 
     VkPipelineShaderStageCreateInfo fshStageInfo = {};
     fshStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    fshStageInfo.stage  = VK_SHADER_STAGE_VERTEX_BIT;
+    fshStageInfo.stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
     fshStageInfo.module = fshModule;
     fshStageInfo.pName  = "main";
 
