@@ -31,6 +31,23 @@ static const VkPresentModeKHR PRESENT_MODE = VK_PRESENT_MODE_FIFO_KHR; // v-sync
 // Swap chain
 static const int SWAP_CHAIN_IMAGE_COUNT = 2;
 
+/* ---------------------------------------------------------------- *
+   Validation layer debug callback.
+ * ---------------------------------------------------------------- */
+static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+    VkDebugReportFlagsEXT /*flags*/,
+    VkDebugReportObjectTypeEXT /*objType*/,
+    uint64_t /*obj*/,
+    size_t /*location*/,
+    int32_t /*code*/,
+    const char* /*layerPrefix*/,
+    const char* msg,
+    void* /*userData*/) {
+
+    std::cerr << "Vulkan validation layer: " << msg << std::endl;
+    return VK_FALSE;
+}
+
 int main()
 {
     /* ------------------------------------------------------------ *
@@ -53,7 +70,7 @@ int main()
     }
 
     /* ------------------------------------------------------------ *
-       Vulkan extensions.
+       Vulkan instance extensions.
      * ------------------------------------------------------------ */
 
     // Get the extensions count.
@@ -99,6 +116,35 @@ int main()
         }
     }
 
+    std::vector<const char*> instanceExtensions;
+    for (uint32_t e = 0; e < glfwExtensionCount; ++e)
+        instanceExtensions.push_back(glfwExtensions[e]);
+
+    /* ------------------------------------------------------------ *
+       Vulkan instance layers.
+     * ------------------------------------------------------------ */
+
+    uint32_t layerCount;
+    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+    std::vector<VkLayerProperties> layers(layerCount);
+    vkEnumerateInstanceLayerProperties(&layerCount,
+                                       layers.data());
+
+    // Check if the validation layer is available
+    std::vector<const char*> validationLayer;
+    validationLayer.push_back("VK_LAYER_LUNARG_standard_validation");
+    bool enableValidationLayer = false;
+    for (const VkLayerProperties& layer : layers)
+        if (std::string(layer.layerName) ==
+            std::string(validationLayer[0]))
+        {
+            enableValidationLayer = true;
+        }
+
+    if (enableValidationLayer)
+        instanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+
     /* ------------------------------------------------------------ *
        Vulkan instance.
      * ------------------------------------------------------------ */
@@ -117,9 +163,15 @@ int main()
     VkInstanceCreateInfo instanceInfo = {};
     instanceInfo.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instanceInfo.pApplicationInfo        = &appInfo;
-    instanceInfo.enabledExtensionCount   = glfwExtensionCount;
-    instanceInfo.ppEnabledExtensionNames = glfwExtensions;
-    instanceInfo.enabledLayerCount       = 0;
+    instanceInfo.enabledExtensionCount   = uint32_t(instanceExtensions.size());
+    instanceInfo.ppEnabledExtensionNames = instanceExtensions.data();
+    if (enableValidationLayer)
+    {
+        instanceInfo.enabledLayerCount   = 1;
+        instanceInfo.ppEnabledLayerNames = validationLayer.data();
+    }
+    else
+        instanceInfo.enabledLayerCount       = 0;
 
     VkInstance instance;
     VkResult result = vkCreateInstance(&instanceInfo,
@@ -132,6 +184,37 @@ int main()
                   << std::endl;
 
         return EXIT_FAILURE;
+    }
+
+    /* ------------------------------------------------------------ *
+       Vulkan debug callback.
+     * ------------------------------------------------------------ */
+
+    VkDebugReportCallbackEXT callback;
+    if (enableValidationLayer)
+    {
+        VkDebugReportCallbackCreateInfoEXT debugInfo = {};
+        debugInfo.sType        = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+        debugInfo.flags        = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+        debugInfo.pfnCallback = debugCallback;
+
+        // Validation is an extension, get the function adress.
+        auto func = (PFN_vkCreateDebugReportCallbackEXT)
+            vkGetInstanceProcAddr(instance,
+                                  "vkCreateDebugReportCallbackEXT");
+        if (func)
+            result = func(instance, &debugInfo, nullptr, &callback);
+        else
+            result = VK_ERROR_INITIALIZATION_FAILED;
+        if (result != VK_SUCCESS)
+        {
+            std::cerr << __FUNCTION__
+                      << ": failed to create vulkan debug "
+                      << "report callback"
+                      << std::endl;
+
+            return EXIT_FAILURE;
+        }
     }
 
     /* ------------------------------------------------------------ *
@@ -501,6 +584,16 @@ int main()
     vkDestroySwapchainKHR(device, swapChain, nullptr);
     vkDestroySurfaceKHR(instance, surface, nullptr);
     vkDestroyDevice(device, nullptr);
+
+    if (enableValidationLayer)
+    {
+        auto func = (PFN_vkDestroyDebugReportCallbackEXT)
+            vkGetInstanceProcAddr(instance,
+                                  "vkDestroyDebugReportCallbackEXT");
+        if (func)
+            func(instance, callback, nullptr);
+    }
+
     vkDestroyInstance(instance, nullptr);
 
     return EXIT_SUCCESS;
