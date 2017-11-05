@@ -4,6 +4,7 @@
  * ---------------------------------------------------------------- */
 
 #include <algorithm>
+#include <fstream>
 #include <iostream>
 #include <vector>
 #include <memory>
@@ -44,8 +45,39 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     const char* msg,
     void* /*userData*/) {
 
-    std::cerr << "Vulkan validation layer: " << msg << std::endl;
+    std::cerr << __FUNCTION__
+              << ": Vulkan validation layer: "
+              << msg
+              << std::endl;
     return VK_FALSE;
+}
+
+/* ---------------------------------------------------------------- *
+   Reads a SPIR-V binary shader file form the path.
+ * ---------------------------------------------------------------- */
+std::vector<char> readShaderSourceFile(const std::string& path)
+{
+    std::ifstream file(path, std::ios::ate | std::ios::binary);
+
+    if (!file.is_open())
+        std::cerr << __FUNCTION__
+                  << "failed to open shader file "
+                  << path.c_str()
+                  << std::endl;
+
+    size_t fileSize = (size_t) file.tellg();
+    if (fileSize == 0)
+        std::cerr << __FUNCTION__
+                  << "shader source is zero-sized"
+                  << path.c_str()
+                  << std::endl;
+
+    std::vector<char> buffer(fileSize);
+    file.seekg(0);
+    file.read(buffer.data(), fileSize);
+    file.close();
+
+    return buffer;
 }
 
 int main()
@@ -551,6 +583,79 @@ int main()
     }
 
     /* ------------------------------------------------------------ *
+       Vulkan vertex shader
+     * ------------------------------------------------------------ */
+
+    const std::vector<char> vshSrc =
+        readShaderSourceFile("shaders/test.vert.spv");
+
+    VkShaderModuleCreateInfo vshInfo = {};
+    vshInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    vshInfo.codeSize = vshSrc.size();
+    vshInfo.pCode    = reinterpret_cast<const uint32_t*>(vshSrc.data());
+
+    VkShaderModule vshModule;
+    result = vkCreateShaderModule(device, &vshInfo, nullptr, &vshModule);
+    if (result != VK_SUCCESS)
+    {
+        std::cerr << __FUNCTION__
+                  << ": failed to create vulkan vertex shader module"
+                  << std::endl;
+
+        return EXIT_FAILURE;
+    }
+
+    VkPipelineShaderStageCreateInfo vshStageInfo = {};
+    vshStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vshStageInfo.stage  = VK_SHADER_STAGE_VERTEX_BIT;
+    vshStageInfo.module = vshModule;
+    vshStageInfo.pName  = "main";
+
+    /* ------------------------------------------------------------ *
+       Vulkan fragment shader
+     * ------------------------------------------------------------ */
+
+    const std::vector<char> fshSrc =
+        readShaderSourceFile("shaders/test.frag.spv");
+
+    VkShaderModuleCreateInfo fshInfo = {};
+    fshInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    fshInfo.codeSize = fshSrc.size();
+    fshInfo.pCode    = reinterpret_cast<const uint32_t*>(fshSrc.data());
+
+    VkShaderModule fshModule;
+    result = vkCreateShaderModule(device, &fshInfo, nullptr, &fshModule);
+    if (result != VK_SUCCESS)
+    {
+        std::cerr << __FUNCTION__
+                  << ": failed to create vulkan vertex shader module"
+                  << std::endl;
+
+        return EXIT_FAILURE;
+    }
+
+    VkPipelineShaderStageCreateInfo fshStageInfo = {};
+    fshStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    fshStageInfo.stage  = VK_SHADER_STAGE_VERTEX_BIT;
+    fshStageInfo.module = fshModule;
+    fshStageInfo.pName  = "main";
+
+    /* ------------------------------------------------------------ *
+       Vulkan graphics pipeline
+     * ------------------------------------------------------------ */
+
+    VkPipelineShaderStageCreateInfo shaderStages[] =
+    {
+        vshStageInfo,
+        fshStageInfo
+    };
+
+    VkGraphicsPipelineCreateInfo pipelineInfo = {};
+    pipelineInfo.sType      = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineInfo.stageCount = 2;
+    pipelineInfo.pStages    = shaderStages;
+
+    /* ------------------------------------------------------------ *
        Vulkan logical device queues
      * ------------------------------------------------------------ */
 
@@ -581,6 +686,8 @@ int main()
 
     glfwDestroyWindow(window);
     glfwTerminate();
+    vkDestroyShaderModule(device, fshModule, nullptr);
+    vkDestroyShaderModule(device, vshModule, nullptr);
     vkDestroySwapchainKHR(device, swapChain, nullptr);
     vkDestroySurfaceKHR(instance, surface, nullptr);
     vkDestroyDevice(device, nullptr);
