@@ -184,7 +184,7 @@ int main()
     physicalDeviceExtensionNames.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     // Search the valid physical devices.
-    std::vector<VkPhysicalDevice> validPhysicsDevices;
+    std::vector<VkPhysicalDevice> validPhysicalDevices;
     for (const VkPhysicalDevice& physicalDevice : physicalDevices)
     {
 #if 0
@@ -240,7 +240,7 @@ int main()
                                                   &presentModeCount,
                                                   presentModes.data());
 
-        // Check that the device supports the preset mode.
+        // Check that the device supports the present mode.
         const auto it2 = std::find_if(
             presentModes.begin(),
             presentModes.end(),
@@ -298,20 +298,20 @@ int main()
             continue;
 
         // OK, device is valid.
-        validPhysicsDevices.push_back(physicalDevice);
+        validPhysicalDevices.push_back(physicalDevice);
     }
 
-    if (validPhysicsDevices.size() == 0)
+    if (validPhysicalDevices.size() == 0)
     {
         std::cerr << __FUNCTION__
-                  << ": failed to find valid physics device "
+                  << ": failed to find valid physical device "
                   << std::endl;
 
         return EXIT_FAILURE;
     }
 
     // Auto-select the first device.
-    VkPhysicalDevice physicalDevice = validPhysicsDevices.front();
+    VkPhysicalDevice physicalDevice = validPhysicalDevices.front();
 
     /* ------------------------------------------------------------ *
        Vulkan queue families (graphics and present)
