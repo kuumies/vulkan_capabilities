@@ -83,7 +83,7 @@ std::vector<char> readShaderSourceFile(const std::string& path)
 int main()
 {
     /* ------------------------------------------------------------ *
-       Vulkan GLFW window.
+       GLFW window.
      * ------------------------------------------------------------ */
 
     glfwInit();
@@ -102,7 +102,7 @@ int main()
     }
 
     /* ------------------------------------------------------------ *
-       Vulkan instance extensions.
+       Instance extensions.
      * ------------------------------------------------------------ */
 
     // Get the extensions count.
@@ -153,7 +153,7 @@ int main()
         instanceExtensions.push_back(glfwExtensions[e]);
 
     /* ------------------------------------------------------------ *
-       Vulkan instance layers.
+       Instance layers.
      * ------------------------------------------------------------ */
 
     uint32_t layerCount;
@@ -178,7 +178,7 @@ int main()
         instanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 
     /* ------------------------------------------------------------ *
-       Vulkan instance.
+       Instance.
      * ------------------------------------------------------------ */
 
     // Let the implementation know that this application does not
@@ -219,7 +219,7 @@ int main()
     }
 
     /* ------------------------------------------------------------ *
-       Vulkan debug callback.
+       Debug callback.
      * ------------------------------------------------------------ */
 
     VkDebugReportCallbackEXT callback;
@@ -250,7 +250,7 @@ int main()
     }
 
     /* ------------------------------------------------------------ *
-       Vulkan surface.
+       Surface.
      * ------------------------------------------------------------ */
 
     // Create the GLFW vulkan surface
@@ -269,7 +269,7 @@ int main()
     }
 
     /* ------------------------------------------------------------ *
-       Vulkan physical device.
+       Physical device.
      * ------------------------------------------------------------ */
 
     // Get the device count.
@@ -429,7 +429,7 @@ int main()
     VkPhysicalDevice physicalDevice = validPhysicalDevices.front();
 
     /* ------------------------------------------------------------ *
-       Vulkan queue families (graphics and present)
+       Queue families (graphics and present)
      * ------------------------------------------------------------ */
 
     // Get the queue family count.
@@ -493,7 +493,7 @@ int main()
     }
 
     /* ------------------------------------------------------------ *
-       Vulkan logical device.
+       Logical device.
      * ------------------------------------------------------------ */
 
     // Create the queue create infos for graphics and present queues.
@@ -533,7 +533,7 @@ int main()
                   << std::endl;
 
     /* ------------------------------------------------------------ *
-       Vulkan swap chain
+       Swap chain
      * ------------------------------------------------------------ */
 
     const uint32_t queueFamilyIndices[] =
@@ -627,7 +627,7 @@ int main()
     }
 
     /* ------------------------------------------------------------ *
-       Vulkan vertex shader
+       Vertex shader
      * ------------------------------------------------------------ */
 
     const std::vector<char> vshSrc =
@@ -656,7 +656,7 @@ int main()
     vshStageInfo.pName  = "main";
 
     /* ------------------------------------------------------------ *
-       Vulkan fragment shader
+       Fragment shader
      * ------------------------------------------------------------ */
 
     const std::vector<char> fshSrc =
@@ -685,7 +685,7 @@ int main()
     fshStageInfo.pName  = "main";
 
     /* ------------------------------------------------------------ *
-       Vulkan rasterizer
+       Rasterizer state
      * ------------------------------------------------------------ */
 
     VkPipelineRasterizationStateCreateInfo rasterizer = {};
@@ -702,7 +702,7 @@ int main()
     rasterizer.depthBiasSlopeFactor    = 0.0f;
 
     /* ------------------------------------------------------------ *
-       Vulkan multisampling
+       Multisampling stage
      * ------------------------------------------------------------ */
 
     VkPipelineMultisampleStateCreateInfo multisampling = {};
@@ -715,7 +715,7 @@ int main()
     multisampling.alphaToOneEnable      = VK_FALSE;
 
     /* ------------------------------------------------------------ *
-       Vulkan blending
+       Blending state
      * ------------------------------------------------------------ */
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
@@ -765,7 +765,7 @@ int main()
     }
 
     /* ------------------------------------------------------------ *
-       Vulkan viewport state.
+       Viewport state.
      * ------------------------------------------------------------ */
 
     // Viewport
@@ -779,7 +779,7 @@ int main()
 
     // Scissor
     VkRect2D scissor = {};
-    scissor.offset = {0, 0};
+    scissor.offset = { 0, 0 };
     scissor.extent = VkExtent2D { WINDOW_WIDTH, WINDOW_HEIGHT };
 
     // Viewport state.
@@ -792,8 +792,22 @@ int main()
 
     /* ------------------------------------------------------------ *
        Render pass
+
+        * framebuffer attachments
+        * framebuffer content handling
+
      * ------------------------------------------------------------ */
 
+    // Create the description of the colorbuffer attachment. The
+    // colorbuffer is an image in the swap chain.
+    //      * no multisampling
+    //      * clear the content before rendering
+    //      * keep the contetn after rendering
+    //      * do not care stencil operations
+    //      * do not create what is the pixel layout before rendering
+    //        as it is going to be cleared
+    //      * set pixel layout to be presentation format after
+    //        rendering as its going to be display on the screen
     VkAttachmentDescription colorAttachment = {};
     colorAttachment.format         = SURFACE_FORMAT;
     colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
@@ -804,15 +818,26 @@ int main()
     colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
     colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
+    // Attachment descriptions
+    const VkAttachmentDescription attachmentDescriptions[] =
+    { colorAttachment };
+
+    // Graphics attachment reference for subpass which is the color
+    // attachment above. Use the optimal layout for color attachment
+    // as thats what it is.
     VkAttachmentReference colorAttachmentRef = {};
     colorAttachmentRef.attachment = 0;
     colorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+    // Subpass that renders into colorbuffer attachment.
     VkSubpassDescription subpass = {};
     subpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments    = &colorAttachmentRef;
 
+    // Add a subpass dependecy to prevent the image layout transition
+    // being run too early. Make render pass to wait by waiting for
+    // the color attachment output stage.
     VkSubpassDependency dependency = {};
     dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass    = 0;
@@ -821,20 +846,20 @@ int main()
     dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
+    // Fill the render pass info.
     VkRenderPassCreateInfo renderPassInfo = {};
     renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments    = &colorAttachment;
+    renderPassInfo.pAttachments    = &attachmentDescriptions;
     renderPassInfo.subpassCount    = 1;
     renderPassInfo.pSubpasses      = &subpass;
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies   = &dependency;
 
+    // Create the render pass.
     VkRenderPass renderPass;
-    result = vkCreateRenderPass(device,
-                                &renderPassInfo,
-                                nullptr,
-                                &renderPass);
+    result = vkCreateRenderPass(device, &renderPassInfo,
+                                nullptr, &renderPass);
     if (result != VK_SUCCESS)
     {
         std::cerr << __FUNCTION__
@@ -905,16 +930,19 @@ int main()
     }
 
     /* ------------------------------------------------------------ *
-       Vulkan framebuffers
+       Framebuffers of swap chain images for render pass.
      * ------------------------------------------------------------ */
 
-    std::vector<VkFramebuffer> swapChainFramebuffers(swapChainImageViews.size());
+    // Each swap chain image view has its own framebuffer.
+    std::vector<VkFramebuffer> swapChainFramebuffers;
+    swapChainFramebuffers.resize(swapChainImageViews.size());
+
+    // Create the framebuffers
     for (size_t i = 0; i < swapChainImageViews.size(); i++)
     {
-        VkImageView attachments[] = {
-            swapChainImageViews[i]
-        };
+        const VkImageView attachments[] = { swapChainImageViews[i] };
 
+        // Create the framebuffer info.
         VkFramebufferCreateInfo framebufferInfo = {};
         framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass      = renderPass;
@@ -924,8 +952,8 @@ int main()
         framebufferInfo.height          = WINDOW_HEIGHT;
         framebufferInfo.layers          = 1;
 
-        result = vkCreateFramebuffer(device,
-                                     &framebufferInfo,
+        // Create the framebuffer.
+        result = vkCreateFramebuffer(device, &framebufferInfo,
                                      nullptr,
                                      &swapChainFramebuffers[i]);
         if (result != VK_SUCCESS)
@@ -939,9 +967,12 @@ int main()
     }
 
     /* ------------------------------------------------------------ *
-       Vulkan command pool
+       Vulkan command buffer.
      * ------------------------------------------------------------ */
 
+    // Create the command pool info for graphics queue. Commands
+    // are recorded only once and the executed multiple times on
+    // the main loop (flags = 0).
     VkCommandPoolCreateInfo poolInfo = {};
     poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.queueFamilyIndex = graphicsQueueFamilyIndex;
@@ -949,11 +980,8 @@ int main()
 
     // Create command pool.
     VkCommandPool commandPool;
-    result = vkCreateCommandPool(device,
-                                 &poolInfo,
-                                 nullptr,
-                                 &commandPool);
-
+    result = vkCreateCommandPool(device, &poolInfo,
+                                 nullptr, &commandPool);
     if (result != VK_SUCCESS)
     {
         std::cerr << __FUNCTION__
@@ -963,15 +991,21 @@ int main()
         return EXIT_FAILURE;
     }
 
-    // Allocate the command buffers.
-    std::vector<VkCommandBuffer> commandBuffers(swapChainFramebuffers.size());
+    // Each image in the swap chain needs to have its own
+    // command buffer.
+    std::vector<VkCommandBuffer> commandBuffers;
+    commandBuffers.resize(swapChainFramebuffers.size());
+
+    // Create the command buffer allocation information.
     VkCommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool        = commandPool;
     allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = (uint32_t) commandBuffers.size();
+    allocInfo.commandBufferCount = uint32_t(commandBuffers.size());
 
-    result = vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data());
+    // Allocate the command buffers.
+    result = vkAllocateCommandBuffers(device, &allocInfo,
+                                      commandBuffers.data());
     if (result != VK_SUCCESS)
     {
         std::cerr << __FUNCTION__
@@ -981,37 +1015,48 @@ int main()
         return EXIT_FAILURE;
     }
 
-    // Record commands
+    // Record same commands for each command buffer.
     for (size_t i = 0; i < commandBuffers.size(); i++)
     {
+        // Create the begin info where the command buffer can be
+        // resubmitted while is pending for execution.
         VkCommandBufferBeginInfo beginInfo = {};
-        beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags            = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-        beginInfo.pInheritanceInfo = nullptr;
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
+        // Begin recording commands
         vkBeginCommandBuffer(commandBuffers[i], &beginInfo);
 
+        // Clear color for colorbuffer attachment
+        VkClearValue clearColor = { 0.2f, 0.2f, 0.2f, 1.0f };
+
+        // Create the render pass begin info. Set the framebuffer
+        // and the size of it + clear color.
         VkRenderPassBeginInfo renderPassInfo = {};
         renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass        = renderPass;
         renderPassInfo.framebuffer       = swapChainFramebuffers[i];
-        renderPassInfo.renderArea.offset = {0, 0};
+        renderPassInfo.renderArea.offset = { 0, 0 };
         renderPassInfo.renderArea.extent = VkExtent2D { WINDOW_WIDTH, WINDOW_HEIGHT };
+        renderPassInfo.clearValueCount   = 1;
+        renderPassInfo.pClearValues      = &clearColor;
 
-        VkClearValue clearColor = { 0.2f, 0.2f, 0.2f, 1.0f };
-        renderPassInfo.clearValueCount = 1;
-        renderPassInfo.pClearValues    = &clearColor;
-
-        vkCmdBeginRenderPass(commandBuffers[i],
-                             &renderPassInfo,
+        // Begin the render pass.
+        vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo,
                              VK_SUBPASS_CONTENTS_INLINE);
 
+        // Bind the graphics pipeline
         vkCmdBindPipeline(commandBuffers[i],
                           VK_PIPELINE_BIND_POINT_GRAPHICS,
                           graphicsPipeline);
+
+        // Draw the triangle.
         vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+
+        // End the render pass.
         vkCmdEndRenderPass(commandBuffers[i]);
 
+        // End recording commands.
         result = vkEndCommandBuffer(commandBuffers[i]);
         if (result != VK_SUCCESS)
         {
@@ -1024,12 +1069,14 @@ int main()
     }
 
     /* ------------------------------------------------------------ *
-       Sync
+       Render / Presentation sync
      * ------------------------------------------------------------ */
 
     VkSemaphoreCreateInfo semaphoreInfo = {};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
+    // Create semaphore for rendering to know when an image in
+    // swap chain is available
     VkSemaphore imageAvailableSemaphore;
     result = vkCreateSemaphore(device,
                                &semaphoreInfo,
@@ -1044,6 +1091,8 @@ int main()
         return EXIT_FAILURE;
     }
 
+    // Create semaphore for presentation to know when an image in
+    // swap chain is rendered.
     VkSemaphore renderFinishedSemaphore;
     result = vkCreateSemaphore(device,
                                &semaphoreInfo,
@@ -1059,35 +1108,27 @@ int main()
     }
 
     /* ------------------------------------------------------------ *
-       Vulkan logical device queues
+       Draw into framebuffer attachment.
      * ------------------------------------------------------------ */
 
-    VkQueue graphicsQueue;
-    vkGetDeviceQueue(device,
-                     graphicsQueueFamilyIndex,
-                     0,
-                     &graphicsQueue);
-
-
-    /* ------------------------------------------------------------ *
-       Vulkan draw
-     * ------------------------------------------------------------ */
-
-    // Get the swap chain image index to select the correct command
-    // buffer. Timeout is disabled. TODO: find out what  the fence
-    // handle parameter is.
+    // Acquire an image from the swap chain. Use the semaphore to
+    // detect when the present queue has finished using the image.
+    // The image is a color attachment to framebuffer.
+    const uint64_t timeout = std::numeric_limits<uint64_t>::max(); // this disables timeout...?
     uint32_t imageIndex = 0;
-    vkAcquireNextImageKHR(device,
-                          swapChain,
-                          std::numeric_limits<uint64_t>::max(),
+    vkAcquireNextImageKHR(device, swapChain, timeout,
                           imageAvailableSemaphore,
-                          VK_NULL_HANDLE,
-                          &imageIndex);
+                          VK_NULL_HANDLE, &imageIndex);
 
-    VkSemaphore waitSemaphores[]    = { imageAvailableSemaphore };
+    // Semaphores to wait until the queue submit is executed
+    // and which stages of pipeline the semaphore is  waited.
+    const VkSemaphore waitSemaphores[]      = { imageAvailableSemaphore };
+    const VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    // Semaphore to signal when the command buffer has finished
+    // execution.
     VkSemaphore signalSemaphores[]  = { renderFinishedSemaphore };
-    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
+    // Create the graphics queue submit info.
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.waitSemaphoreCount   = 1;
@@ -1097,6 +1138,13 @@ int main()
     submitInfo.pCommandBuffers      = &commandBuffers[imageIndex];
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores    = signalSemaphores;
+
+    // Get the graphics queue
+    VkQueue graphicsQueue;
+    vkGetDeviceQueue(device,
+                     graphicsQueueFamilyIndex,
+                     0,
+                     &graphicsQueue);
 
     // Submit the command buffer into queue
     result = vkQueueSubmit(graphicsQueue,
@@ -1113,8 +1161,7 @@ int main()
     }
 
     /* ------------------------------------------------------------ *
-       Present the rendering result from swap chain into
-       screen surface.
+       Present the framebuffer from swap chain into screen surface.
      * ------------------------------------------------------------ */
 
     // Get the present queue handle from the logical device.
