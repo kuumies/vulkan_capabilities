@@ -62,7 +62,8 @@ int main()
         if (it == extensions.end())
         {
             std::cerr << __FUNCTION__
-                      << ": Vulkan implementation does not support extension"
+                      << ": Vulkan implementation does not support "
+                         "extension"
                       << glfwExtension
                       << std::endl;
 
@@ -85,15 +86,15 @@ int main()
     appInfo.apiVersion         = VK_API_VERSION_1_0;
 
     // Create the instance with extensions that GLFW requires.
-    VkInstanceCreateInfo createInfo = {};
-    createInfo.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    createInfo.pApplicationInfo        = &appInfo;
-    createInfo.enabledExtensionCount   = glfwExtensionCount;
-    createInfo.ppEnabledExtensionNames = glfwExtensions;
-    createInfo.enabledLayerCount       = 0;
+    VkInstanceCreateInfo instanceInfo = {};
+    instanceInfo.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    instanceInfo.pApplicationInfo        = &appInfo;
+    instanceInfo.enabledExtensionCount   = glfwExtensionCount;
+    instanceInfo.ppEnabledExtensionNames = glfwExtensions;
+    instanceInfo.enabledLayerCount       = 0;
 
     VkInstance instance;
-    VkResult result = vkCreateInstance(&createInfo,
+    VkResult result = vkCreateInstance(&instanceInfo,
                                        nullptr,
                                        &instance);
     if (result != VK_SUCCESS)
@@ -144,19 +145,19 @@ int main()
     }
 
     // Get the devices.
-    std::vector<VkPhysicalDevice> devices(physicalDeviceCount);
+    std::vector<VkPhysicalDevice> physicsDevices(physicalDeviceCount);
     vkEnumeratePhysicalDevices(instance,
                                &physicalDeviceCount,
-                               devices.data());
+                               physicsDevices.data());
 
     // Print the found device names.
-    for (const VkPhysicalDevice& device : devices)
+    for (const VkPhysicalDevice& physicalDevice : physicsDevices)
     {
         VkPhysicalDeviceProperties deviceProperties;
-        vkGetPhysicalDeviceProperties(device, &deviceProperties);
+        vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
 
         VkPhysicalDeviceFeatures deviceFeatures;
-        vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+        vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
 
         std::cout << __FUNCTION__
                   << ": "
@@ -165,7 +166,7 @@ int main()
     }
 
     // Auto-select the first device.
-    VkPhysicalDevice physicalDevice = devices.front();
+    VkPhysicalDevice physicalDevice = physicsDevices.front();
 
     /* ------------------------------------------------------------ *
        Vulkan graphics and present queue families
@@ -237,34 +238,34 @@ int main()
 
     // Create the queue create infos for graphics and present queues.
     float queuePriority = 1.0f;
-    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos(2);
+    std::vector<VkDeviceQueueCreateInfo> queueInfos(2);
 
-    queueCreateInfos[0].sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueCreateInfos[0].queueFamilyIndex = graphicsQueueFamilyIndex;
-    queueCreateInfos[0].queueCount       = 1;
-    queueCreateInfos[0].pQueuePriorities = &queuePriority;
+    queueInfos[0].sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queueInfos[0].queueFamilyIndex = graphicsQueueFamilyIndex;
+    queueInfos[0].queueCount       = 1;
+    queueInfos[0].pQueuePriorities = &queuePriority;
 
-    queueCreateInfos[1].sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueCreateInfos[1].queueFamilyIndex = presentQueueFamilyIndex;
-    queueCreateInfos[1].queueCount       = 1;
-    queueCreateInfos[1].pQueuePriorities = &queuePriority;
+    queueInfos[1].sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queueInfos[1].queueFamilyIndex = presentQueueFamilyIndex;
+    queueInfos[1].queueCount       = 1;
+    queueInfos[1].pQueuePriorities = &queuePriority;
 
     // Logical device with graphics and present queues.
     VkPhysicalDeviceFeatures deviceFeatures = {};
-    VkDeviceCreateInfo logicalDeviceCreateInfo = {};
-    logicalDeviceCreateInfo.sType                 = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    logicalDeviceCreateInfo.pQueueCreateInfos     = queueCreateInfos.data();
-    logicalDeviceCreateInfo.queueCreateInfoCount  = 2;
-    logicalDeviceCreateInfo.pEnabledFeatures      = &deviceFeatures;
-    logicalDeviceCreateInfo.enabledExtensionCount = 0;
-    logicalDeviceCreateInfo.enabledLayerCount     = 0;
+    VkDeviceCreateInfo deviceInfo = {};
+    deviceInfo.sType                 = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    deviceInfo.pQueueCreateInfos     = queueInfos.data();
+    deviceInfo.queueCreateInfoCount  = 2;
+    deviceInfo.pEnabledFeatures      = &deviceFeatures;
+    deviceInfo.enabledExtensionCount = 0;
+    deviceInfo.enabledLayerCount     = 0;
 
     // Create the logical device.
-    VkDevice logicalDevice;
+    VkDevice device;
     result = vkCreateDevice(physicalDevice,
-                            &logicalDeviceCreateInfo,
+                            &deviceInfo,
                             nullptr,
-                            &logicalDevice);
+                            &device);
     if (result != VK_SUCCESS)
         std::cerr << __FUNCTION__
                   << ": failed to create vulkan logical device"
@@ -275,13 +276,13 @@ int main()
      * ------------------------------------------------------------ */
 
     VkQueue graphicsQueue;
-    vkGetDeviceQueue(logicalDevice,
+    vkGetDeviceQueue(device,
                      graphicsQueueFamilyIndex,
                      0,
                      &graphicsQueue);
 
     VkQueue presentQueue;
-    vkGetDeviceQueue(logicalDevice,
+    vkGetDeviceQueue(device,
                      presentQueueFamilyIndex,
                      0,
                      &presentQueue);
@@ -302,7 +303,7 @@ int main()
     glfwDestroyWindow(window);
     glfwTerminate();
     vkDestroySurfaceKHR(instance, surface, nullptr);
-    vkDestroyDevice(logicalDevice, nullptr);
+    vkDestroyDevice(device, nullptr);
     vkDestroyInstance(instance, nullptr);
 
     return EXIT_SUCCESS;
