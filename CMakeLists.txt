@@ -66,6 +66,7 @@ install(TARGETS ${PROJECT_NAME}   RUNTIME DESTINATION bin)
 
 #---------------------------------------------------------------------
 # GLSL to SPIR-V
+# from: https://gist.github.com/vlsh/a0d191701cb48f157b05be7f74d79396
 
 if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64")
   set(GLSL_VALIDATOR "$ENV{VULKAN_SDK}/Bin/glslangValidator.exe")
