@@ -1068,11 +1068,6 @@ int main()
                      0,
                      &graphicsQueue);
 
-    VkQueue presentQueue;
-    vkGetDeviceQueue(device,
-                     presentQueueFamilyIndex,
-                     0,
-                     &presentQueue);
 
     /* ------------------------------------------------------------ *
        Vulkan draw
@@ -1081,7 +1076,7 @@ int main()
     // Get the swap chain image index to select the correct command
     // buffer. Timeout is disabled. TODO: find out what  the fence
     // handle parameter is.
-    uint32_t imageIndex;
+    uint32_t imageIndex = 0;
     vkAcquireNextImageKHR(device,
                           swapChain,
                           std::numeric_limits<uint64_t>::max(),
@@ -1117,20 +1112,55 @@ int main()
         return EXIT_FAILURE;
     }
 
+    /* ------------------------------------------------------------ *
+       Present the rendering result from swap chain into
+       screen surface.
+     * ------------------------------------------------------------ */
+
+    // Get the present queue handle from the logical device.
+    VkQueue presentQueue;
+    vkGetDeviceQueue(device, presentQueueFamilyIndex,
+                     0, &presentQueue);
+
+    // Create the present info which tells:
+    //   * semaphore to wait until the rendering result image can
+    //     be presented to screen surface
+    //   * swap chain and swap chain image to present to screen.
+    //   * (other options are needed only when using multiple swap
+    //      chains)
     VkPresentInfoKHR presentInfo = {};
-    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
+    presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
+    presentInfo.pWaitSemaphores    = signalSemaphores;
+    presentInfo.swapchainCount     = 1;
+    presentInfo.pSwapchains        = &swapChain;
+    presentInfo.pImageIndices      = &imageIndex;
+    presentInfo.pResults           = nullptr;
 
-    VkSwapchainKHR swapChains[] = {swapChain};
-    presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = swapChains;
-    presentInfo.pImageIndices = &imageIndex;
-    presentInfo.pResults = nullptr; // Optional
+    // Present the rendering result into screen surface.
+    result = vkQueuePresentKHR(presentQueue, &presentInfo);
+    if (result != VK_SUCCESS)
+    {
+        std::cerr << __FUNCTION__
+                  << ": failed to present the rendering results "
+                  << "to screen surface."
+                  << std::endl;
 
-    vkQueuePresentKHR(presentQueue, &presentInfo);
+        return EXIT_FAILURE;
+    }
 
+    // Wait until the present queue has finished.
+    result = vkQueueWaitIdle(presentQueue);
+    if (result != VK_SUCCESS)
+    {
+        std::cerr << __FUNCTION__
+                  << ": failed to wait until the rendering image is "
+                  << "presented onto screen. "
+                  << "to screen surface."
+                  << std::endl;
+
+        return EXIT_FAILURE;
+    }
 
     /* ------------------------------------------------------------ *
        Start the "event" loop.
