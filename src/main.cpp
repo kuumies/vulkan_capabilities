@@ -582,6 +582,50 @@ int main()
         return EXIT_FAILURE;
     }
 
+    // Get the swap chain image count.
+    uint32_t imageCount = 0;
+    vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
+
+    // Get the swap chain images.
+    std::vector<VkImage> swapChainImages(imageCount);
+    vkGetSwapchainImagesKHR(device,
+                            swapChain,
+                            &imageCount,
+                            swapChainImages.data());
+
+    // Create swap chain image views.
+    std::vector<VkImageView> swapChainImageViews(imageCount);
+    for (uint32_t i = 0; i < imageCount; ++i)
+    {
+        VkImageViewCreateInfo createInfo = {};
+        createInfo.sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        createInfo.image    = swapChainImages[i];
+        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format   = SURFACE_FORMAT;
+        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.baseMipLevel = 0;
+        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.baseArrayLayer = 0;
+        createInfo.subresourceRange.layerCount = 1;
+
+        result = vkCreateImageView(device,
+                                   &createInfo,
+                                   nullptr,
+                                   &swapChainImageViews[i]);
+        if (result != VK_SUCCESS)
+        {
+            std::cerr << __FUNCTION__
+                      << ": failed to create vulkan image view"
+                      << std::endl;
+
+            return EXIT_FAILURE;
+        }
+    }
+
     /* ------------------------------------------------------------ *
        Vulkan vertex shader
      * ------------------------------------------------------------ */
@@ -851,6 +895,40 @@ int main()
     }
 
     /* ------------------------------------------------------------ *
+       Vulkan framebuffers
+     * ------------------------------------------------------------ */
+
+    std::vector<VkFramebuffer> swapChainFramebuffers(swapChainImageViews.size());
+    for (size_t i = 0; i < swapChainImageViews.size(); i++)
+    {
+        VkImageView attachments[] = {
+            swapChainImageViews[i]
+        };
+
+        VkFramebufferCreateInfo framebufferInfo = {};
+        framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass      = renderPass;
+        framebufferInfo.attachmentCount = 1;
+        framebufferInfo.pAttachments    = attachments;
+        framebufferInfo.width           = WINDOW_WIDTH;
+        framebufferInfo.height          = WINDOW_HEIGHT;
+        framebufferInfo.layers          = 1;
+
+        result = vkCreateFramebuffer(device,
+                                     &framebufferInfo,
+                                     nullptr,
+                                     &swapChainFramebuffers[i]);
+        if (result != VK_SUCCESS)
+        {
+            std::cerr << __FUNCTION__
+                      << ": failed to create vulkan framebuffer"
+                      << std::endl;
+
+            return EXIT_FAILURE;
+        }
+    }
+
+    /* ------------------------------------------------------------ *
        Vulkan logical device queues
      * ------------------------------------------------------------ */
 
@@ -881,7 +959,12 @@ int main()
 
     glfwDestroyWindow(window);
     glfwTerminate();
-     vkDestroyPipeline(device, graphicsPipeline, nullptr);
+
+    for (uint32_t i = 0; i < swapChainFramebuffers.size(); i++)
+        vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
+    for (uint32_t i = 0; i < swapChainImageViews.size(); i++)
+        vkDestroyImageView(device, swapChainImageViews[i], nullptr);
+    vkDestroyPipeline(device, graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyRenderPass(device, renderPass, nullptr);
     vkDestroyShaderModule(device, fshModule, nullptr);
