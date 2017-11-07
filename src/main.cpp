@@ -887,7 +887,7 @@ int main()
     };
 
     Mesh mesh(device, physicalDevice, 0);
-    mesh.write(vertices);
+    mesh.create(vertices);
 
     /* ------------------------------------------------------------ *
        Graphics pipeline
@@ -1078,16 +1078,6 @@ int main()
 
         mesh.draw(commandBuffers[i]);
 
-//        // Bind the vertex buffer.
-//        VkBuffer vertexBuffers[] = { vertexBuffer };
-//        VkDeviceSize offsets[] = { 0 };
-//        vkCmdBindVertexBuffers(commandBuffers[i], 0, 1,
-//                               vertexBuffers, offsets);
-
-//        // Draw the vertex buffer
-//        vkCmdDraw(commandBuffers[i], uint32_t(vertices.size()),
-//                  1, 0, 0);
-
         // End the render pass.
         vkCmdEndRenderPass(commandBuffers[i]);
 
@@ -1270,7 +1260,7 @@ int main()
     for (uint32_t i = 0; i < swapChainImageViews.size(); i++)
         vkDestroyImageView(device, swapChainImageViews[i], nullptr);
 
-//    mesh.destroy();
+    mesh.destroy();
 
     //vkDestroyBuffer(device, vertexBuffer, nullptr);
     //vkFreeMemory(device, vertexBufferMemory, nullptr);

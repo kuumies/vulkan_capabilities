@@ -45,8 +45,10 @@ public:
     // writing vertices into mesh.
     std::vector<VkVertexInputAttributeDescription> attributeDescriptions() const;
 
-    // Writes the vertices into mesh buffer.
-    void write(const std::vector<Vertex>& vertices);
+    // Creates the mesh buffer.
+    void create(const std::vector<Vertex>& vertices);
+    // Destroys the mesh buffer.
+    void destroy();
 
     // Draws the mesh.
     void draw(VkCommandBuffer commandBuffer);

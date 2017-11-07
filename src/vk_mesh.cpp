@@ -127,15 +127,21 @@ VkVertexInputBindingDescription Mesh::bindingDescription()
 
 /* ---------------------------------------------------------------- */
 
-std::vector<VkVertexInputAttributeDescription> Mesh::attributeDescriptions() const
+std::vector<VkVertexInputAttributeDescription>
+    Mesh::attributeDescriptions() const
 { return d->attributeDescriptions; }
 
 /* ---------------------------------------------------------------- */
 
-void Mesh::write(const std::vector<Vertex>& vertices)
+void Mesh::create(const std::vector<Vertex>& vertices)
 {
     d->destroy();
     d->create(vertices);
+}
+
+void Mesh::destroy()
+{
+    d->destroy();
 }
 
 /* ---------------------------------------------------------------- */
