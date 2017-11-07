@@ -5,6 +5,10 @@
 
 #include "vk_mesh.h"
 
+/* ---------------------------------------------------------------- */
+
+#include "vk_buffer.h"
+
 namespace kuu
 {
 namespace vk
@@ -19,6 +23,7 @@ struct Mesh::Data
         : device(device)
         , physicalDevice(physicalDevice)
         , bindingNumber(bindingNumber)
+        , buffer(device, physicalDevice)
     {}
 
     ~Data()
@@ -26,7 +31,7 @@ struct Mesh::Data
         destroy();
     }
 
-    void create(VkDeviceSize size)
+    void create(std::vector<Vertex> vertices)
     {
         // Create the binding description
         bindingDescription = VkVertexInputBindingDescription{};
@@ -49,65 +54,7 @@ struct Mesh::Data
         attributeDescriptions[1].format   = VK_FORMAT_R32G32B32_SFLOAT;
         attributeDescriptions[1].offset   = offsetof(Vertex, color);
 
-        // Create the vertex buffer.
-        //  * buffer is exclusive to graphics queue
-        bufferInfo = VkBufferCreateInfo{};
-        bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size        = size;
-        bufferInfo.usage       = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-        VkResult result = vkCreateBuffer(device, &bufferInfo,
-                                         nullptr, &vertexBuffer);
-        if (result != VK_SUCCESS)
-            throw std::runtime_error(
-                __FUNCTION__ +
-                std::string(": failed to create vertex buffer"));
-
-        created = true;
-    }
-
-    void alloc()
-    {
-        // Get the memory requirements for the vertex buffer.
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(device, vertexBuffer,
-                                      &memRequirements);
-
-        // Allocate memory for the vertex buffer.
-        VkMemoryAllocateInfo memoryAllocInfo = {};
-        memoryAllocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        memoryAllocInfo.allocationSize  = memRequirements.size;
-        memoryAllocInfo.memoryTypeIndex =
-            memoryTypeIndex(memRequirements,
-                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-        VkResult result = vkAllocateMemory(device, &memoryAllocInfo,
-                                           nullptr, &vertexBufferMemory);
-        if (result != VK_SUCCESS)
-            throw std::runtime_error(
-                __FUNCTION__ +
-                std::string(": failed to alloc memory for vertex buffer"));
-
-        // Associate the mememory to buffer.
-        vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
-
-    }
-
-    void write(const std::vector<Vertex>& vertices)
-    {
-        // Map the GPU buffer memory into CPU memory.
-        void* data;
-        vkMapMemory(device, vertexBufferMemory, 0, bufferInfo.size, 0, &data);
-
-        // Copy vertex data into buffer memory
-        memcpy(data, vertices.data(), (size_t) bufferInfo.size);
-
-        // Unmap the GPU memory. The vertex data is immeadetly copies as
-        // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT flag was used when finding
-        // the fitting memory for vertex buffer.
-        vkUnmapMemory(device, vertexBufferMemory);
+        buffer.create(sizeof(vertices[0]) * vertices.size(), vertices.data());
 
         // Take the vertex count.
         vertexCount = uint32_t(vertices.size());
@@ -115,11 +62,7 @@ struct Mesh::Data
 
     void destroy()
     {
-        if (!created)
-            return;
-
-        vkDestroyBuffer(device, vertexBuffer, nullptr);
-        vkFreeMemory(device, vertexBufferMemory, nullptr);
+        buffer.destroy();
     }
 
     // Returns the memory type index based on the memory type and
@@ -161,9 +104,7 @@ struct Mesh::Data
     // Vulkan stuff for vertex buffer, binding and rendering
     VkVertexInputBindingDescription bindingDescription;
     std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
-    VkBufferCreateInfo bufferInfo;
-    VkBuffer vertexBuffer;
-    VkDeviceMemory vertexBufferMemory;
+    Buffer buffer;
 
     // Vertex count.
     uint32_t vertexCount = 0;
@@ -194,9 +135,7 @@ std::vector<VkVertexInputAttributeDescription> Mesh::attributeDescriptions() con
 void Mesh::write(const std::vector<Vertex>& vertices)
 {
     d->destroy();
-    d->create(sizeof(vertices[0]) * vertices.size());
-    d->alloc();
-    d->write(vertices);
+    d->create(vertices);
 }
 
 /* ---------------------------------------------------------------- */
@@ -204,7 +143,7 @@ void Mesh::write(const std::vector<Vertex>& vertices)
 void Mesh::draw(VkCommandBuffer commandBuffer)
 {
     // Bind the vertex buffer.
-    VkBuffer vertexBuffers[] = { d->vertexBuffer };
+    VkBuffer vertexBuffers[] = { d->buffer.handle() };
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
