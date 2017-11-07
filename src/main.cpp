@@ -10,6 +10,7 @@
 #include <memory>
 #define GLFW_INCLUDE_VULKAN
 #include <glfw/glfw3.h>
+#include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <vulkan/vulkan.h>
 
@@ -870,7 +871,113 @@ int main()
     }
 
     /* ------------------------------------------------------------ *
-       Vulkan graphics pipeline
+       Mesh
+     * ------------------------------------------------------------ */
+
+    struct Vertex
+    {
+        glm::vec2 pos;
+        glm::vec3 color;
+    };
+
+    const std::vector<Vertex> vertices =
+    {
+        {  {0.0f, -0.5f}, { 1.0f, 0.0f, 0.0f } },
+        {  {0.5f,  0.5f}, { 0.0f, 1.0f, 0.0f } },
+        { {-0.5f,  0.5f}, { 0.0f, 0.0f, 1.0f } }
+    };
+
+    VkVertexInputBindingDescription bindingDescription = {};
+    bindingDescription.binding   = 0;
+    bindingDescription.stride    = sizeof(Vertex);
+    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+    attributeDescriptions.resize(2);
+
+    attributeDescriptions[0].binding  = 0;
+    attributeDescriptions[0].location = 0;
+    attributeDescriptions[0].format   = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[0].offset   = offsetof(Vertex, pos);
+
+    attributeDescriptions[1].binding  = 0;
+    attributeDescriptions[1].location = 1;
+    attributeDescriptions[1].format   = VK_FORMAT_R32G32B32_SFLOAT;
+    attributeDescriptions[1].offset   = offsetof(Vertex, color);
+
+    // Create the vertex buffer.
+    //  * buffer is exclusive to graphics queue
+    VkBufferCreateInfo bufferInfo = {};
+    bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size        = sizeof(vertices[0]) * vertices.size();
+    bufferInfo.usage       = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VkBuffer vertexBuffer;
+    result = vkCreateBuffer(device, &bufferInfo, nullptr, &vertexBuffer);
+    if (result != VK_SUCCESS)
+    {
+        std::cerr << __FUNCTION__
+                  << ": failed to create vertex buffer"
+                  << std::endl;
+
+        return EXIT_FAILURE;
+    }
+
+    VkPhysicalDeviceMemoryProperties memProperties;
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(device, vertexBuffer, &memRequirements);
+
+    bool found = false;
+    uint32_t memoryTypeIndex = 0;
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
+    {
+        const uint32_t memoryTypeBits = (i << i);
+
+        if (!(memRequirements.memoryTypeBits & memoryTypeBits))
+            continue;
+
+        if (!(memProperties.memoryTypes[i].propertyFlags & (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)))
+            continue;
+
+        memoryTypeIndex = i;
+        found           = true;
+        break;
+    }
+
+    if (!found)
+    {
+        std::cerr << __FUNCTION__
+                  << ": failed to find memory for vertex buffer"
+                  << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    VkMemoryAllocateInfo memoryAllocInfo = {};
+    memoryAllocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memoryAllocInfo.allocationSize  = memRequirements.size;
+    memoryAllocInfo.memoryTypeIndex = memoryTypeIndex;
+
+    VkDeviceMemory vertexBufferMemory;
+    result = vkAllocateMemory(device, &memoryAllocInfo, nullptr, &vertexBufferMemory);
+    if (result != VK_SUCCESS)
+    {
+        std::cerr << __FUNCTION__
+                  << ": failed to alloc memory for vertex buffer"
+                  << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
+    void* data;
+    vkMapMemory(device, vertexBufferMemory, 0, bufferInfo.size, 0, &data);
+        memcpy(data, vertices.data(), (size_t) bufferInfo.size);
+    vkUnmapMemory(device, vertexBufferMemory);
+
+    /* ------------------------------------------------------------ *
+       Graphics pipeline
      * ------------------------------------------------------------ */
 
     // Shader stages
@@ -883,10 +990,10 @@ int main()
     // Vertex input
     VkPipelineVertexInputStateCreateInfo vertexInput = {};
     vertexInput.sType                           = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInput.vertexBindingDescriptionCount   = 0;
-    vertexInput.pVertexBindingDescriptions      = nullptr;
-    vertexInput.vertexAttributeDescriptionCount = 0;
-    vertexInput.pVertexAttributeDescriptions    = nullptr;
+    vertexInput.vertexBindingDescriptionCount   = 1;
+    vertexInput.pVertexBindingDescriptions      = &bindingDescription;
+    vertexInput.vertexAttributeDescriptionCount = uint32_t(attributeDescriptions.size());
+    vertexInput.pVertexAttributeDescriptions    = attributeDescriptions.data();
 
     // Input assemply state
     VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
@@ -967,7 +1074,7 @@ int main()
     }
 
     /* ------------------------------------------------------------ *
-       Vulkan command buffer.
+       Command buffer.
      * ------------------------------------------------------------ */
 
     // Create the command pool info for graphics queue. Commands
@@ -1050,8 +1157,16 @@ int main()
                           VK_PIPELINE_BIND_POINT_GRAPHICS,
                           graphicsPipeline);
 
-        // Draw the triangle.
-        vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+        vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+
+        VkBuffer vertexBuffers[] = {vertexBuffer};
+        VkDeviceSize offsets[] = {0};
+        vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
+
+        vkCmdDraw(commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+
+//         Draw the triangle.
+//        vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
 
         // End the render pass.
         vkCmdEndRenderPass(commandBuffers[i]);
@@ -1235,6 +1350,8 @@ int main()
     for (uint32_t i = 0; i < swapChainImageViews.size(); i++)
         vkDestroyImageView(device, swapChainImageViews[i], nullptr);
 
+    vkDestroyBuffer(device, vertexBuffer, nullptr);
+    vkFreeMemory(device, vertexBufferMemory, nullptr);
     vkDestroyCommandPool(device, commandPool, nullptr);
     vkDestroyPipeline(device, graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
