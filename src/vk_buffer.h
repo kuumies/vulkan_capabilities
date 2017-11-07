@@ -25,7 +25,7 @@ public:
     // Constructs the buffer.
     Buffer(VkDevice device, VkPhysicalDevice physicalDevice);
 
-    // Returns the vulkan handle. Handle is valid only when
+    // Returns the vulkan handle. Handle is valid only after
     // the buffer is created.
     VkBuffer handle() const;
 

@@ -26,45 +26,6 @@ struct Mesh::Data
         , buffer(device, physicalDevice)
     {}
 
-    ~Data()
-    {
-        destroy();
-    }
-
-    void create(std::vector<Vertex> vertices)
-    {
-        // Create the binding description
-        bindingDescription = VkVertexInputBindingDescription{};
-        bindingDescription.binding   = bindingNumber;
-        bindingDescription.stride    = sizeof(Vertex);
-        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-        // Create the vertex input attribute descriptions for each
-        // vertex parameter.
-        attributeDescriptions.clear();
-        attributeDescriptions.resize(2);
-
-        attributeDescriptions[0].binding  = bindingNumber;
-        attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format   = VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[0].offset   = offsetof(Vertex, pos);
-
-        attributeDescriptions[1].binding  = bindingNumber;
-        attributeDescriptions[1].location = 1;
-        attributeDescriptions[1].format   = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[1].offset   = offsetof(Vertex, color);
-
-        buffer.create(sizeof(vertices[0]) * vertices.size(), vertices.data());
-
-        // Take the vertex count.
-        vertexCount = uint32_t(vertices.size());
-    }
-
-    void destroy()
-    {
-        buffer.destroy();
-    }
-
     // Returns the memory type index based on the memory type and
     // needed memory properties.
     uint32_t memoryTypeIndex(
@@ -101,11 +62,8 @@ struct Mesh::Data
     VkPhysicalDevice physicalDevice;
     uint32_t bindingNumber;
 
-    // Vulkan stuff for vertex buffer, binding and rendering
-    VkVertexInputBindingDescription bindingDescription;
-    std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+    // Vertex buffer
     Buffer buffer;
-
     // Vertex count.
     uint32_t vertexCount = 0;
     // Creation status.
@@ -123,25 +81,53 @@ Mesh::Mesh(VkDevice device,
 /* ---------------------------------------------------------------- */
 
 VkVertexInputBindingDescription Mesh::bindingDescription()
-{ return d->bindingDescription; }
+{
+    VkVertexInputBindingDescription bindingDescription;
+    bindingDescription.binding   = d->bindingNumber;
+    bindingDescription.stride    = sizeof(Vertex);
+    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    return bindingDescription;
+}
 
 /* ---------------------------------------------------------------- */
 
 std::vector<VkVertexInputAttributeDescription>
     Mesh::attributeDescriptions() const
-{ return d->attributeDescriptions; }
+{
+    std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+    attributeDescriptions.clear();
+    attributeDescriptions.resize(2);
+
+    attributeDescriptions[0].binding  = d->bindingNumber;
+    attributeDescriptions[0].location = 0;
+    attributeDescriptions[0].format   = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[0].offset   = offsetof(Vertex, pos);
+
+    attributeDescriptions[1].binding  = d->bindingNumber;
+    attributeDescriptions[1].location = 1;
+    attributeDescriptions[1].format   = VK_FORMAT_R32G32B32_SFLOAT;
+    attributeDescriptions[1].offset   = offsetof(Vertex, color);
+
+    return attributeDescriptions;
+}
 
 /* ---------------------------------------------------------------- */
 
-void Mesh::create(const std::vector<Vertex>& vertices)
+void Mesh::create(std::vector<Vertex> vertices)
 {
-    d->destroy();
-    d->create(vertices);
+    d->buffer.destroy();
+    d->buffer.create(sizeof(vertices[0]) * vertices.size(),
+                     vertices.data());
+
+    // Take the vertex count.
+    d->vertexCount = uint32_t(vertices.size());
 }
+
+/* ---------------------------------------------------------------- */
 
 void Mesh::destroy()
 {
-    d->destroy();
+    d->buffer.destroy();
 }
 
 /* ---------------------------------------------------------------- */

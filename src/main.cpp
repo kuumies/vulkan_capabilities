@@ -1262,8 +1262,6 @@ int main()
 
     mesh.destroy();
 
-    //vkDestroyBuffer(device, vertexBuffer, nullptr);
-    //vkFreeMemory(device, vertexBufferMemory, nullptr);
     vkDestroyCommandPool(device, commandPool, nullptr);
     vkDestroyPipeline(device, graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);

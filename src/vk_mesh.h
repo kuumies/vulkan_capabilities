@@ -38,19 +38,19 @@ public:
          VkPhysicalDevice physicalDevice,
          const uint32_t bindingNumber);
 
-    // Returns the binding description. This is valid only after
-    // writing vertices into mesh.
+    // Returns the binding description.
     VkVertexInputBindingDescription bindingDescription();
     // Returns the attribute descriptions. This is valid only after
-    // writing vertices into mesh.
-    std::vector<VkVertexInputAttributeDescription> attributeDescriptions() const;
+    // mesh is created.
+    std::vector<VkVertexInputAttributeDescription>
+        attributeDescriptions() const;
 
     // Creates the mesh buffer.
-    void create(const std::vector<Vertex>& vertices);
+    void create(std::vector<Vertex> vertices);
     // Destroys the mesh buffer.
     void destroy();
 
-    // Draws the mesh.
+    // Records the draw commands into command buffer.
     void draw(VkCommandBuffer commandBuffer);
 
 private:
