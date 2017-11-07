@@ -40,8 +40,7 @@ public:
 
     // Returns the binding description.
     VkVertexInputBindingDescription bindingDescription();
-    // Returns the attribute descriptions. This is valid only after
-    // mesh is created.
+    // Returns the attribute descriptions.
     std::vector<VkVertexInputAttributeDescription>
         attributeDescriptions() const;
 
