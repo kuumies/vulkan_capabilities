@@ -924,12 +924,15 @@ int main()
         return EXIT_FAILURE;
     }
 
+    // Get physical device memory properties
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
 
+    // Get the memory requirements for the vertex buffer.
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(device, vertexBuffer, &memRequirements);
 
+    // Find the fitting memory type index for the vertex buffer.
     bool found = false;
     uint32_t memoryTypeIndex = 0;
     for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
@@ -955,6 +958,7 @@ int main()
         return EXIT_FAILURE;
     }
 
+    // Allocate memory for the vertex buffer.
     VkMemoryAllocateInfo memoryAllocInfo = {};
     memoryAllocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     memoryAllocInfo.allocationSize  = memRequirements.size;
@@ -970,10 +974,19 @@ int main()
         return EXIT_FAILURE;
     }
 
+    // Associate the mememory to buffer.
     vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
+
+    // Map the GPU buffer memory into CPU memory.
     void* data;
     vkMapMemory(device, vertexBufferMemory, 0, bufferInfo.size, 0, &data);
-        memcpy(data, vertices.data(), (size_t) bufferInfo.size);
+
+    // Copy vertex data into buffer memory
+    memcpy(data, vertices.data(), (size_t) bufferInfo.size);
+
+    // Unmap the GPU memory. The vertex data is immeadetly copies as
+    // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT flag was used when finding
+    // the fitting memory for vertex buffer.
     vkUnmapMemory(device, vertexBufferMemory);
 
     /* ------------------------------------------------------------ *
@@ -1157,16 +1170,15 @@ int main()
                           VK_PIPELINE_BIND_POINT_GRAPHICS,
                           graphicsPipeline);
 
-        vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+        // Bind the vertex buffer.
+        VkBuffer vertexBuffers[] = { vertexBuffer };
+        VkDeviceSize offsets[] = { 0 };
+        vkCmdBindVertexBuffers(commandBuffers[i], 0, 1,
+                               vertexBuffers, offsets);
 
-        VkBuffer vertexBuffers[] = {vertexBuffer};
-        VkDeviceSize offsets[] = {0};
-        vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
-
-        vkCmdDraw(commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
-
-//         Draw the triangle.
-//        vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+        // Draw the vertex buffer
+        vkCmdDraw(commandBuffers[i], uint32_t(vertices.size()),
+                  1, 0, 0);
 
         // End the render pass.
         vkCmdEndRenderPass(commandBuffers[i]);
