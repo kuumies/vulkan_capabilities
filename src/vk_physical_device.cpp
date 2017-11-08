@@ -8,6 +8,7 @@
 /* ---------------------------------------------------------------- */
 
 #include <algorithm>
+#include <iostream>
 
 /* ---------------------------------------------------------------- */
 
@@ -169,6 +170,27 @@ bool PhysicalDevice::isSurfaceSupported(
     });
 
     return it != d->surfaceFormats.end();
+}
+
+/* ---------------------------------------------------------------- */
+
+void PhysicalDevice::dump()
+{
+    std::string deviceType;
+    switch(d->properties.deviceType)
+    {
+        case VK_PHYSICAL_DEVICE_TYPE_OTHER:          deviceType = "Other";          break;
+        case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: deviceType = "Integrated GPU"; break;
+        case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:   deviceType = "Discrete GPU";   break;
+        case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:    deviceType = "Virtual  GPU";   break;
+        case VK_PHYSICAL_DEVICE_TYPE_CPU:            deviceType = "CPU";            break;
+        default:
+            break;
+    }
+
+    std::cout << "Physical device" << std::endl;
+    std::cout << "\tDevice name... " << d->properties.deviceName << std::endl;
+    std::cout << "\tDevice type... " << deviceType.c_str() << std::endl;
 }
 
 } // namespace vk

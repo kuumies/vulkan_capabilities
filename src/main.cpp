@@ -334,6 +334,8 @@ int main()
     std::vector<PhysicalDevice> validPhysicalDevices;
     for (PhysicalDevice device : physicalDevices)
     {
+        device.dump();
+
         if (!device.isExtensionSupported(physicalDeviceExtensionNames))
             continue;
         if (!device.isSurfaceSupported(SURFACE_FORMAT, SURFACE_COLOR_SPACE))

@@ -43,6 +43,10 @@ public:
     bool isSurfaceSupported(VkFormat format,
                             VkColorSpaceKHR colorSpace) const;
 
+    // Dump information about the physical device into standard
+    // output.
+    void dump();
+
 private:
     struct Data;
     std::shared_ptr<Data> d;
