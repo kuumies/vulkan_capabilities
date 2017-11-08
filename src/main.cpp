@@ -16,7 +16,9 @@
 
 /* ---------------------------------------------------------------- */
 
+#include "vk_instance.h"
 #include "vk_mesh.h"
+#include "vk_physical_device.h"
 #include "vk_shader_stage.h"
 
 /* ---------------------------------------------------------------- *
@@ -38,6 +40,7 @@ static const VkPresentModeKHR PRESENT_MODE = VK_PRESENT_MODE_FIFO_KHR; // v-sync
 // Swap chain
 static const int SWAP_CHAIN_IMAGE_COUNT = 2;
 
+#if 0
 /* ---------------------------------------------------------------- *
    Validation layer debug callback.
  * ---------------------------------------------------------------- */
@@ -85,6 +88,7 @@ std::vector<char> readShaderSourceFile(const std::string& path)
 
     return buffer;
 }
+#endif
 
 int main()
 {
@@ -107,6 +111,46 @@ int main()
         return EXIT_FAILURE;
     }
 
+    /* ------------------------------------------------------------ *
+       Instance
+     * ------------------------------------------------------------ */
+
+    using namespace kuu::vk;
+
+    // Get the extensions that GLFW window requires. On Windows
+    // these are VK_KHR_surface and VK_KHR_win32_surface.
+    uint32_t glfwExtensionCount = 0;
+    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(
+        &glfwExtensionCount);
+    for (uint32_t i = 0; i < glfwExtensionCount; ++i)
+    {
+        const std::string glfwExtension = glfwExtensions[i];
+        if (!Instance::isExtensionSupported(glfwExtension))
+            throw std::runtime_error(
+                __FUNCTION__ +
+                    std::string(": Vulkan implementation does not support ") +
+                    glfwExtension + " extension.");
+    }
+
+    std::vector<std::string> instanceLayers;
+    std::vector<std::string> instanceExtensions;
+    for (uint32_t e = 0; e < glfwExtensionCount; ++e)
+        instanceExtensions.push_back(std::string(glfwExtensions[e]));
+
+    // Check if the validation layer is available
+    bool enableValidationLayer = Instance::isLayerSupported("VK_LAYER_LUNARG_standard_validation");
+    if (enableValidationLayer)
+    {
+        instanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+        instanceLayers.push_back("VK_LAYER_LUNARG_standard_validation");
+    }
+
+    Instance inst(WINDOW_NAME, "kuuEngine",
+                  instanceExtensions, instanceLayers);
+    VkInstance instance = inst.handle();
+    inst.setValidationLeyerEnabled();
+
+#if 0
     /* ------------------------------------------------------------ *
        Instance extensions.
      * ------------------------------------------------------------ */
@@ -223,11 +267,13 @@ int main()
 
         return EXIT_FAILURE;
     }
+#endif
+    VkResult result;
 
     /* ------------------------------------------------------------ *
        Debug callback.
      * ------------------------------------------------------------ */
-
+#if 0
     VkDebugReportCallbackEXT callback;
     if (enableValidationLayer)
     {
@@ -254,6 +300,7 @@ int main()
             return EXIT_FAILURE;
         }
     }
+#endif
 
     /* ------------------------------------------------------------ *
        Surface.
@@ -278,6 +325,39 @@ int main()
        Physical device.
      * ------------------------------------------------------------ */
 
+    std::vector<std::string> physicalDeviceExtensionNames;
+    physicalDeviceExtensionNames.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
+    std::vector<PhysicalDevice> physicalDevices =
+        inst.physicalDevices(surface);
+
+    std::vector<PhysicalDevice> validPhysicalDevices;
+    for (PhysicalDevice device : physicalDevices)
+    {
+        if (!device.isExtensionSupported(physicalDeviceExtensionNames))
+            continue;
+        if (!device.isSurfaceSupported(SURFACE_FORMAT, SURFACE_COLOR_SPACE))
+            continue;
+        if (!device.isPresentModeSupported(PRESENT_MODE))
+            continue;
+        if (!device.isImageExtentSupported(glm::ivec2(WINDOW_WIDTH, WINDOW_HEIGHT)))
+            continue;
+        if (!device.isSwapChainImageCountSupported(SWAP_CHAIN_IMAGE_COUNT))
+            continue;
+
+        validPhysicalDevices.push_back(device);
+    }
+
+    if (validPhysicalDevices.size() == 0)
+    {
+        std::cerr << __FUNCTION__
+                  << ": failed to find valid physical device "
+                  << std::endl;
+
+        return EXIT_FAILURE;
+    }
+
+#if 0
     // Get the device count.
     uint32_t physicalDeviceCount = 0;
     vkEnumeratePhysicalDevices(instance,
@@ -433,6 +513,11 @@ int main()
 
     // Auto-select the first device.
     VkPhysicalDevice physicalDevice = validPhysicalDevices.front();
+#endif
+
+    // Auto-select the first device.
+    PhysicalDevice phyDev = validPhysicalDevices[0];
+    VkPhysicalDevice physicalDevice = phyDev.handle();
 
     /* ------------------------------------------------------------ *
        Queue families (graphics and present)
@@ -516,6 +601,10 @@ int main()
     queueInfos[1].queueCount       = 1;
     queueInfos[1].pQueuePriorities = &queuePriority;
 
+    std::vector<const char*> physicalDeviceExtensionNamesStr;
+    for (auto& extension : physicalDeviceExtensionNames)
+        physicalDeviceExtensionNamesStr.push_back(extension.c_str());
+
     // Logical device with graphics and present queues.
     VkPhysicalDeviceFeatures deviceFeatures = {};
     VkDeviceCreateInfo deviceInfo = {};
@@ -523,8 +612,8 @@ int main()
     deviceInfo.pQueueCreateInfos       = queueInfos.data();
     deviceInfo.queueCreateInfoCount    = 2;
     deviceInfo.pEnabledFeatures        = &deviceFeatures;
-    deviceInfo.enabledExtensionCount   = static_cast<uint32_t>(physicalDeviceExtensionNames.size());
-    deviceInfo.ppEnabledExtensionNames = physicalDeviceExtensionNames.data();
+    deviceInfo.enabledExtensionCount   = static_cast<uint32_t>(physicalDeviceExtensionNamesStr.size());
+    deviceInfo.ppEnabledExtensionNames = physicalDeviceExtensionNamesStr.data();
     deviceInfo.enabledLayerCount       = 0;
 
     // Create the logical device.
@@ -938,7 +1027,7 @@ int main()
     // Graphics pipeline
     VkGraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.stageCount          = shaderStages.size();
+    pipelineInfo.stageCount          = uint32_t(shaderStages.size());
     pipelineInfo.pStages             = shaderStages.data();
     pipelineInfo.pVertexInputState   = &vertexInput;
     pipelineInfo.pViewportState      = &viewportState;
@@ -1287,14 +1376,14 @@ int main()
     vkDestroySurfaceKHR(instance, surface, nullptr);
     vkDestroyDevice(device, nullptr);
 
-    if (enableValidationLayer)
-    {
-        auto func = (PFN_vkDestroyDebugReportCallbackEXT)
-            vkGetInstanceProcAddr(instance,
-                                  "vkDestroyDebugReportCallbackEXT");
-        if (func)
-            func(instance, callback, nullptr);
-    }
+//    if (enableValidationLayer)
+//    {
+//        auto func = (PFN_vkDestroyDebugReportCallbackEXT)
+//            vkGetInstanceProcAddr(instance,
+//                                  "vkDestroyDebugReportCallbackEXT");
+//        if (func)
+//            func(instance, callback, nullptr);
+//    }
 
     vkDestroyInstance(instance, nullptr);
 
