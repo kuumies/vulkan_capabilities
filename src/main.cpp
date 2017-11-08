@@ -16,9 +16,11 @@
 
 /* ---------------------------------------------------------------- */
 
+#include "vk_device.h"
 #include "vk_instance.h"
 #include "vk_mesh.h"
 #include "vk_physical_device.h"
+#include "vk_queue.h"
 #include "vk_shader_stage.h"
 
 /* ---------------------------------------------------------------- *
@@ -521,6 +523,27 @@ int main()
     PhysicalDevice phyDev = validPhysicalDevices[0];
     VkPhysicalDevice physicalDevice = phyDev.handle();
 
+    Queue graphicsQueue(physicalDevice,
+                        surface,
+                        Queue::Type::Graphics);
+    graphicsQueue.create(1, 1.0f);
+
+    Queue presentQueue(physicalDevice,
+                       surface,
+                       Queue::Type::Presentation);
+    presentQueue.create(1, 1.0f);
+
+    std::vector<Queue> queues;
+    queues.push_back(graphicsQueue);
+    queues.push_back(presentQueue);
+
+    Device dev(physicalDevice);
+    dev.create(queues, physicalDeviceExtensionNames);
+
+    VkDevice device = dev.handle();
+
+#if 0
+
     /* ------------------------------------------------------------ *
        Queue families (graphics and present)
      * ------------------------------------------------------------ */
@@ -628,16 +651,15 @@ int main()
         std::cerr << __FUNCTION__
                   << ": failed to create vulkan logical device"
                   << std::endl;
+#endif
 
     /* ------------------------------------------------------------ *
        Swap chain
      * ------------------------------------------------------------ */
 
-    const uint32_t queueFamilyIndices[] =
-    {
-        graphicsQueueFamilyIndex,
-        presentQueueFamilyIndex
-    };
+    std::vector<uint32_t> queueFamilyIndices;
+    for (const Queue& q : queues)
+        queueFamilyIndices.push_back(q.familyIndex());
 
     VkSwapchainCreateInfoKHR createInfo = {};
     createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -654,11 +676,11 @@ int main()
     createInfo.oldSwapchain     = VK_NULL_HANDLE;
     createInfo.preTransform     = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 
-    if (graphicsQueueFamilyIndex != presentQueueFamilyIndex)
+    if (graphicsQueue.familyIndex() != presentQueue.familyIndex())
     {
         createInfo.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
-        createInfo.queueFamilyIndexCount = 2;
-        createInfo.pQueueFamilyIndices   = queueFamilyIndices;
+        createInfo.queueFamilyIndexCount = uint32_t(queueFamilyIndices.size());
+        createInfo.pQueueFamilyIndices   = queueFamilyIndices.data();
     }
     else
     {
@@ -1107,7 +1129,7 @@ int main()
     // the main loop (flags = 0).
     VkCommandPoolCreateInfo poolInfo = {};
     poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.queueFamilyIndex = graphicsQueueFamilyIndex;
+    poolInfo.queueFamilyIndex = graphicsQueue.familyIndex();
     poolInfo.flags            = 0;
 
     // Create command pool.
@@ -1270,15 +1292,17 @@ int main()
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores    = signalSemaphores;
 
+
+
     // Get the graphics queue
-    VkQueue graphicsQueue;
-    vkGetDeviceQueue(device,
-                     graphicsQueueFamilyIndex,
-                     0,
-                     &graphicsQueue);
+//    VkQueue graphicsQueue;
+//    vkGetDeviceQueue(device,
+//                     graphicsQueue.familyIndex(),
+//                     0,
+//                     &graphicsQueue);
 
     // Submit the command buffer into queue
-    result = vkQueueSubmit(graphicsQueue,
+    result = vkQueueSubmit(graphicsQueue.handle(),
                            1,
                            &submitInfo,
                            VK_NULL_HANDLE);
@@ -1296,9 +1320,9 @@ int main()
      * ------------------------------------------------------------ */
 
     // Get the present queue handle from the logical device.
-    VkQueue presentQueue;
-    vkGetDeviceQueue(device, presentQueueFamilyIndex,
-                     0, &presentQueue);
+//    VkQueue presentQueue;
+//    vkGetDeviceQueue(device, presentQueue.familyIndex(),
+//                     0, &presentQueue);
 
     // Create the present info which tells:
     //   * semaphore to wait until the rendering result image can
@@ -1316,7 +1340,7 @@ int main()
     presentInfo.pResults           = nullptr;
 
     // Present the rendering result into screen surface.
-    result = vkQueuePresentKHR(presentQueue, &presentInfo);
+    result = vkQueuePresentKHR(presentQueue.handle(), &presentInfo);
     if (result != VK_SUCCESS)
     {
         std::cerr << __FUNCTION__
@@ -1328,7 +1352,7 @@ int main()
     }
 
     // Wait until the present queue has finished.
-    result = vkQueueWaitIdle(presentQueue);
+    result = vkQueueWaitIdle(presentQueue.handle());
     if (result != VK_SUCCESS)
     {
         std::cerr << __FUNCTION__
@@ -1366,6 +1390,7 @@ int main()
     for (uint32_t i = 0; i < swapChainImageViews.size(); i++)
         vkDestroyImageView(device, swapChainImageViews[i], nullptr);
 
+    shader.destroy();
     mesh.destroy();
 
     vkDestroyCommandPool(device, commandPool, nullptr);
@@ -1376,7 +1401,7 @@ int main()
 //    vkDestroyShaderModule(device, vshModule, nullptr);
     vkDestroySwapchainKHR(device, swapChain, nullptr);
     vkDestroySurfaceKHR(instance, surface, nullptr);
-    vkDestroyDevice(device, nullptr);
+//    vkDestroyDevice(device, nullptr);
 
 //    if (enableValidationLayer)
 //    {
@@ -1387,7 +1412,7 @@ int main()
 //            func(instance, callback, nullptr);
 //    }
 
-    vkDestroyInstance(instance, nullptr);
+//    vkDestroyInstance(instance, nullptr);
 
     return EXIT_SUCCESS;
 }

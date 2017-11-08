@@ -124,18 +124,18 @@ bool PhysicalDevice::isImageExtentSupported(const glm::ivec2& extent) const
     const uint32_t w = extent.x;
     const uint32_t h = extent.y;
 
-    return w < d->capabilities.minImageExtent.width  ||
-           w > d->capabilities.maxImageExtent.width  ||
-           h < d->capabilities.minImageExtent.height ||
-           h > d->capabilities.maxImageExtent.height;
+    return w >= d->capabilities.minImageExtent.width  &&
+           w <= d->capabilities.maxImageExtent.width  &&
+           h >= d->capabilities.minImageExtent.height &&
+           h <= d->capabilities.maxImageExtent.height;
 }
 
 /* ---------------------------------------------------------------- */
 
 bool PhysicalDevice::isSwapChainImageCountSupported(uint32_t count) const
 {
-    return count < d->capabilities.minImageCount ||
-           count > d->capabilities.maxImageCount;
+    return count >= d->capabilities.minImageCount &&
+           count <= d->capabilities.maxImageCount;
 }
 
 /* ---------------------------------------------------------------- */
