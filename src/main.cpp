@@ -17,6 +17,7 @@
 /* ---------------------------------------------------------------- */
 
 #include "vk_mesh.h"
+#include "vk_shader_stage.h"
 
 /* ---------------------------------------------------------------- *
    Globals.
@@ -632,6 +633,16 @@ int main()
     }
 
     /* ------------------------------------------------------------ *
+       Shader
+     * ------------------------------------------------------------ */
+
+    using namespace kuu::vk;
+    ShaderStage shader(device);
+    shader.create("shaders/test.vert.spv",
+                  "shaders/test.frag.spv");
+
+#if 0
+    /* ------------------------------------------------------------ *
        Vertex shader
      * ------------------------------------------------------------ */
 
@@ -688,6 +699,7 @@ int main()
     fshStageInfo.stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
     fshStageInfo.module = fshModule;
     fshStageInfo.pName  = "main";
+#endif
 
     /* ------------------------------------------------------------ *
        Rasterizer state
@@ -878,7 +890,6 @@ int main()
        Mesh
      * ------------------------------------------------------------ */
 
-    using namespace kuu::vk;
     const std::vector<Vertex> vertices =
     {
         {  {0.0f, -0.5f}, { 1.0f, 0.0f, 0.0f } },
@@ -894,11 +905,15 @@ int main()
      * ------------------------------------------------------------ */
 
     // Shader stages
+#if 0
     VkPipelineShaderStageCreateInfo shaderStages[] =
     {
         vshStageInfo,
         fshStageInfo
     };
+#endif
+
+    auto shaderStages = shader.shaderStages();
 
     std::vector<VkVertexInputBindingDescription> bindingDescriptions;
     bindingDescriptions.push_back(mesh.bindingDescription());
@@ -923,8 +938,8 @@ int main()
     // Graphics pipeline
     VkGraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.stageCount          = 2;
-    pipelineInfo.pStages             = shaderStages;
+    pipelineInfo.stageCount          = shaderStages.size();
+    pipelineInfo.pStages             = shaderStages.data();
     pipelineInfo.pVertexInputState   = &vertexInput;
     pipelineInfo.pViewportState      = &viewportState;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
@@ -1266,8 +1281,8 @@ int main()
     vkDestroyPipeline(device, graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyRenderPass(device, renderPass, nullptr);
-    vkDestroyShaderModule(device, fshModule, nullptr);
-    vkDestroyShaderModule(device, vshModule, nullptr);
+//    vkDestroyShaderModule(device, fshModule, nullptr);
+//    vkDestroyShaderModule(device, vshModule, nullptr);
     vkDestroySwapchainKHR(device, swapChain, nullptr);
     vkDestroySurfaceKHR(instance, surface, nullptr);
     vkDestroyDevice(device, nullptr);
