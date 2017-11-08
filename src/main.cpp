@@ -42,56 +42,6 @@ static const VkPresentModeKHR PRESENT_MODE = VK_PRESENT_MODE_FIFO_KHR; // v-sync
 // Swap chain
 static const int SWAP_CHAIN_IMAGE_COUNT = 2;
 
-#if 0
-/* ---------------------------------------------------------------- *
-   Validation layer debug callback.
- * ---------------------------------------------------------------- */
-static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
-    VkDebugReportFlagsEXT /*flags*/,
-    VkDebugReportObjectTypeEXT /*objType*/,
-    uint64_t /*obj*/,
-    size_t /*location*/,
-    int32_t /*code*/,
-    const char* /*layerPrefix*/,
-    const char* msg,
-    void* /*userData*/) {
-
-    std::cerr << __FUNCTION__
-              << ": Vulkan validation layer: "
-              << msg
-              << std::endl;
-    return VK_FALSE;
-}
-
-/* ---------------------------------------------------------------- *
-   Reads a SPIR-V binary shader file form the path.
- * ---------------------------------------------------------------- */
-std::vector<char> readShaderSourceFile(const std::string& path)
-{
-    std::ifstream file(path, std::ios::ate | std::ios::binary);
-
-    if (!file.is_open())
-        std::cerr << __FUNCTION__
-                  << "failed to open shader file "
-                  << path.c_str()
-                  << std::endl;
-
-    size_t fileSize = (size_t) file.tellg();
-    if (fileSize == 0)
-        std::cerr << __FUNCTION__
-                  << "shader source is zero-sized"
-                  << path.c_str()
-                  << std::endl;
-
-    std::vector<char> buffer(fileSize);
-    file.seekg(0);
-    file.read(buffer.data(), fileSize);
-    file.close();
-
-    return buffer;
-}
-#endif
-
 int main()
 {
     /* ------------------------------------------------------------ *
