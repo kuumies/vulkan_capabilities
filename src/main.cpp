@@ -96,14 +96,26 @@ int main()
         instanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
         instanceLayers.push_back("VK_LAYER_LUNARG_standard_validation");
     }
-
     Instance inst(WINDOW_NAME, "kuuEngine",
                   instanceExtensions, instanceLayers);
     VkInstance instance = inst.handle();
     inst.setValidationLeyerEnabled();
 
-    VkResult result;
 
+#if 0
+    vk::Instance instance = vk::Instance::get();
+    instance.setApplicationName("")
+            .setEngineName("")
+            .setExtensions()
+            .setLayers()
+            .create();
+            .createSurface(window);
+
+    instance.usePhysicalDevice(0);
+    instance.createLogicalDevice(queues)
+#endif
+
+    VkResult result;
 
     /* ------------------------------------------------------------ *
        Surface.
