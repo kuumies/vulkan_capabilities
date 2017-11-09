@@ -122,6 +122,12 @@ struct Instance::Data
 
 /* ---------------------------------------------------------------- */
 
+Instance::Instance()
+    : d(std::make_shared<Data>())
+{}
+
+/* ---------------------------------------------------------------- */
+
 Instance& Instance::setApplicationName(
     const std::string& applicationName)
 {
@@ -166,9 +172,8 @@ Instance &Instance::setCreateValidationLayer()
 
 /* ---------------------------------------------------------------- */
 
-Instance &Instance::setCreateSurface(GLFWwindow *window)
+Instance &Instance::setCreateSurface(GLFWwindow* window)
 {
-    d->createSurface = true;
     d->window = window;
     return *this;
 }
@@ -265,6 +270,7 @@ bool Instance::destroy()
             d->callback,
             nullptr);
     vkDestroyInstance(d->instance, nullptr);
+
     return true;
 }
 
@@ -277,14 +283,6 @@ VkInstance Instance::handle() const
 
 std::vector<PhysicalDevice> Instance::physicalDevices() const
 { return d->physicalDevices; }
-
-/* ---------------------------------------------------------------- */
-
-Instance& Instance::get()
-{
-    static Instance instance;
-    return instance;
-}
 
 /* ---------------------------------------------------------------- */
 
@@ -340,12 +338,6 @@ bool Instance::isLayerSupported(const std::string& layer)
 
     return it != layers.end();
 }
-    
-/* ---------------------------------------------------------------- */
-
-Instance::Instance()
-    : d(std::make_shared<Data>())
-{}
 
 } // namespace vk
 } // namespace kuu

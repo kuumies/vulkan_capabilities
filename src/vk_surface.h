@@ -21,6 +21,10 @@ namespace kuu
 namespace vk
 {
 
+/* ---------------------------------------------------------------- */
+
+class Instance;
+
 /* ---------------------------------------------------------------- *
    A surface for Vulkan-based rendering.
 
@@ -29,11 +33,8 @@ namespace vk
    extensions, e.g. for Windows these are VK_KHR_surface and
    VK_KHR_win32_surface.
 
-   These extensions needs to be given to Vulkan instance before
-   the instance is created.
-
    Surface is per-window object therefore user must give in the
-   window during construction.
+   window object during creation.
 
    TODO: this now works with a GLFW window but what about Qt
          window? That would allow stacking widgets to window.
@@ -42,21 +43,20 @@ namespace vk
 class Surface
 {
 public:
-    // Constructs the surface. The window object must be valid.
-    Surface(GLFWwindow* window);
+    // Constructs the surface.
+    Surface(const Instance& instance);
+
+    // Creates the surface.
+    bool create(GLFWwindow* window);
+    // Destroys the surface.
+    bool destroy();
 
     // Returns true if the implementation supports all of the
     // extensions that the surface needs.
     static bool areExtensionsSupported();
-
     // Returns the instance extensions implementation must support.
     // These can be asked before creating the surface.
     static std::vector<std::string> extensions();
-
-    // Creates the surface.
-    bool create();
-    // Destroys the surface.
-    bool destroy();
 
 private:
     struct Data;

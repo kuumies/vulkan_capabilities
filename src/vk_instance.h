@@ -53,6 +53,9 @@ namespace vk
 class Instance
 {
 public:
+    // Constructs the instance.
+    Instance();
+
     // Sets the application name.
     Instance& setApplicationName(const std::string& applicationName);
     // Sets the engine name.
@@ -88,18 +91,11 @@ public:
     // thrown.
     std::vector<PhysicalDevice> physicalDevices() const;
 
-    // Returns an instance of the class.
-    static Instance& get();
     // Returns true if the instance supports the given in extension.
     static bool isExtensionSupported(const std::string& extension);
     // Returns true if the instance supports the given in layer..
     static bool isLayerSupported(const std::string& layer);
-    
-private:
-    Instance();
-    Instance(Instance const&);
-    void operator=(Instance const&);
-    
+
 private:
     struct Data;
     std::shared_ptr<Data> d;

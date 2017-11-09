@@ -22,16 +22,39 @@ namespace vk
 
 struct Surface::Data
 {
+    Instance instance;
     GLFWwindow* window;
     VkSurfaceKHR surface;
 };
 
 /* ---------------------------------------------------------------- */
 
-Surface::Surface(GLFWwindow* window)
+Surface::Surface(const Instance& instance)
     : d(std::make_shared<Data>())
 {
+    d->instance = instance;
+}
+
+/* ---------------------------------------------------------------- */
+
+bool Surface::create(GLFWwindow* window)
+{
     d->window = window;
+    const VkResult result = glfwCreateWindowSurface(
+        d->instance.handle(),
+        d->window,
+        nullptr,
+        &d->surface);
+
+    return result == VK_SUCCESS;
+}
+
+/* ---------------------------------------------------------------- */
+
+bool Surface::destroy()
+{
+    vkDestroySurfaceKHR(d->instance.handle(), d->surface, nullptr);
+    return true;
 }
 
 /* ---------------------------------------------------------------- */
@@ -57,28 +80,6 @@ std::vector<std::string> Surface::extensions()
     for (uint32_t i = 0; i < glfwExtensionCount; ++i)
         out.push_back(std::string(glfwExtensions[i]));
     return out;
-}
-
-/* ---------------------------------------------------------------- */
-
-bool Surface::create()
-{
-
-    const VkResult result = glfwCreateWindowSurface(
-        Instance::get().handle(),
-        d->window,
-        nullptr,
-        &d->surface);
-
-    return result == VK_SUCCESS;
-}
-
-/* ---------------------------------------------------------------- */
-
-bool Surface::destroy()
-{
-    vkDestroySurfaceKHR(Instance::get().handle(), d->surface, nullptr);
-    return true;
 }
 
 } // namespace vk

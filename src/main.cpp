@@ -87,23 +87,17 @@ int main()
         instanceLayers.push_back("VK_LAYER_LUNARG_standard_validation");
     }
 
-    // Create the Vulkan instance.
-    Instance& inst = Instance::get();
+    // Create a Vulkan instance.
+    Instance inst;
     inst.setApplicationName(WINDOW_NAME)
         .setEngineName("kuuEngine")
         .setExtensions(instanceExtensions)
-        .setLayers(instanceLayers)
-        .setCreateSurface(window);
+        .setLayers(instanceLayers);
+//        .setCreateValidationLayer()
+//        .setCreateSurface(window);
     inst.create();
 
-
-//    Instance inst(WINDOW_NAME, "kuuEngine",
-//                  instanceExtensions, instanceLayers);
     VkInstance instance = inst.handle();
-    //inst.setValidationLeyerEnabled();
-
-
-
 
     VkResult result;
 
@@ -872,9 +866,10 @@ int main()
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyRenderPass(device, renderPass, nullptr);
     vkDestroySwapchainKHR(device, swapChain, nullptr);
-    vkDestroySurfaceKHR(instance, surface, nullptr);
+    //vkDestroySurfaceKHR(instance, surface, nullptr);
 
     dev.destroy();
+    inst.destroy();
 
     return EXIT_SUCCESS;
 }
