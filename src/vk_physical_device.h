@@ -25,7 +25,9 @@ class PhysicalDevice
 {
 public:
     // Constructs the physical device.
-    PhysicalDevice(VkPhysicalDevice device, VkSurfaceKHR surface);
+    PhysicalDevice(VkPhysicalDevice device);
+
+    void setSurface(VkSurfaceKHR surface);
 
     // Returns the handle to physical device.
     VkPhysicalDevice handle() const;

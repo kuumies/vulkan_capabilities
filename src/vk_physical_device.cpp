@@ -33,14 +33,36 @@ struct PhysicalDevice::Data
 
 /* ---------------------------------------------------------------- */
 
-PhysicalDevice::PhysicalDevice(VkPhysicalDevice device, VkSurfaceKHR surface)
+PhysicalDevice::PhysicalDevice(VkPhysicalDevice device)
     : d(std::make_shared<Data>())
 {
     d->device  = device;
-    d->surface = surface;
 
     vkGetPhysicalDeviceProperties(d->device, &d->properties);
     vkGetPhysicalDeviceFeatures(d->device, &d->features);
+
+    // Get the extension count
+    uint32_t extensionCount;
+    vkEnumerateDeviceExtensionProperties(d->device, nullptr,
+                                         &extensionCount, nullptr);
+
+    // Get the extensions
+    if (extensionCount)
+    {
+
+        d->extensions.resize(extensionCount);
+        vkEnumerateDeviceExtensionProperties(
+            d->device, nullptr,
+            &extensionCount, d->extensions.data());
+    }
+}
+
+/* ---------------------------------------------------------------- */
+
+void PhysicalDevice::setSurface(VkSurfaceKHR surface)
+{
+    d->surface = surface;
+
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(d->device, surface, &d->capabilities);
 
     // Get the surface format count.
@@ -68,24 +90,7 @@ PhysicalDevice::PhysicalDevice(VkPhysicalDevice device, VkSurfaceKHR surface)
             d->device, surface,
             &presentModeCount, d->presentModes.data());
     }
-
-    // Get the extension count
-    uint32_t extensionCount;
-    vkEnumerateDeviceExtensionProperties(d->device, nullptr,
-                                         &extensionCount, nullptr);
-
-    // Get the extensions
-    if (extensionCount)
-    {
-
-        d->extensions.resize(extensionCount);
-        vkEnumerateDeviceExtensionProperties(
-            d->device, nullptr,
-            &extensionCount, d->extensions.data());
-    }
 }
-
-/* ---------------------------------------------------------------- */
 
 VkPhysicalDevice PhysicalDevice::handle() const
 { return d->device; }

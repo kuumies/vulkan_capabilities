@@ -22,6 +22,7 @@
 #include "vk_physical_device.h"
 #include "vk_queue.h"
 #include "vk_shader_stage.h"
+#include "vk_surface.h"
 
 /* ---------------------------------------------------------------- *
    Globals.
@@ -69,51 +70,40 @@ int main()
 
     using namespace kuu::vk;
 
-    // Get the extensions that GLFW window requires. On Windows
-    // these are VK_KHR_surface and VK_KHR_win32_surface.
-    uint32_t glfwExtensionCount = 0;
-    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(
-        &glfwExtensionCount);
-    for (uint32_t i = 0; i < glfwExtensionCount; ++i)
-    {
-        const std::string glfwExtension = glfwExtensions[i];
-        if (!Instance::isExtensionSupported(glfwExtension))
-            throw std::runtime_error(
-                __FUNCTION__ +
-                    std::string(": Vulkan implementation does not support ") +
-                    glfwExtension + " extension.");
-    }
+    if (!Surface::areExtensionsSupported())
+        return EXIT_FAILURE;
 
     std::vector<std::string> instanceLayers;
-    std::vector<std::string> instanceExtensions;
-    for (uint32_t e = 0; e < glfwExtensionCount; ++e)
-        instanceExtensions.push_back(std::string(glfwExtensions[e]));
+    std::vector<std::string> instanceExtensions =
+        Surface::extensions();
 
     // Check if the validation layer is available
-    bool enableValidationLayer = Instance::isLayerSupported("VK_LAYER_LUNARG_standard_validation");
+    const bool enableValidationLayer =
+        Instance::isLayerSupported(
+            "VK_LAYER_LUNARG_standard_validation");
     if (enableValidationLayer)
     {
         instanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
         instanceLayers.push_back("VK_LAYER_LUNARG_standard_validation");
     }
-    Instance inst(WINDOW_NAME, "kuuEngine",
-                  instanceExtensions, instanceLayers);
+
+    // Create the Vulkan instance.
+    Instance& inst = Instance::get();
+    inst.setApplicationName(WINDOW_NAME)
+        .setEngineName("kuuEngine")
+        .setExtensions(instanceExtensions)
+        .setLayers(instanceLayers)
+        .setCreateSurface(window);
+    inst.create();
+
+
+//    Instance inst(WINDOW_NAME, "kuuEngine",
+//                  instanceExtensions, instanceLayers);
     VkInstance instance = inst.handle();
-    inst.setValidationLeyerEnabled();
+    //inst.setValidationLeyerEnabled();
 
 
-#if 0
-    vk::Instance instance = vk::Instance::get();
-    instance.setApplicationName("")
-            .setEngineName("")
-            .setExtensions()
-            .setLayers()
-            .create();
-            .createSurface(window);
 
-    instance.usePhysicalDevice(0);
-    instance.createLogicalDevice(queues)
-#endif
 
     VkResult result;
 
@@ -144,11 +134,12 @@ int main()
     physicalDeviceExtensionNames.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     std::vector<PhysicalDevice> physicalDevices =
-        inst.physicalDevices(surface);
+        inst.physicalDevices();
 
     std::vector<PhysicalDevice> validPhysicalDevices;
     for (PhysicalDevice device : physicalDevices)
     {
+        device.setSurface(surface);
         device.dump();
 
         if (!device.isExtensionSupported(physicalDeviceExtensionNames))
