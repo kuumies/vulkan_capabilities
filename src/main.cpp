@@ -23,6 +23,7 @@
 #include "vk_queue.h"
 #include "vk_shader_stage.h"
 #include "vk_surface.h"
+#include "vk_swap_chain.h"
 
 /* ---------------------------------------------------------------- *
    Globals.
@@ -79,6 +80,10 @@ int main()
     Surface surface = instance.createSurface(window);
     if (!surface.isValid())
         return EXIT_FAILURE;
+    surface.setFormat( { SURFACE_FORMAT, SURFACE_COLOR_SPACE });
+    surface.setImageExtent( { WINDOW_WIDTH, WINDOW_HEIGHT } );
+    surface.setSwapChainImageCount(SWAP_CHAIN_IMAGE_COUNT);
+    surface.setPresentMode(PRESENT_MODE);
 
     // Get all physical devices.
     std::vector<PhysicalDevice> physicalDevices =
@@ -123,104 +128,13 @@ int main()
     Device device = physicalDevice.createLogicalDevice(
         queueParameters,
         extensionNames);
-
-    // Get the queues
-    std::vector<Queue> queues = device.queues();
-    Queue graphicsQueue = device.queue(Queue::Type::Graphics);
-    Queue presentQueue = device.queue(Queue::Type::Presentation);
-
-    /* ------------------------------------------------------------ *
-       Swap chain
-     * ------------------------------------------------------------ */
-
-    std::vector<uint32_t> queueFamilyIndices;
-    for (const Queue& q : queues)
-        queueFamilyIndices.push_back(q.familyIndex());
-
-    VkSwapchainCreateInfoKHR createInfo = {};
-    createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface          = surface.handle();
-    createInfo.minImageCount    = SWAP_CHAIN_IMAGE_COUNT;
-    createInfo.imageFormat      = SURFACE_FORMAT;
-    createInfo.imageColorSpace  = SURFACE_COLOR_SPACE;
-    createInfo.imageExtent      = VkExtent2D { WINDOW_WIDTH, WINDOW_HEIGHT };
-    createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    createInfo.compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    createInfo.presentMode      = PRESENT_MODE;
-    createInfo.clipped          = VK_TRUE;
-    createInfo.oldSwapchain     = VK_NULL_HANDLE;
-    createInfo.preTransform     = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-
-    if (graphicsQueue.familyIndex() != presentQueue.familyIndex())
-    {
-        createInfo.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
-        createInfo.queueFamilyIndexCount = uint32_t(queueFamilyIndices.size());
-        createInfo.pQueueFamilyIndices   = queueFamilyIndices.data();
-    }
-    else
-    {
-        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    }
-
-    VkResult result;
-    VkSwapchainKHR swapChain;
-    result = vkCreateSwapchainKHR(device.handle(),
-                                  &createInfo,
-                                  nullptr,
-                                  &swapChain);
-    if (result != VK_SUCCESS)
-    {
-        std::cerr << __FUNCTION__
-                  << ": failed to create vulkan swap chain"
-                  << std::endl;
-
+    if (device.isValid())
         return EXIT_FAILURE;
-    }
 
-    // Get the swap chain image count.
-    uint32_t imageCount = 0;
-    vkGetSwapchainImagesKHR(device.handle(), swapChain, &imageCount, nullptr);
-
-    // Get the swap chain images.
-    std::vector<VkImage> swapChainImages(imageCount);
-    vkGetSwapchainImagesKHR(device.handle(),
-                            swapChain,
-                            &imageCount,
-                            swapChainImages.data());
-
-    // Create swap chain image views.
-    std::vector<VkImageView> swapChainImageViews(imageCount);
-    for (uint32_t i = 0; i < imageCount; ++i)
-    {
-        VkImageViewCreateInfo createInfo = {};
-        createInfo.sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        createInfo.image    = swapChainImages[i];
-        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        createInfo.format   = SURFACE_FORMAT;
-        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        createInfo.subresourceRange.baseMipLevel = 0;
-        createInfo.subresourceRange.levelCount = 1;
-        createInfo.subresourceRange.baseArrayLayer = 0;
-        createInfo.subresourceRange.layerCount = 1;
-
-        result = vkCreateImageView(device.handle(),
-                                   &createInfo,
-                                   nullptr,
-                                   &swapChainImageViews[i]);
-        if (result != VK_SUCCESS)
-        {
-            std::cerr << __FUNCTION__
-                      << ": failed to create vulkan image view"
-                      << std::endl;
-
-            return EXIT_FAILURE;
-        }
-    }
+    // Create swap chain.
+    SwapChain swapChain = device.createSwapChain(surface);
+    if (!swapChain.isValid())
+        return EXIT_FAILURE;
 
     /* ------------------------------------------------------------ *
        Shader
@@ -297,6 +211,7 @@ int main()
     pipelineLayoutInfo.pushConstantRangeCount = 0;
     pipelineLayoutInfo.pPushConstantRanges    = 0;
 
+    VkResult result;
     VkPipelineLayout pipelineLayout;
     result = vkCreatePipelineLayout(device.handle(),
                                     &pipelineLayoutInfo,
@@ -495,6 +410,9 @@ int main()
        Framebuffers of swap chain images for render pass.
      * ------------------------------------------------------------ */
 
+    // Get the swap chain image views.
+    std::vector<VkImageView> swapChainImageViews = swapChain.imageViews();
+
     // Each swap chain image view has its own framebuffer.
     std::vector<VkFramebuffer> swapChainFramebuffers;
     swapChainFramebuffers.resize(swapChainImageViews.size());
@@ -531,6 +449,9 @@ int main()
     /* ------------------------------------------------------------ *
        Command buffer.
      * ------------------------------------------------------------ */
+
+    // Get the graphics queue.
+    Queue graphicsQueue = device.queue(Queue::Type::Graphics);
 
     // Create the command pool info for graphics queue. Commands
     // are recorded only once and the executed multiple times on
@@ -677,7 +598,7 @@ int main()
     // The image is a color attachment to framebuffer.
     const uint64_t timeout = std::numeric_limits<uint64_t>::max(); // this disables timeout...?
     uint32_t imageIndex = 0;
-    vkAcquireNextImageKHR(device.handle(), swapChain, timeout,
+    vkAcquireNextImageKHR(device.handle(), swapChain.handle(), timeout,
                           imageAvailableSemaphore,
                           VK_NULL_HANDLE, &imageIndex);
 
@@ -700,15 +621,6 @@ int main()
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores    = signalSemaphores;
 
-
-
-    // Get the graphics queue
-//    VkQueue graphicsQueue;
-//    vkGetDeviceQueue(device,
-//                     graphicsQueue.familyIndex(),
-//                     0,
-//                     &graphicsQueue);
-
     // Submit the command buffer into queue
     result = vkQueueSubmit(graphicsQueue.handle(),
                            1,
@@ -728,9 +640,9 @@ int main()
      * ------------------------------------------------------------ */
 
     // Get the present queue handle from the logical device.
-//    VkQueue presentQueue;
-//    vkGetDeviceQueue(device, presentQueue.familyIndex(),
-//                     0, &presentQueue);
+    Queue presentQueue  = device.queue(Queue::Type::Presentation);
+    // Get the swap chain handle.
+    VkSwapchainKHR swapChainHandle = swapChain.handle();
 
     // Create the present info which tells:
     //   * semaphore to wait until the rendering result image can
@@ -743,7 +655,7 @@ int main()
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores    = signalSemaphores;
     presentInfo.swapchainCount     = 1;
-    presentInfo.pSwapchains        = &swapChain;
+    presentInfo.pSwapchains        = &swapChainHandle;
     presentInfo.pImageIndices      = &imageIndex;
     presentInfo.pResults           = nullptr;
 
@@ -795,8 +707,6 @@ int main()
 
     for (uint32_t i = 0; i < swapChainFramebuffers.size(); i++)
         vkDestroyFramebuffer(device.handle(), swapChainFramebuffers[i], nullptr);
-    for (uint32_t i = 0; i < swapChainImageViews.size(); i++)
-        vkDestroyImageView(device.handle(), swapChainImageViews[i], nullptr);
 
     shader.destroy();
     mesh.destroy();
@@ -805,8 +715,6 @@ int main()
     vkDestroyPipeline(device.handle(), graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(device.handle(), pipelineLayout, nullptr);
     vkDestroyRenderPass(device.handle(), renderPass, nullptr);
-    vkDestroySwapchainKHR(device.handle(), swapChain, nullptr);
-    //vkDestroySurfaceKHR(instance, surface, nullptr);
 
     return EXIT_SUCCESS;
 }

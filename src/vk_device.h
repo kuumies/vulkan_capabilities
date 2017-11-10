@@ -14,6 +14,7 @@
 /* ---------------------------------------------------------------- */
 
 #include "vk_queue.h"
+#include "vk_swap_chain.h"
 
 namespace kuu
 {
@@ -56,6 +57,9 @@ public:
     std::vector<Queue> queues() const;
     // Returns queue.
     Queue queue(Queue::Type type) const;
+
+    // Creates and returns a swap chain.
+    SwapChain createSwapChain(const Surface& surface) const;
 
 private:
     struct Data;

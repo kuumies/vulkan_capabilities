@@ -16,12 +16,10 @@ namespace vk
 {
 
 /* ---------------------------------------------------------------- *
-   A vulkan queue
+   A queue
  * ---------------------------------------------------------------- */
 class Queue
 {
-    friend class Device;
-
 public:
     // Defines the type of the queue.
     enum class Type
@@ -30,17 +28,16 @@ public:
         Presentation    // Presentation queue
     };
 
-    // Constructs the queue.
+    // Constructs the queue for logical device, queue family
+    // index and queue type.
     Queue(const VkDevice& device, uint32_t familyIndex, Type type);
 
-    // Returns the family index. Queues must have been created.
+    // Returns the family index.
     uint32_t familyIndex() const;
     // Returns the type.
     Type type() const;
-
-    // Returns queue handle.
+    // Returns handle.
     VkQueue handle() const;
-
 
 private:
     struct Data;

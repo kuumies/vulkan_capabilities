@@ -193,5 +193,12 @@ Queue Device::queue(Queue::Type type) const
 
 }
 
+/* ---------------------------------------------------------------- */
+
+SwapChain Device::createSwapChain(const Surface& surface) const
+{
+    return SwapChain(*this, surface);
+}
+
 } // namespace vk
 } // namespace kuu
