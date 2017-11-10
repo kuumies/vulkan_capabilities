@@ -50,7 +50,7 @@ Mesh::Mesh(VkDevice device,
 
 /* ---------------------------------------------------------------- */
 
-VkVertexInputBindingDescription Mesh::bindingDescription()
+VkVertexInputBindingDescription Mesh::bindingDescription() const
 {
     VkVertexInputBindingDescription bindingDescription;
     bindingDescription.binding   = d->bindingNumber;

@@ -20,6 +20,7 @@
 #include "vk_instance.h"
 #include "vk_mesh.h"
 #include "vk_physical_device.h"
+#include "vk_pipeline.h"
 #include "vk_queue.h"
 #include "vk_shader_stage.h"
 #include "vk_surface.h"
@@ -136,15 +137,31 @@ int main()
     if (!swapChain.isValid())
         return EXIT_FAILURE;
 
-    /* ------------------------------------------------------------ *
-       Shader
-     * ------------------------------------------------------------ */
-
-    using namespace kuu::vk;
+    //Create shaders
     ShaderStage shader(device.handle());
     shader.create("shaders/test.vert.spv",
                   "shaders/test.frag.spv");
 
+    // Create mesh
+    const std::vector<Vertex> vertices =
+    {
+        {  {0.0f, -0.5f}, { 1.0f, 0.0f, 0.0f } },
+        {  {0.5f,  0.5f}, { 0.0f, 1.0f, 0.0f } },
+        { {-0.5f,  0.5f}, { 0.0f, 0.0f, 1.0f } }
+    };
+    Mesh mesh(device.handle(), physicalDevice.handle(), 0);
+    mesh.create(vertices);
+
+    // Create pipeline parameters
+    Pipeline::Parameters pipelineParams(mesh, shader);
+    pipelineParams.viewportWidth  = WINDOW_WIDTH;
+    pipelineParams.viewportHeight = WINDOW_HEIGHT;
+
+    // Create pipeline
+    Pipeline pipeline(device, surface, pipelineParams);
+
+    VkResult result;
+#if 0
     /* ------------------------------------------------------------ *
        Rasterizer state
      * ------------------------------------------------------------ */
@@ -335,15 +352,6 @@ int main()
        Mesh
      * ------------------------------------------------------------ */
 
-    const std::vector<Vertex> vertices =
-    {
-        {  {0.0f, -0.5f}, { 1.0f, 0.0f, 0.0f } },
-        {  {0.5f,  0.5f}, { 0.0f, 1.0f, 0.0f } },
-        { {-0.5f,  0.5f}, { 0.0f, 0.0f, 1.0f } }
-    };
-
-    Mesh mesh(device.handle(), physicalDevice.handle(), 0);
-    mesh.create(vertices);
 
     /* ------------------------------------------------------------ *
        Graphics pipeline
@@ -405,6 +413,11 @@ int main()
 
         return EXIT_FAILURE;
     }
+#endif
+
+    VkPipelineLayout pipelineLayout = pipeline.pipelineLayout();
+    VkRenderPass renderPass = pipeline.renderPass();
+    VkPipeline graphicsPipeline = pipeline.graphicsPipeline();
 
     /* ------------------------------------------------------------ *
        Framebuffers of swap chain images for render pass.
@@ -712,9 +725,9 @@ int main()
     mesh.destroy();
 
     vkDestroyCommandPool(device.handle(), commandPool, nullptr);
-    vkDestroyPipeline(device.handle(), graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(device.handle(), pipelineLayout, nullptr);
-    vkDestroyRenderPass(device.handle(), renderPass, nullptr);
+//    vkDestroyPipeline(device.handle(), graphicsPipeline, nullptr);
+//    vkDestroyPipelineLayout(device.handle(), pipelineLayout, nullptr);
+//    vkDestroyRenderPass(device.handle(), renderPass, nullptr);
 
     return EXIT_SUCCESS;
 }

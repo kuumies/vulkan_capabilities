@@ -39,7 +39,7 @@ public:
          const uint32_t bindingNumber);
 
     // Returns the binding description.
-    VkVertexInputBindingDescription bindingDescription();
+    VkVertexInputBindingDescription bindingDescription() const;
     // Returns the attribute descriptions.
     std::vector<VkVertexInputAttributeDescription>
         attributeDescriptions() const;
