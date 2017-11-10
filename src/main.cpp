@@ -45,10 +45,7 @@ static const int SWAP_CHAIN_IMAGE_COUNT = 2;
 
 int main()
 {
-    /* ------------------------------------------------------------ *
-       GLFW window.
-     * ------------------------------------------------------------ */
-
+    // GLFW window.
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE,  GLFW_FALSE);
@@ -63,10 +60,6 @@ int main()
 
         return EXIT_FAILURE;
     }
-
-    /* ------------------------------------------------------------ *
-       Instance
-     * ------------------------------------------------------------ */
 
     using namespace kuu::vk;
 
@@ -87,84 +80,52 @@ int main()
     if (!surface.isValid())
         return EXIT_FAILURE;
 
-    VkResult result;
-
-    /* ------------------------------------------------------------ *
-       Surface.
-     * ------------------------------------------------------------ */
-    VkSurfaceKHR surfaceHandle;
-#if 0
-    // Create the GLFW vulkan surface
-    result = glfwCreateWindowSurface(instance,
-                                     window,
-                                     nullptr,
-                                     &surface);
-    if (result != VK_SUCCESS)
-    {
-        std::cerr << __FUNCTION__
-                  << ": failed to create vulkan surface"
-                  << std::endl;
-
-        return EXIT_FAILURE;
-    }
-#endif
-    surfaceHandle = surface.handle();
-
-    /* ------------------------------------------------------------ *
-       Physical device.
-     * ------------------------------------------------------------ */
-
-    std::vector<std::string> physicalDeviceExtensionNames;
-    physicalDeviceExtensionNames.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-
+    // Get all physical devices.
     std::vector<PhysicalDevice> physicalDevices =
         instance.physicalDevices();
 
-    std::vector<PhysicalDevice> validPhysicalDevices;
-    for (PhysicalDevice device : physicalDevices)
+    // Find physical devices that supports the needed properties.
+    std::vector<std::string> extensionNames;
+    extensionNames.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    std::vector<PhysicalDevice> suitablePhysicalDevices;
+    for (const PhysicalDevice& device : physicalDevices)
     {
-        device.dump();
-
-        if (!device.isExtensionSupported(physicalDeviceExtensionNames))
-            continue;
-        if (!device.isSurfaceSupported(surface, SURFACE_FORMAT, SURFACE_COLOR_SPACE))
-            continue;
-        if (!device.isPresentModeSupported(surface, PRESENT_MODE))
-            continue;
-        if (!device.isImageExtentSupported(surface, glm::ivec2(WINDOW_WIDTH, WINDOW_HEIGHT)))
-            continue;
-        if (!device.isSwapChainImageCountSupported(surface, SWAP_CHAIN_IMAGE_COUNT))
+        if (!device.isExtensionSupported(extensionNames))
             continue;
 
-        validPhysicalDevices.push_back(device);
+        if (!surface.isCompatibleWith(device))
+            surface.setCompatibleWith(device);
+
+        suitablePhysicalDevices.push_back(device);
+        break;
     }
 
-    if (validPhysicalDevices.size() == 0)
+    if (suitablePhysicalDevices.size() == 0)
     {
         std::cerr << __FUNCTION__
-                  << ": failed to find valid physical device "
+                  << ": failed to find suitable physical device "
                   << std::endl;
 
         return EXIT_FAILURE;
     }
 
     // Auto-select the first device.
-    PhysicalDevice phyDev = validPhysicalDevices[0];
-    VkSurfaceFormatKHR fmt = phyDev.suitableSurfaceFormat(surface);
+    PhysicalDevice physicalDevive = suitablePhysicalDevices[0];
 
-    VkPhysicalDevice physicalDevice = phyDev.handle();
+
+    VkPhysicalDevice physicalDeviceHandle = physicalDevive.handle();
 
     /* ------------------------------------------------------------ *
        Queues
      * ------------------------------------------------------------ */
 
-    Queue graphicsQueue(physicalDevice,
-                        surfaceHandle,
+    Queue graphicsQueue(physicalDeviceHandle,
+                        surface.handle(),
                         Queue::Type::Graphics);
     graphicsQueue.create(1, 1.0f);
 
-    Queue presentQueue(physicalDevice,
-                       surfaceHandle,
+    Queue presentQueue(physicalDeviceHandle,
+                       surface.handle(),
                        Queue::Type::Presentation);
     presentQueue.create(1, 1.0f);
 
@@ -176,8 +137,8 @@ int main()
        Logical device.
      * ------------------------------------------------------------ */
 
-    Device dev(physicalDevice);
-    dev.create(queues, physicalDeviceExtensionNames);
+    Device dev(physicalDeviceHandle);
+    dev.create(queues, extensionNames);
 
     VkDevice device = dev.handle();
 
@@ -191,7 +152,7 @@ int main()
 
     VkSwapchainCreateInfoKHR createInfo = {};
     createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface          = surfaceHandle;
+    createInfo.surface          = surface.handle();
     createInfo.minImageCount    = SWAP_CHAIN_IMAGE_COUNT;
     createInfo.imageFormat      = SURFACE_FORMAT;
     createInfo.imageColorSpace  = SURFACE_COLOR_SPACE;
@@ -215,6 +176,7 @@ int main()
         createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     }
 
+    VkResult result;
     VkSwapchainKHR swapChain;
     result = vkCreateSwapchainKHR(device,
                                   &createInfo,
@@ -478,7 +440,7 @@ int main()
         { {-0.5f,  0.5f}, { 0.0f, 0.0f, 1.0f } }
     };
 
-    Mesh mesh(device, physicalDevice, 0);
+    Mesh mesh(device, physicalDeviceHandle, 0);
     mesh.create(vertices);
 
     /* ------------------------------------------------------------ *

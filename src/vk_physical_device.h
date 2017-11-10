@@ -33,20 +33,13 @@ public:
     // Returns the handle to physical device.
     VkPhysicalDevice handle() const;
 
-    // Returns a surface format suitable for the physical device.
-    VkSurfaceFormatKHR suitableSurfaceFormat(
-        const Surface& surface,
-        VkFormat format = VK_FORMAT_B8G8R8A8_UNORM,
-        VkColorSpaceKHR colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) const;
-
     // Returns true if the extension is supported.
     bool isExtensionSupported(const std::string& extension) const;
     bool isExtensionSupported(const std::vector<std::string>& extensions) const;
 
     // Returns true if the surface image extent is supported.
-    bool isImageExtentSupported(
-        const Surface& surface,
-        const glm::ivec2& extent) const;
+    bool isImageExtentSupported(const Surface& surface,
+        const VkExtent2D &extent) const;
     // Returns true if the surface swap image count is supported.
     bool isSwapChainImageCountSupported(
             const Surface& surface,

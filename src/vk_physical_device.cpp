@@ -16,6 +16,8 @@ namespace kuu
 {
 namespace vk
 {
+namespace
+{
 
 /* ---------------------------------------------------------------- */
 
@@ -41,6 +43,8 @@ std::vector<VkSurfaceFormatKHR> physicalDeviceSurfaceFormats(
 
     return surfaceFormats;
 }
+
+} // anonymous namespace
 
 /* ---------------------------------------------------------------- */
 
@@ -70,7 +74,6 @@ PhysicalDevice::PhysicalDevice(VkPhysicalDevice device)
     // Get the extensions
     if (extensionCount)
     {
-
         d->extensions.resize(extensionCount);
         vkEnumerateDeviceExtensionProperties(
             d->device, nullptr,
@@ -82,33 +85,6 @@ PhysicalDevice::PhysicalDevice(VkPhysicalDevice device)
 
 VkPhysicalDevice PhysicalDevice::handle() const
 { return d->device; }
-
-/* ---------------------------------------------------------------- */
-
-VkSurfaceFormatKHR PhysicalDevice::suitableSurfaceFormat(
-        const Surface& surface,
-        VkFormat format,
-        VkColorSpaceKHR colorSpace) const
-{
-    std::vector<VkSurfaceFormatKHR> formats =
-            physicalDeviceSurfaceFormats(
-                surface.handle(),
-                d->device);
-    if (formats.size() == 1 && formats[0].format == VK_FORMAT_UNDEFINED)
-        return { VK_FORMAT_B8G8R8A8_UNORM,
-                 VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
-
-    for (const VkSurfaceFormatKHR& availableFormat : formats)
-    {
-        if (availableFormat.format == format &&
-            availableFormat.colorSpace == colorSpace)
-        {
-            return availableFormat;
-        }
-    }
-
-    return formats[0];
-}
 
 /* ---------------------------------------------------------------- */
 
@@ -141,7 +117,7 @@ bool PhysicalDevice::isExtensionSupported(
 
 bool PhysicalDevice::isImageExtentSupported(
         const Surface& surface,
-        const glm::ivec2& extent) const
+        const VkExtent2D& extent) const
 {
     VkSurfaceCapabilitiesKHR capabilities;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
@@ -149,8 +125,8 @@ bool PhysicalDevice::isImageExtentSupported(
             surface.handle(),
             &capabilities);
 
-    const uint32_t w = extent.x;
-    const uint32_t h = extent.y;
+    const uint32_t w = extent.width;
+    const uint32_t h = extent.height;
 
     return w >= capabilities.minImageExtent.width  &&
            w <= capabilities.maxImageExtent.width  &&
