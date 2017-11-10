@@ -7,6 +7,7 @@
 
 /* ---------------------------------------------------------------- */
 
+#include <iostream>
 #include <glfw/glfw3.h>
 
 /* ---------------------------------------------------------------- */
@@ -22,40 +23,54 @@ namespace vk
 
 struct Surface::Data
 {
-    Instance instance;
-    GLFWwindow* window;
+    Data(const Instance& instance, GLFWwindow* window)
+        : instance(instance)
+        , valid(false)
+    {
+        const VkResult result = glfwCreateWindowSurface(
+            instance.handle(),
+            window,
+            nullptr,
+            &surface);
+
+        if (result == VK_SUCCESS)
+        {
+            valid = true;
+        }
+        else
+        {
+            std::cerr << __FUNCTION__
+                      << ": failed to create surface for a window"
+                      << std::endl;
+            valid = false;
+        }
+    }
+
+     ~Data()
+    {
+        vkDestroySurfaceKHR(instance.handle(), surface, nullptr);
+    }
+
+    const Instance instance;
     VkSurfaceKHR surface;
+    bool valid = false;
 };
 
 /* ---------------------------------------------------------------- */
 
-Surface::Surface(const Instance& instance)
-    : d(std::make_shared<Data>())
-{
-    d->instance = instance;
-}
+Surface::Surface(const Instance& instance, GLFWwindow* window)
+    : d(std::make_shared<Data>(instance, window))
+{}
 
 /* ---------------------------------------------------------------- */
 
-bool Surface::create(GLFWwindow* window)
-{
-    d->window = window;
-    const VkResult result = glfwCreateWindowSurface(
-        d->instance.handle(),
-        d->window,
-        nullptr,
-        &d->surface);
-
-    return result == VK_SUCCESS;
-}
+bool Surface::isValid() const
+{ return d->valid; }
 
 /* ---------------------------------------------------------------- */
 
-bool Surface::destroy()
-{
-    vkDestroySurfaceKHR(d->instance.handle(), d->surface, nullptr);
-    return true;
-}
+VkSurfaceKHR Surface::handle() const
+{ return d->surface; }
 
 /* ---------------------------------------------------------------- */
 

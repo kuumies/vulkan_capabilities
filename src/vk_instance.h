@@ -53,42 +53,52 @@ namespace vk
 class Instance
 {
 public:
-    // Constructs the instance.
-    Instance();
+    // Defines instance creation paramaters.
+    struct Parameters
+    {
+        // Application name
+        std::string applicationName;
 
-    // Sets the application name.
-    Instance& setApplicationName(const std::string& applicationName);
-    // Sets the engine name.
-    Instance& setEngineName(const std::string& engineName);
-    // Sets the extensions.
-    Instance& setExtensions(std::vector<std::string>& extensions);
-    // Sets the layers. If the layers contains the validation layer
-    // then a debug callback is created. The callback will print
-    // issues reported by the validation layer into standard error
-    // output.
-    Instance& setLayers(std::vector<std::string>& layers);
-    // Sets that the validation layer is created.
-    Instance& setCreateValidationLayer();
-    // Sets that the surface is created for the window object.
-    Instance& setCreateSurface(GLFWwindow* window);
-    
-    // Creates the instance.
-    bool create();
-    // Destroys the instance.
-    bool destroy();
-    
-    // Returns handle to Vulkan instance. If the instance has not been 
-    // created or it has been destroyd then a std::runtime_exection is
-    // thrown.
+        // Rendering engine name
+        std::string engineName;
+
+        // Instance extensions to be used. Note that surface
+        // extensions are automatically set if createSurface
+        // param is true.
+        std::vector<std::string> extensions;
+
+        // Instance layers to be used. Note that validation layer
+        // is automatically created if createValidation param is
+        // set to true.
+        std::vector<std::string> layers;
+
+        // Set true to create the validation layer and a debug
+        // callback. The callback will print issues reported by
+        // the validation layer into standard error output. If the
+        // system does not support validation then the instance set
+        // to invalid state.
+        bool createValidationLayer = false;
+
+        // Sets the extensions that are needed to create the surface.
+        // If the system does not support surface then the instance
+        // set to invalid state.
+        bool createSurfaceExtensesions = false;
+    };
+
+    // Constructs the instance.
+    Instance(const Parameters& params);
+
+    // Returns true if the instance valid.
+    bool isValid() const;
+
+    // Returns handle to Vulkan instance. Handle is not valid if
+    // the instance is not valid.
     VkInstance handle() const;
-    // Returns the surface. Surface is created only if the
-    // setCreateSurface function was called before creating the
-    // instance.
-//    Surface surface() const;
+    // Creates a surface for a widnow. Surface is not valid if
+    // the instance is not valid.
+    Surface createSurface(GLFWwindow* window) const;
     
-    // Returns all physical devices. If the instance is has not been 
-    // created or it has been deleted then a std::runtime_exception is 
-    // thrown.
+    // Returns all physical devices.
     std::vector<PhysicalDevice> physicalDevices() const;
 
     // Returns true if the instance supports the given in extension.

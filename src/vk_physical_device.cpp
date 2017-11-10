@@ -19,15 +19,36 @@ namespace vk
 
 /* ---------------------------------------------------------------- */
 
+std::vector<VkSurfaceFormatKHR> physicalDeviceSurfaceFormats(
+    VkSurfaceKHR surface,
+    VkPhysicalDevice physicalDevice)
+{
+    uint32_t formatCount;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(
+            physicalDevice,
+            surface,
+            &formatCount,
+            nullptr);
+
+    std::vector<VkSurfaceFormatKHR> surfaceFormats;
+    if (formatCount > 0)
+    {
+        surfaceFormats.resize(formatCount);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(
+            physicalDevice, surface,
+            &formatCount, surfaceFormats.data());
+    }
+
+    return surfaceFormats;
+}
+
+/* ---------------------------------------------------------------- */
+
 struct PhysicalDevice::Data
 {
     VkPhysicalDevice device;
-    VkSurfaceKHR surface;
     VkPhysicalDeviceProperties properties;
     VkPhysicalDeviceFeatures features;
-    VkSurfaceCapabilitiesKHR capabilities;
-    std::vector<VkSurfaceFormatKHR> surfaceFormats;
-    std::vector<VkPresentModeKHR> presentModes;
     std::vector<VkExtensionProperties> extensions;
 };
 
@@ -59,41 +80,35 @@ PhysicalDevice::PhysicalDevice(VkPhysicalDevice device)
 
 /* ---------------------------------------------------------------- */
 
-void PhysicalDevice::setSurface(VkSurfaceKHR surface)
-{
-    d->surface = surface;
-
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(d->device, surface, &d->capabilities);
-
-    // Get the surface format count.
-    uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(d->device, d->surface,
-                                         &formatCount, nullptr);
-    if (formatCount > 0)
-    {
-        d->surfaceFormats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(
-            d->device, d->surface,
-            &formatCount, d->surfaceFormats.data());
-    }
-
-    // Get the present modes count.
-    uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(
-        d->device, surface,
-        &presentModeCount, nullptr);
-
-    if (presentModeCount > 0)
-    {
-        d->presentModes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(
-            d->device, surface,
-            &presentModeCount, d->presentModes.data());
-    }
-}
-
 VkPhysicalDevice PhysicalDevice::handle() const
 { return d->device; }
+
+/* ---------------------------------------------------------------- */
+
+VkSurfaceFormatKHR PhysicalDevice::suitableSurfaceFormat(
+        const Surface& surface,
+        VkFormat format,
+        VkColorSpaceKHR colorSpace) const
+{
+    std::vector<VkSurfaceFormatKHR> formats =
+            physicalDeviceSurfaceFormats(
+                surface.handle(),
+                d->device);
+    if (formats.size() == 1 && formats[0].format == VK_FORMAT_UNDEFINED)
+        return { VK_FORMAT_B8G8R8A8_UNORM,
+                 VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
+
+    for (const VkSurfaceFormatKHR& availableFormat : formats)
+    {
+        if (availableFormat.format == format &&
+            availableFormat.colorSpace == colorSpace)
+        {
+            return availableFormat;
+        }
+    }
+
+    return formats[0];
+}
 
 /* ---------------------------------------------------------------- */
 
@@ -124,57 +139,93 @@ bool PhysicalDevice::isExtensionSupported(
 
 /* ---------------------------------------------------------------- */
 
-bool PhysicalDevice::isImageExtentSupported(const glm::ivec2& extent) const
+bool PhysicalDevice::isImageExtentSupported(
+        const Surface& surface,
+        const glm::ivec2& extent) const
 {
+    VkSurfaceCapabilitiesKHR capabilities;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+            d->device,
+            surface.handle(),
+            &capabilities);
+
     const uint32_t w = extent.x;
     const uint32_t h = extent.y;
 
-    return w >= d->capabilities.minImageExtent.width  &&
-           w <= d->capabilities.maxImageExtent.width  &&
-           h >= d->capabilities.minImageExtent.height &&
-           h <= d->capabilities.maxImageExtent.height;
+    return w >= capabilities.minImageExtent.width  &&
+           w <= capabilities.maxImageExtent.width  &&
+           h >= capabilities.minImageExtent.height &&
+           h <= capabilities.maxImageExtent.height;
 }
 
 /* ---------------------------------------------------------------- */
 
-bool PhysicalDevice::isSwapChainImageCountSupported(uint32_t count) const
+bool PhysicalDevice::isSwapChainImageCountSupported(
+        const Surface& surface,
+        uint32_t count) const
 {
-    return count >= d->capabilities.minImageCount &&
-           count <= d->capabilities.maxImageCount;
+    VkSurfaceCapabilitiesKHR capabilities;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+            d->device,
+            surface.handle(),
+            &capabilities);
+
+    return count >= capabilities.minImageCount &&
+           count <= capabilities.maxImageCount;
 }
 
 /* ---------------------------------------------------------------- */
 
 bool PhysicalDevice::isPresentModeSupported(
-    VkPresentModeKHR presentMode) const
+        const Surface& surface,
+        VkPresentModeKHR presentMode) const
 {
-    // Check that the device supports the present mode.
+
+    uint32_t presentModeCount;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(
+        d->device, surface.handle(),
+        &presentModeCount, nullptr);
+
+    std::vector<VkPresentModeKHR> presentModes;
+    if (presentModeCount > 0)
+    {
+        presentModes.resize(presentModeCount);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(
+            d->device, surface.handle(),
+            &presentModeCount, presentModes.data());
+    }
+
     const auto it = std::find_if(
-        d->presentModes.begin(),
-        d->presentModes.end(),
+        presentModes.begin(),
+        presentModes.end(),
         [presentMode](const VkPresentModeKHR& mode)
     { return mode == presentMode; });
 
-    return it != d->presentModes.end();
+    return it != presentModes.end();
 }
 
 /* ---------------------------------------------------------------- */
 
 bool PhysicalDevice::isSurfaceSupported(
-    VkFormat format,
-    VkColorSpaceKHR colorSpace) const
-{
-    // Check that the device supports the surface mode.
+        const Surface& surface,
+        VkFormat format,
+        VkColorSpaceKHR colorSpace) const
+{  
+    std::vector<VkSurfaceFormatKHR> surfaceFormats =
+            physicalDeviceSurfaceFormats(
+                surface.handle(),
+                d->device);
+
     const auto it = std::find_if(
-        d->surfaceFormats.begin(),
-        d->surfaceFormats.end(),
+        surfaceFormats.begin(),
+        surfaceFormats.end(),
         [format, colorSpace](const VkSurfaceFormatKHR& fmt)
     {
         return fmt.format     == format &&
                fmt.colorSpace == colorSpace;
     });
 
-    return it != d->surfaceFormats.end();
+    return it != surfaceFormats.end();
 }
 
 /* ---------------------------------------------------------------- */

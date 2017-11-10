@@ -34,7 +34,7 @@ static const int WINDOW_WIDTH  = 720;
 static const int WINDOW_HEIGHT = 576;
 
 // Surface
-static const VkFormat SURFACE_FORMAT             = VK_FORMAT_R8G8B8A8_UNORM;
+static const VkFormat SURFACE_FORMAT             = VK_FORMAT_B8G8R8A8_UNORM;
 static const VkColorSpaceKHR SURFACE_COLOR_SPACE = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
 // Presentation
@@ -70,43 +70,31 @@ int main()
 
     using namespace kuu::vk;
 
-    if (!Surface::areExtensionsSupported())
+    // Create an instance parameters.
+    Instance::Parameters params;
+    params.applicationName = WINDOW_NAME;
+    params.engineName = "kuuEngine";
+    params.createValidationLayer = true;
+    params.createSurfaceExtensesions = true;
+
+    // Create an instance.
+    Instance instance(params);
+    if (!instance.isValid())
         return EXIT_FAILURE;
 
-    std::vector<std::string> instanceLayers;
-    std::vector<std::string> instanceExtensions =
-        Surface::extensions();
-
-    // Check if the validation layer is available
-    const bool enableValidationLayer =
-        Instance::isLayerSupported(
-            "VK_LAYER_LUNARG_standard_validation");
-    if (enableValidationLayer)
-    {
-        instanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-        instanceLayers.push_back("VK_LAYER_LUNARG_standard_validation");
-    }
-
-    // Create a Vulkan instance.
-    Instance inst;
-    inst.setApplicationName(WINDOW_NAME)
-        .setEngineName("kuuEngine")
-        .setExtensions(instanceExtensions)
-        .setLayers(instanceLayers);
-//        .setCreateValidationLayer()
-//        .setCreateSurface(window);
-    inst.create();
-
-    VkInstance instance = inst.handle();
+    // Create a surface.
+    Surface surface = instance.createSurface(window);
+    if (!surface.isValid())
+        return EXIT_FAILURE;
 
     VkResult result;
 
     /* ------------------------------------------------------------ *
        Surface.
      * ------------------------------------------------------------ */
-
+    VkSurfaceKHR surfaceHandle;
+#if 0
     // Create the GLFW vulkan surface
-    VkSurfaceKHR surface;
     result = glfwCreateWindowSurface(instance,
                                      window,
                                      nullptr,
@@ -119,6 +107,8 @@ int main()
 
         return EXIT_FAILURE;
     }
+#endif
+    surfaceHandle = surface.handle();
 
     /* ------------------------------------------------------------ *
        Physical device.
@@ -128,23 +118,22 @@ int main()
     physicalDeviceExtensionNames.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     std::vector<PhysicalDevice> physicalDevices =
-        inst.physicalDevices();
+        instance.physicalDevices();
 
     std::vector<PhysicalDevice> validPhysicalDevices;
     for (PhysicalDevice device : physicalDevices)
     {
-        device.setSurface(surface);
         device.dump();
 
         if (!device.isExtensionSupported(physicalDeviceExtensionNames))
             continue;
-        if (!device.isSurfaceSupported(SURFACE_FORMAT, SURFACE_COLOR_SPACE))
+        if (!device.isSurfaceSupported(surface, SURFACE_FORMAT, SURFACE_COLOR_SPACE))
             continue;
-        if (!device.isPresentModeSupported(PRESENT_MODE))
+        if (!device.isPresentModeSupported(surface, PRESENT_MODE))
             continue;
-        if (!device.isImageExtentSupported(glm::ivec2(WINDOW_WIDTH, WINDOW_HEIGHT)))
+        if (!device.isImageExtentSupported(surface, glm::ivec2(WINDOW_WIDTH, WINDOW_HEIGHT)))
             continue;
-        if (!device.isSwapChainImageCountSupported(SWAP_CHAIN_IMAGE_COUNT))
+        if (!device.isSwapChainImageCountSupported(surface, SWAP_CHAIN_IMAGE_COUNT))
             continue;
 
         validPhysicalDevices.push_back(device);
@@ -161,6 +150,8 @@ int main()
 
     // Auto-select the first device.
     PhysicalDevice phyDev = validPhysicalDevices[0];
+    VkSurfaceFormatKHR fmt = phyDev.suitableSurfaceFormat(surface);
+
     VkPhysicalDevice physicalDevice = phyDev.handle();
 
     /* ------------------------------------------------------------ *
@@ -168,12 +159,12 @@ int main()
      * ------------------------------------------------------------ */
 
     Queue graphicsQueue(physicalDevice,
-                        surface,
+                        surfaceHandle,
                         Queue::Type::Graphics);
     graphicsQueue.create(1, 1.0f);
 
     Queue presentQueue(physicalDevice,
-                       surface,
+                       surfaceHandle,
                        Queue::Type::Presentation);
     presentQueue.create(1, 1.0f);
 
@@ -200,7 +191,7 @@ int main()
 
     VkSwapchainCreateInfoKHR createInfo = {};
     createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface          = surface;
+    createInfo.surface          = surfaceHandle;
     createInfo.minImageCount    = SWAP_CHAIN_IMAGE_COUNT;
     createInfo.imageFormat      = SURFACE_FORMAT;
     createInfo.imageColorSpace  = SURFACE_COLOR_SPACE;
@@ -869,7 +860,6 @@ int main()
     //vkDestroySurfaceKHR(instance, surface, nullptr);
 
     dev.destroy();
-    inst.destroy();
 
     return EXIT_SUCCESS;
 }

@@ -104,16 +104,151 @@ std::vector<const char*> toConstCharVector(
 
 struct Instance::Data
 {
-    std::string applicationName;
-    std::string engineName;
-    std::vector<std::string> extensions;
-    std::vector<std::string> layers;
-    bool createValidation = false;
-    bool createSurface = false;
-    GLFWwindow* window = nullptr;
-    
+    Data(const Parameters& params)
+    {
+        //////////////////////////////////////////////////////////////
+        // 1) Collect extensions and layers that user wants to use.
+
+        std::vector<std::string> layers;
+        std::vector<std::string> extensions;
+
+        if (params.createSurfaceExtensesions)
+        {
+            if (!Surface::areExtensionsSupported())
+            {
+                std::cerr << __FUNCTION__
+                          << ": surface extensions are not supported"
+                          << std::endl;
+                return;
+            }
+
+            extensions = Surface::extensions();
+        }
+
+        if (params.createValidationLayer)
+        {
+            const bool validationLayerSupported =
+                Instance::isLayerSupported(
+                    "VK_LAYER_LUNARG_standard_validation");
+            if (validationLayerSupported)
+            {
+                extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+                layers.push_back("VK_LAYER_LUNARG_standard_validation");
+            }
+            else
+            {
+                std::cerr << __FUNCTION__
+                          << ": validation layer is not supported"
+                          << std::endl;
+                return;
+            }
+        }
+
+        //////////////////////////////////////////////////////////////////
+        // 2) create the instance
+
+        layers.insert(layers.end(), params.layers.begin(), params.layers.end());
+        extensions.insert(extensions.end(), params.extensions.begin(), params.extensions.end());
+
+        std::vector<const char*> extensionsAsConstChar = toConstCharVector(extensions);
+        std::vector<const char*> layersAsConstChar     = toConstCharVector(layers);
+
+        VkApplicationInfo appInfo = {};
+        appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+        appInfo.pApplicationName   = params.applicationName.c_str();
+        appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+        appInfo.pEngineName        = params.engineName.c_str();
+        appInfo.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
+        appInfo.apiVersion         = VK_API_VERSION_1_0;
+
+        VkInstanceCreateInfo instanceInfo = {};
+        instanceInfo.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        instanceInfo.pApplicationInfo        = &appInfo;
+        instanceInfo.enabledLayerCount       = uint32_t(layers.size());
+        instanceInfo.enabledExtensionCount   = uint32_t(extensions.size());
+
+        if (extensions.size())
+            instanceInfo.ppEnabledExtensionNames = extensionsAsConstChar.data();
+        if (layers.size())
+            instanceInfo.ppEnabledLayerNames = layersAsConstChar.data();
+
+        const VkResult result = vkCreateInstance(
+            &instanceInfo,
+            nullptr,
+            &instance);
+
+        if (result != VK_SUCCESS)
+        {
+            std::cerr << __FUNCTION__
+                      << ": failed to create Vulkan instance"
+                      << std::endl;
+            return;
+        }
+
+        //////////////////////////////////////////////////////////////////
+        // 3) create the physical devices
+
+        uint32_t physicalDeviceCount = 0;
+        vkEnumeratePhysicalDevices(
+            instance,
+            &physicalDeviceCount,
+            nullptr);
+
+        if (physicalDeviceCount > 0)
+        {
+            std::vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
+            vkEnumeratePhysicalDevices(
+                instance,
+                &physicalDeviceCount,
+                physicalDevices.data());
+
+            for (VkPhysicalDevice device : physicalDevices)
+                this->physicalDevices.push_back(PhysicalDevice(device));
+        }
+        else
+        {
+            std::cerr << __FUNCTION__
+                      << ": no physical devices with Vulkan support"
+                      << std::endl;
+            return;
+        }
+
+        //////////////////////////////////////////////////////////////////
+        // 4) create the debug callback if user has set the debug report
+        //    extensions and it is supported by system.
+
+        if (params.createValidationLayer)
+        {
+            VkDebugReportCallbackCreateInfoEXT debugInfo = {};
+            debugInfo.sType        = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+            debugInfo.flags        = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+            debugInfo.pfnCallback  = debugCallback;
+
+            vkCreateDebugReportCallback(
+                instance,
+                &debugInfo,
+                nullptr,
+                &callback);
+        }
+
+        valid = true;
+    }
+
+    ~Data()
+    {
+        if (!valid)
+            return;
+
+        if (callback)
+            vkDestroyDebugReportCallback(
+                instance,
+                callback,
+                nullptr);
+        vkDestroyInstance(instance, nullptr);
+    }
+
     VkInstance instance;
-    bool created;
+    bool valid;
     
     std::vector<PhysicalDevice> physicalDevices;
 
@@ -122,162 +257,24 @@ struct Instance::Data
 
 /* ---------------------------------------------------------------- */
 
-Instance::Instance()
-    : d(std::make_shared<Data>())
+Instance::Instance(const Parameters& params)
+    : d(std::make_shared<Data>(params))
 {}
 
 /* ---------------------------------------------------------------- */
 
-Instance& Instance::setApplicationName(
-    const std::string& applicationName)
-{
-    d->applicationName = applicationName;
-    return *this;
-}
-
-/* ---------------------------------------------------------------- */
-
-Instance& Instance::setEngineName(
-    const std::string& engineName)
-{
-    d->engineName = engineName;
-    return *this;
-}
-    
-/* ---------------------------------------------------------------- */
-
-Instance& Instance::setExtensions(
-    std::vector<std::string>& extensions)
-{
-    d->extensions = extensions;
-    return *this;
-}
-
-/* ---------------------------------------------------------------- */
-
-Instance& Instance::setLayers(
-    std::vector<std::string>& layers)
-{
-    d->layers = layers;
-    return *this;
-}
-
-/* ---------------------------------------------------------------- */
-
-Instance &Instance::setCreateValidationLayer()
-{
-    d->createValidation = true;
-    return *this;
-}
-
-/* ---------------------------------------------------------------- */
-
-Instance &Instance::setCreateSurface(GLFWwindow* window)
-{
-    d->window = window;
-    return *this;
-}
-    
-/* ---------------------------------------------------------------- */
-
-bool Instance::create()
-{
-    //////////////////////////////////////////////////////////////////
-    // 1) create the instance
-    
-    std::vector<const char*> extensions = toConstCharVector(d->extensions);
-    std::vector<const char*> layers     = toConstCharVector(d->layers);
-    
-    VkApplicationInfo appInfo = {};
-    appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName   = d->applicationName.c_str();
-    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.pEngineName        = d->engineName.c_str();
-    appInfo.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion         = VK_API_VERSION_1_0;
-
-    VkInstanceCreateInfo instanceInfo = {};
-    instanceInfo.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    instanceInfo.pApplicationInfo        = &appInfo;
-    instanceInfo.enabledLayerCount       = uint32_t(layers.size());
-    instanceInfo.enabledExtensionCount   = uint32_t(extensions.size());
-    
-    if (extensions.size())
-        instanceInfo.ppEnabledExtensionNames = extensions.data();
-    if (layers.size())
-        instanceInfo.ppEnabledLayerNames = layers.data();
-
-    const VkResult result = vkCreateInstance(
-        &instanceInfo,
-        nullptr,
-        &d->instance);
-    
-    //////////////////////////////////////////////////////////////////
-    // 2) create the physical devices
-    
-    uint32_t physicalDeviceCount = 0;
-    vkEnumeratePhysicalDevices(
-        d->instance,
-        &physicalDeviceCount,
-        nullptr);
-
-    if (physicalDeviceCount > 0)
-    {
-        std::vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
-        vkEnumeratePhysicalDevices(
-            d->instance,
-            &physicalDeviceCount,
-            physicalDevices.data());
-
-        for (VkPhysicalDevice device : physicalDevices)
-            d->physicalDevices.push_back(PhysicalDevice(device));
-    }
-
-    //////////////////////////////////////////////////////////////////
-    // 3) create the debug callback if user has set the debug report
-    //    extensions and it is supported by system.
-
-    const std::string debugEx = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
-    if (containsExtension(debugEx, d->extensions) &&
-        isExtensionSupported(debugEx))
-    {
-        VkDebugReportCallbackCreateInfoEXT debugInfo = {};
-        debugInfo.sType        = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-        debugInfo.flags        = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
-        debugInfo.pfnCallback  = debugCallback;
-
-        vkCreateDebugReportCallback(
-            d->instance,
-            &debugInfo,
-            nullptr,
-            &d->callback);
-    }
-    
-    d->created = true;
-    return result == VK_SUCCESS &&
-           d->physicalDevices.size() > 0;
-}
-
-/* ---------------------------------------------------------------- */
-
-bool Instance::destroy()
-{
-    if (!d->created)
-        return false;
-    if (d->callback)
-        vkDestroyDebugReportCallback(
-            d->instance,
-            d->callback,
-            nullptr);
-    vkDestroyInstance(d->instance, nullptr);
-
-    return true;
-}
+bool Instance::isValid() const
+{ return d->valid; }
 
 /* ---------------------------------------------------------------- */
 
 VkInstance Instance::handle() const
 { return d->instance; }
+
+/* ---------------------------------------------------------------- */
+
+Surface Instance::createSurface(GLFWwindow* window) const
+{ return Surface(*this, window); }
 
 /* ---------------------------------------------------------------- */
 

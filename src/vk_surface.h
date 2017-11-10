@@ -44,12 +44,13 @@ class Surface
 {
 public:
     // Constructs the surface.
-    Surface(const Instance& instance);
+    Surface(const Instance& instance, GLFWwindow* window);
 
-    // Creates the surface.
-    bool create(GLFWwindow* window);
-    // Destroys the surface.
-    bool destroy();
+    // Returns true if the surface is valid.
+    bool isValid() const;
+
+    // Returns the handle to surface.
+    VkSurfaceKHR handle() const;
 
     // Returns true if the implementation supports all of the
     // extensions that the surface needs.
