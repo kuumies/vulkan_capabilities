@@ -31,28 +31,16 @@ public:
     };
 
     // Constructs the queue.
-    Queue(VkPhysicalDevice physicalDevice,
-          VkSurfaceKHR surface,
-          Type type);
+    Queue(const VkDevice& device, uint32_t familyIndex, Type type);
 
-    // Returns the queue create info. The info is valid after
-    // the queue is created.
-    VkDeviceQueueCreateInfo deviceQueue() const;
     // Returns the family index. Queues must have been created.
     uint32_t familyIndex() const;
-    // Returns queue handle. The handle is valid only if the
-    // queue has been added into logical device.
+    // Returns the type.
+    Type type() const;
+
+    // Returns queue handle.
     VkQueue handle() const;
 
-    // Creates the family index. Returns true if the creation
-    // succeeded.
-    bool create(uint32_t count, float priority);
-
-    // Destroys the queue.
-    void destroy();
-
-private:
-    void setHandle(VkQueue handle);
 
 private:
     struct Data;

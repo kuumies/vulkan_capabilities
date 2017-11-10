@@ -14,6 +14,7 @@
 
 /* ---------------------------------------------------------------- */
 
+#include "vk_device.h"
 #include "vk_surface.h"
 
 namespace kuu
@@ -32,6 +33,10 @@ public:
 
     // Returns the handle to physical device.
     VkPhysicalDevice handle() const;
+
+    // Create logical device.
+    Device createLogicalDevice(const std::vector<Device::QueueParameters> &params,
+                               const std::vector<std::string>& extensions) const;
 
     // Returns true if the extension is supported.
     bool isExtensionSupported(const std::string& extension) const;

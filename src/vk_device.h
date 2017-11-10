@@ -20,24 +20,42 @@ namespace kuu
 namespace vk
 {
 
+/* ---------------------------------------------------------------- */
+
+class Surface;
+class PhysicalDevice;
+
 /* ---------------------------------------------------------------- *
    A vulkan logical device.
  * ---------------------------------------------------------------- */
 class Device
 {
 public:
+    // Queue parameters
+    struct QueueParameters
+    {
+        Queue::Type type;
+        uint32_t count;
+        float priority;
+
+        Surface* surface = nullptr;
+    };
+
     // Constructs the device.
-    Device(VkPhysicalDevice physicalDevice);
+    Device(const PhysicalDevice& physicalDevice,
+           const std::vector<QueueParameters>& params,
+           const std::vector<std::string>& extensions);
+
+    // Returns true if the device is valid.
+    bool isValid() const;
 
     // Returns the device handle. Device must have been created.
     VkDevice handle() const;
 
-    // Creates the device. This function will update the input queue
-    // handles. Returns true if the device creation succeeded.
-    bool create(std::vector<Queue> queues,
-                 const std::vector<std::string>& physicalDeviceExtensions);
-    // Destroys the device.
-    void destroy();
+    // Returns the queues.
+    std::vector<Queue> queues() const;
+    // Returns queue.
+    Queue queue(Queue::Type type) const;
 
 private:
     struct Data;

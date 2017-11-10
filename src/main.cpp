@@ -110,37 +110,24 @@ int main()
     }
 
     // Auto-select the first device.
-    PhysicalDevice physicalDevive = suitablePhysicalDevices[0];
+    PhysicalDevice physicalDevice = suitablePhysicalDevices[0];
 
+    // Create logical device queue parameteres.
+    std::vector<Device::QueueParameters> queueParameters =
+    {
+        { Queue::Type::Graphics,     1, 1.0f           },
+        { Queue::Type::Presentation, 1, 1.0f, &surface }
+    };
 
-    VkPhysicalDevice physicalDeviceHandle = physicalDevive.handle();
+    // Create logical device.
+    Device device = physicalDevice.createLogicalDevice(
+        queueParameters,
+        extensionNames);
 
-    /* ------------------------------------------------------------ *
-       Queues
-     * ------------------------------------------------------------ */
-
-    Queue graphicsQueue(physicalDeviceHandle,
-                        surface.handle(),
-                        Queue::Type::Graphics);
-    graphicsQueue.create(1, 1.0f);
-
-    Queue presentQueue(physicalDeviceHandle,
-                       surface.handle(),
-                       Queue::Type::Presentation);
-    presentQueue.create(1, 1.0f);
-
-    std::vector<Queue> queues;
-    queues.push_back(graphicsQueue);
-    queues.push_back(presentQueue);
-
-    /* ------------------------------------------------------------ *
-       Logical device.
-     * ------------------------------------------------------------ */
-
-    Device dev(physicalDeviceHandle);
-    dev.create(queues, extensionNames);
-
-    VkDevice device = dev.handle();
+    // Get the queues
+    std::vector<Queue> queues = device.queues();
+    Queue graphicsQueue = device.queue(Queue::Type::Graphics);
+    Queue presentQueue = device.queue(Queue::Type::Presentation);
 
     /* ------------------------------------------------------------ *
        Swap chain
@@ -178,7 +165,7 @@ int main()
 
     VkResult result;
     VkSwapchainKHR swapChain;
-    result = vkCreateSwapchainKHR(device,
+    result = vkCreateSwapchainKHR(device.handle(),
                                   &createInfo,
                                   nullptr,
                                   &swapChain);
@@ -193,11 +180,11 @@ int main()
 
     // Get the swap chain image count.
     uint32_t imageCount = 0;
-    vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(device.handle(), swapChain, &imageCount, nullptr);
 
     // Get the swap chain images.
     std::vector<VkImage> swapChainImages(imageCount);
-    vkGetSwapchainImagesKHR(device,
+    vkGetSwapchainImagesKHR(device.handle(),
                             swapChain,
                             &imageCount,
                             swapChainImages.data());
@@ -221,7 +208,7 @@ int main()
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount = 1;
 
-        result = vkCreateImageView(device,
+        result = vkCreateImageView(device.handle(),
                                    &createInfo,
                                    nullptr,
                                    &swapChainImageViews[i]);
@@ -240,7 +227,7 @@ int main()
      * ------------------------------------------------------------ */
 
     using namespace kuu::vk;
-    ShaderStage shader(device);
+    ShaderStage shader(device.handle());
     shader.create("shaders/test.vert.spv",
                   "shaders/test.frag.spv");
 
@@ -311,7 +298,7 @@ int main()
     pipelineLayoutInfo.pPushConstantRanges    = 0;
 
     VkPipelineLayout pipelineLayout;
-    result = vkCreatePipelineLayout(device,
+    result = vkCreatePipelineLayout(device.handle(),
                                     &pipelineLayoutInfo,
                                     nullptr,
                                     &pipelineLayout);
@@ -418,7 +405,7 @@ int main()
 
     // Create the render pass.
     VkRenderPass renderPass;
-    result = vkCreateRenderPass(device, &renderPassInfo,
+    result = vkCreateRenderPass(device.handle(), &renderPassInfo,
                                 nullptr, &renderPass);
     if (result != VK_SUCCESS)
     {
@@ -440,7 +427,7 @@ int main()
         { {-0.5f,  0.5f}, { 0.0f, 0.0f, 1.0f } }
     };
 
-    Mesh mesh(device, physicalDeviceHandle, 0);
+    Mesh mesh(device.handle(), physicalDevice.handle(), 0);
     mesh.create(vertices);
 
     /* ------------------------------------------------------------ *
@@ -489,7 +476,7 @@ int main()
     pipelineInfo.basePipelineIndex   = -1;
 
     VkPipeline graphicsPipeline;
-    result = vkCreateGraphicsPipelines(device,
+    result = vkCreateGraphicsPipelines(device.handle(),
                                        VK_NULL_HANDLE,
                                        1,
                                        &pipelineInfo,
@@ -528,7 +515,7 @@ int main()
         framebufferInfo.layers          = 1;
 
         // Create the framebuffer.
-        result = vkCreateFramebuffer(device, &framebufferInfo,
+        result = vkCreateFramebuffer(device.handle(), &framebufferInfo,
                                      nullptr,
                                      &swapChainFramebuffers[i]);
         if (result != VK_SUCCESS)
@@ -555,7 +542,7 @@ int main()
 
     // Create command pool.
     VkCommandPool commandPool;
-    result = vkCreateCommandPool(device, &poolInfo,
+    result = vkCreateCommandPool(device.handle(), &poolInfo,
                                  nullptr, &commandPool);
     if (result != VK_SUCCESS)
     {
@@ -579,7 +566,7 @@ int main()
     allocInfo.commandBufferCount = uint32_t(commandBuffers.size());
 
     // Allocate the command buffers.
-    result = vkAllocateCommandBuffers(device, &allocInfo,
+    result = vkAllocateCommandBuffers(device.handle(), &allocInfo,
                                       commandBuffers.data());
     if (result != VK_SUCCESS)
     {
@@ -652,7 +639,7 @@ int main()
     // Create semaphore for rendering to know when an image in
     // swap chain is available
     VkSemaphore imageAvailableSemaphore;
-    result = vkCreateSemaphore(device,
+    result = vkCreateSemaphore(device.handle(),
                                &semaphoreInfo,
                                nullptr,
                                &imageAvailableSemaphore);
@@ -668,7 +655,7 @@ int main()
     // Create semaphore for presentation to know when an image in
     // swap chain is rendered.
     VkSemaphore renderFinishedSemaphore;
-    result = vkCreateSemaphore(device,
+    result = vkCreateSemaphore(device.handle(),
                                &semaphoreInfo,
                                nullptr,
                                &renderFinishedSemaphore);
@@ -690,7 +677,7 @@ int main()
     // The image is a color attachment to framebuffer.
     const uint64_t timeout = std::numeric_limits<uint64_t>::max(); // this disables timeout...?
     uint32_t imageIndex = 0;
-    vkAcquireNextImageKHR(device, swapChain, timeout,
+    vkAcquireNextImageKHR(device.handle(), swapChain, timeout,
                           imageAvailableSemaphore,
                           VK_NULL_HANDLE, &imageIndex);
 
@@ -794,7 +781,7 @@ int main()
         glfwPollEvents();
     }
 
-    vkDeviceWaitIdle(device);
+    vkDeviceWaitIdle(device.handle());
 
     /* ------------------------------------------------------------ *
        Clean up
@@ -803,25 +790,23 @@ int main()
     glfwDestroyWindow(window);
     glfwTerminate();
 
-    vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
-    vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
+    vkDestroySemaphore(device.handle(), renderFinishedSemaphore, nullptr);
+    vkDestroySemaphore(device.handle(), imageAvailableSemaphore, nullptr);
 
     for (uint32_t i = 0; i < swapChainFramebuffers.size(); i++)
-        vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
+        vkDestroyFramebuffer(device.handle(), swapChainFramebuffers[i], nullptr);
     for (uint32_t i = 0; i < swapChainImageViews.size(); i++)
-        vkDestroyImageView(device, swapChainImageViews[i], nullptr);
+        vkDestroyImageView(device.handle(), swapChainImageViews[i], nullptr);
 
     shader.destroy();
     mesh.destroy();
 
-    vkDestroyCommandPool(device, commandPool, nullptr);
-    vkDestroyPipeline(device, graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-    vkDestroyRenderPass(device, renderPass, nullptr);
-    vkDestroySwapchainKHR(device, swapChain, nullptr);
+    vkDestroyCommandPool(device.handle(), commandPool, nullptr);
+    vkDestroyPipeline(device.handle(), graphicsPipeline, nullptr);
+    vkDestroyPipelineLayout(device.handle(), pipelineLayout, nullptr);
+    vkDestroyRenderPass(device.handle(), renderPass, nullptr);
+    vkDestroySwapchainKHR(device.handle(), swapChain, nullptr);
     //vkDestroySurfaceKHR(instance, surface, nullptr);
-
-    dev.destroy();
 
     return EXIT_SUCCESS;
 }

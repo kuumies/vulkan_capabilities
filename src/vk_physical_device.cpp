@@ -86,6 +86,11 @@ PhysicalDevice::PhysicalDevice(VkPhysicalDevice device)
 VkPhysicalDevice PhysicalDevice::handle() const
 { return d->device; }
 
+Device PhysicalDevice::createLogicalDevice(
+    const std::vector<Device::QueueParameters>& params,
+    const std::vector<std::string>& extensions) const
+{ return Device(*this, params, extensions); }
+
 /* ---------------------------------------------------------------- */
 
 bool PhysicalDevice::isExtensionSupported(
