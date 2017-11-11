@@ -15,6 +15,11 @@ namespace kuu
 namespace vk
 {
 
+/* ---------------------------------------------------------------- */
+
+class Semaphore;
+class SwapChain;
+
 /* ---------------------------------------------------------------- *
    A queue
  * ---------------------------------------------------------------- */
@@ -38,6 +43,14 @@ public:
     Type type() const;
     // Returns handle.
     VkQueue handle() const;
+
+    void submit(VkCommandBuffer buffer,
+                const Semaphore& waitSemaphore,
+                const Semaphore& signalSemaphore);
+    void present(const SwapChain& swapChain,
+                 const uint32_t imageIndex,
+                 const Semaphore& waitSemaphore);
+    void waitIdle();
 
 private:
     struct Data;

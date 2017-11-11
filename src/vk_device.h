@@ -38,8 +38,7 @@ public:
         Queue::Type type;
         uint32_t count;
         float priority;
-
-        Surface* surface = nullptr;
+        Surface* surface;
     };
 
     // Constructs the device.

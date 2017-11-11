@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------- *
    Antti Jumpponen <kuumies@gmail.com>
-   The definition of kuu::vk::SwapChain class
+   The definition of kuu::vk::Semaphore class
  * ---------------------------------------------------------------- */
 
 #pragma once
@@ -11,6 +11,10 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+/* ---------------------------------------------------------------- */
+
+#include "vk_swap_chain.h"
+
 namespace kuu
 {
 namespace vk
@@ -19,29 +23,21 @@ namespace vk
 /* ---------------------------------------------------------------- */
 
 class Device;
-class Semaphore;
-class Surface;
 
 /* ---------------------------------------------------------------- *
-   A vulkan swap chain.
+   A semaphore
  * ---------------------------------------------------------------- */
-class SwapChain
+class Semaphore
 {
 public:
-    // Constructs the swap chain.
-    SwapChain(const Device& device,
-              const Surface& surface);
+    // Constructs the pipeline
+    Semaphore(const Device& device);
 
-    // Returns true if the swap chain is valid.
+    // Returns true if the semaphore is valid.
     bool isValid() const;
 
     // Returns handle.
-    VkSwapchainKHR handle() const;
-
-    // Returns the image views.
-    std::vector<VkImageView> imageViews() const;
-
-    uint32_t acquireImage(const Semaphore& semaphore);
+    VkSemaphore handle() const;
 
 private:
     struct Data;

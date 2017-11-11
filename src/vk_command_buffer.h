@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------- *
    Antti Jumpponen <kuumies@gmail.com>
-   The definition of kuu::vk::SwapChain class
+   The definition of kuu::vk::CommandBuffer class
  * ---------------------------------------------------------------- */
 
 #pragma once
@@ -19,29 +19,29 @@ namespace vk
 /* ---------------------------------------------------------------- */
 
 class Device;
-class Semaphore;
-class Surface;
+class Queue;
 
 /* ---------------------------------------------------------------- *
-   A vulkan swap chain.
+   A command buffer
  * ---------------------------------------------------------------- */
-class SwapChain
+class CommandBuffer
 {
 public:
-    // Constructs the swap chain.
-    SwapChain(const Device& device,
-              const Surface& surface);
+    // Constructs the command buffer.
+    CommandBuffer(const Device& device,
+                  const Queue& graphicsQueue,
+                  const int count);
 
-    // Returns true if the swap chain is valid.
+    // Returns true if the command buffer is valid.
     bool isValid() const;
 
-    // Returns handle.
-    VkSwapchainKHR handle() const;
+    // Returns the buffer count.
+    int bufferCount() const;
+    // Returns the buffer.
+    VkCommandBuffer buffer(int bufferIndex) const;
 
-    // Returns the image views.
-    std::vector<VkImageView> imageViews() const;
-
-    uint32_t acquireImage(const Semaphore& semaphore);
+    void begin(int buffer);
+    void end(int buffer);
 
 private:
     struct Data;

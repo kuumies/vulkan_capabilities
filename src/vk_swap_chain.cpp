@@ -11,8 +11,9 @@
 
 /* ---------------------------------------------------------------- */
 
-#include "vk_surface.h"
 #include "vk_device.h"
+#include "vk_semaphore.h"
+#include "vk_surface.h"
 
 namespace kuu
 {
@@ -156,6 +157,20 @@ VkSwapchainKHR SwapChain::handle() const
 
 std::vector<VkImageView> SwapChain::imageViews() const
 { return d->imageViews; }
+
+uint32_t SwapChain::acquireImage(const Semaphore& semaphore)
+{
+    const uint64_t timeout = std::numeric_limits<uint64_t>::max(); // this disables timeout...?
+    uint32_t imageIndex = 0;
+    vkAcquireNextImageKHR(
+        d->device.handle(),
+        d->swapChain,
+        timeout,
+        semaphore.handle(),
+        VK_NULL_HANDLE,
+        &imageIndex);
+    return imageIndex;
+}
 
 } // namespace vk
 } // namespace kuu

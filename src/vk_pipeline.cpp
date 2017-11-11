@@ -13,6 +13,7 @@
 
 #include "vk_surface.h"
 #include "vk_device.h"
+#include "vk_render_pass.h"
 
 namespace kuu
 {
@@ -27,7 +28,11 @@ struct Pipeline::Data
          const Surface& surface,
          const Parameters& params)
         : device(device)
+        , renderPass(device, surface, { params.viewportWidth, params.viewportHeight, params.swapChain })
     {
+        if (!renderPass.isValid())
+            return;
+
         VkPipelineRasterizationStateCreateInfo rasterizer = {};
         rasterizer.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         rasterizer.depthClampEnable        = VK_FALSE;
@@ -119,83 +124,83 @@ struct Pipeline::Data
         viewportState.scissorCount  = 1;
         viewportState.pScissors     = &scissor;
 
-        /* ------------------------------------------------------------ *
-           Render pass
+//        /* ------------------------------------------------------------ *
+//           Render pass
 
-            * framebuffer attachments
-            * framebuffer content handling
+//            * framebuffer attachments
+//            * framebuffer content handling
 
-         * ------------------------------------------------------------ */
+//         * ------------------------------------------------------------ */
 
-        // Create the description of the colorbuffer attachment. The
-        // colorbuffer is an image in the swap chain.
-        //      * no multisampling
-        //      * clear the content before rendering
-        //      * keep the contetn after rendering
-        //      * do not care stencil operations
-        //      * do not create what is the pixel layout before rendering
-        //        as it is going to be cleared
-        //      * set pixel layout to be presentation format after
-        //        rendering as its going to be display on the screen
-        VkAttachmentDescription colorAttachment = {};
-        colorAttachment.format         = surface.format().format;
-        colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+//        // Create the description of the colorbuffer attachment. The
+//        // colorbuffer is an image in the swap chain.
+//        //      * no multisampling
+//        //      * clear the content before rendering
+//        //      * keep the contetn after rendering
+//        //      * do not care stencil operations
+//        //      * do not create what is the pixel layout before rendering
+//        //        as it is going to be cleared
+//        //      * set pixel layout to be presentation format after
+//        //        rendering as its going to be display on the screen
+//        VkAttachmentDescription colorAttachment = {};
+//        colorAttachment.format         = surface.format().format;
+//        colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
+//        colorAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+//        colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+//        colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+//        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+//        colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+//        colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-        // Attachment descriptions
-        const VkAttachmentDescription attachmentDescriptions[] =
-        { colorAttachment };
+//        // Attachment descriptions
+//        const VkAttachmentDescription attachmentDescriptions[] =
+//        { colorAttachment };
 
-        // Graphics attachment reference for subpass which is the color
-        // attachment above. Use the optimal layout for color attachment
-        // as thats what it is.
-        VkAttachmentReference colorAttachmentRef = {};
-        colorAttachmentRef.attachment = 0;
-        colorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+//        // Graphics attachment reference for subpass which is the color
+//        // attachment above. Use the optimal layout for color attachment
+//        // as thats what it is.
+//        VkAttachmentReference colorAttachmentRef = {};
+//        colorAttachmentRef.attachment = 0;
+//        colorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-        // Subpass that renders into colorbuffer attachment.
-        VkSubpassDescription subpass = {};
-        subpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments    = &colorAttachmentRef;
+//        // Subpass that renders into colorbuffer attachment.
+//        VkSubpassDescription subpass = {};
+//        subpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
+//        subpass.colorAttachmentCount = 1;
+//        subpass.pColorAttachments    = &colorAttachmentRef;
 
-        // Add a subpass dependecy to prevent the image layout transition
-        // being run too early. Make render pass to wait by waiting for
-        // the color attachment output stage.
-        VkSubpassDependency dependency = {};
-        dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass    = 0;
-        dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+//        // Add a subpass dependecy to prevent the image layout transition
+//        // being run too early. Make render pass to wait by waiting for
+//        // the color attachment output stage.
+//        VkSubpassDependency dependency = {};
+//        dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
+//        dependency.dstSubpass    = 0;
+//        dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+//        dependency.srcAccessMask = 0;
+//        dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+//        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-        // Fill the render pass info.
-        VkRenderPassCreateInfo renderPassInfo = {};
-        renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        renderPassInfo.attachmentCount = 1;
-        renderPassInfo.pAttachments    = attachmentDescriptions;
-        renderPassInfo.subpassCount    = 1;
-        renderPassInfo.pSubpasses      = &subpass;
-        renderPassInfo.dependencyCount = 1;
-        renderPassInfo.pDependencies   = &dependency;
+//        // Fill the render pass info.
+//        VkRenderPassCreateInfo renderPassInfo = {};
+//        renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+//        renderPassInfo.attachmentCount = 1;
+//        renderPassInfo.pAttachments    = attachmentDescriptions;
+//        renderPassInfo.subpassCount    = 1;
+//        renderPassInfo.pSubpasses      = &subpass;
+//        renderPassInfo.dependencyCount = 1;
+//        renderPassInfo.pDependencies   = &dependency;
 
-        // Create the render pass.
-        result = vkCreateRenderPass(device.handle(), &renderPassInfo,
-                                    nullptr, &renderPass);
-        if (result != VK_SUCCESS)
-        {
-            std::cerr << __FUNCTION__
-                      << ": failed to create vulkan render pass"
-                      << std::endl;
+//        // Create the render pass.
+//        result = vkCreateRenderPass(device.handle(), &renderPassInfo,
+//                                    nullptr, &renderPass);
+//        if (result != VK_SUCCESS)
+//        {
+//            std::cerr << __FUNCTION__
+//                      << ": failed to create vulkan render pass"
+//                      << std::endl;
 
-            return;
-        }
+//            return;
+//        }
 
         std::vector<VkVertexInputBindingDescription> bindingDescriptions;
         bindingDescriptions.push_back(params.mesh.bindingDescription());
@@ -233,7 +238,7 @@ struct Pipeline::Data
         pipelineInfo.pColorBlendState    = &colorBlending;
         pipelineInfo.pDynamicState       = nullptr;
         pipelineInfo.layout              = pipelineLayout;
-        pipelineInfo.renderPass          = renderPass;
+        pipelineInfo.renderPass          = renderPass.handle();
         pipelineInfo.subpass             = 0;
         pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex   = -1;
@@ -244,21 +249,21 @@ struct Pipeline::Data
                                            1,
                                            &pipelineInfo,
                                            nullptr,
-                                           &graphicsPipeline);
+                                           &pipeline);
 
     }
 
     ~Data()
     {
-        vkDestroyPipeline(device.handle(), graphicsPipeline, nullptr);
-        vkDestroyRenderPass(device.handle(), renderPass, nullptr);
+        vkDestroyPipeline(device.handle(), pipeline, nullptr);
+//        vkDestroyRenderPass(device.handle(), renderPass, nullptr);
         vkDestroyPipelineLayout(device.handle(), pipelineLayout, nullptr);
     }
 
     Device device;
+    RenderPass renderPass;
     VkPipelineLayout pipelineLayout;
-    VkRenderPass renderPass;
-    VkPipeline graphicsPipeline;
+    VkPipeline pipeline;
 };
 
 /* ---------------------------------------------------------------- */
@@ -269,19 +274,22 @@ Pipeline::Pipeline(const Device& device,
     : d(std::make_shared<Data>(device, surface, params))
 {}
 
-VkPipelineLayout Pipeline::pipelineLayout() const
-{
-    return d->pipelineLayout;
-}
+/* ---------------------------------------------------------------- */
 
-VkRenderPass Pipeline::renderPass() const
-{
-    return d->renderPass;
-}
+RenderPass Pipeline::renderPass() const
+{ return d->renderPass; }
 
-VkPipeline Pipeline::graphicsPipeline() const
+/* ---------------------------------------------------------------- */
+
+VkPipeline Pipeline::handle() const
+{ return d->pipeline; }
+
+void Pipeline::bind(VkCommandBuffer buf)
 {
-    return d->graphicsPipeline;
+    vkCmdBindPipeline(
+        buf,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        d->pipeline);
 }
 
 } // namespace vk

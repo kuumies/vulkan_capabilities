@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------- *
    Antti Jumpponen <kuumies@gmail.com>
-   The definition of kuu::vk::Pipeline class
+   The definition of kuu::vk::RenderPass class
  * ---------------------------------------------------------------- */
 
 #pragma once
@@ -11,8 +11,8 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "vk_mesh.h"
-#include "vk_shader_stage.h"
+/* ---------------------------------------------------------------- */
+
 #include "vk_swap_chain.h"
 
 namespace kuu
@@ -23,45 +23,43 @@ namespace vk
 /* ---------------------------------------------------------------- */
 
 class Device;
-class RenderPass;
 class Surface;
 
 /* ---------------------------------------------------------------- *
-   A pipeline
+   A render pass
  * ---------------------------------------------------------------- */
-class Pipeline
+class RenderPass
 {
 public:
-    // Defines pipeline params
+    // Defines render pass params
     struct Parameters
     {
-        Parameters(Mesh mesh, ShaderStage shaderStage, SwapChain swapChain)
-            : mesh(mesh)
-            , shaderStage(shaderStage)
+        Parameters(uint32_t viewportWidth, uint32_t viewportHeight, SwapChain swapChain)
+            : viewportWidth(viewportWidth)
+            , viewportHeight(viewportHeight)
             , swapChain(swapChain)
         {}
 
         uint32_t viewportWidth;
         uint32_t viewportHeight;
-
-        VkCullModeFlagBits cullMode = VK_CULL_MODE_BACK_BIT;
-        VkFrontFace frontFace = VK_FRONT_FACE_CLOCKWISE;
-
-        Mesh mesh;
-        ShaderStage shaderStage;
-
         SwapChain swapChain;
     };
 
     // Constructs the pipeline
-    Pipeline(const Device& device,
-             const Surface& surface,
-             const Parameters& params);
+    RenderPass(const Device& device,
+               const Surface& surface,
+               const Parameters& params);
 
-    RenderPass renderPass() const;
-    VkPipeline handle() const;
+    // Returns true if the render pass is valid.
+    bool isValid() const;
 
-    void bind(VkCommandBuffer buf);
+    // Returns the handle.
+    VkRenderPass handle() const;
+    // Returns swap chain framebuffers.
+    std::vector<VkFramebuffer> swapChainFramebuffers() const;
+
+    void begin(int i, VkCommandBuffer buffer, VkClearValue clearColor);
+    void end(VkCommandBuffer buffer);
 
 private:
     struct Data;
