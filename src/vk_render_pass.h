@@ -55,8 +55,6 @@ public:
 
     // Returns the handle.
     VkRenderPass handle() const;
-    // Returns swap chain framebuffers.
-    std::vector<VkFramebuffer> swapChainFramebuffers() const;
 
     void begin(int i, VkCommandBuffer buffer, VkClearValue clearColor);
     void end(VkCommandBuffer buffer);

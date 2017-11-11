@@ -158,6 +158,13 @@ VkSwapchainKHR SwapChain::handle() const
 std::vector<VkImageView> SwapChain::imageViews() const
 { return d->imageViews; }
 
+/* ---------------------------------------------------------------- */
+
+int SwapChain::imageViewSize() const
+{ return int(d->imageViews.size()); }
+
+/* ---------------------------------------------------------------- */
+
 uint32_t SwapChain::acquireImage(const Semaphore& semaphore)
 {
     const uint64_t timeout = std::numeric_limits<uint64_t>::max(); // this disables timeout...?

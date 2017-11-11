@@ -187,11 +187,6 @@ bool RenderPass::isValid() const
 VkRenderPass RenderPass::handle() const
 { return d->renderPass; }
 
-/* ---------------------------------------------------------------- */
-
-std::vector<VkFramebuffer> RenderPass::swapChainFramebuffers() const
-{ return d->swapChainFramebuffers; }
-
 void RenderPass::begin(int i, VkCommandBuffer buffer, VkClearValue clearColor)
 {
     VkRenderPassBeginInfo renderPassInfo = {};

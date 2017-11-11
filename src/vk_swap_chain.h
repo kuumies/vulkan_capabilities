@@ -40,6 +40,8 @@ public:
 
     // Returns the image views.
     std::vector<VkImageView> imageViews() const;
+    // Returns the count of image views.
+    int imageViewSize() const;
 
     uint32_t acquireImage(const Semaphore& semaphore);
 

@@ -129,9 +129,7 @@ int main()
     };
 
     // Create logical device.
-    Device device = physicalDevice.createLogicalDevice(
-        queueParameters,
-        extensionNames);
+    Device device(physicalDevice, queueParameters, extensionNames);
     if (device.isValid())
         return EXIT_FAILURE;
 
@@ -155,31 +153,28 @@ int main()
     Mesh mesh(device.handle(), physicalDevice.handle(), 0);
     mesh.create(vertices);
 
-    // Create pipeline parameters
+    // Create pipeline
     Pipeline::Parameters pipelineParams(mesh, shader, swapChain);
     pipelineParams.viewportWidth  = WINDOW_WIDTH;
     pipelineParams.viewportHeight = WINDOW_HEIGHT;
-
-    // Create pipeline
     Pipeline pipeline(device, surface, pipelineParams);
 
+    // Get render pass.
     RenderPass renderPass = pipeline.renderPass();
     if (!renderPass.isValid())
         return EXIT_FAILURE;
-
-    std::vector<VkFramebuffer> swapChainFramebuffers =
-        renderPass.swapChainFramebuffers();
 
     // Get the graphics queue.
     Queue graphicsQueue = device.queue(Queue::Type::Graphics);
 
     // Create command buffer.
-    CommandBuffer commandBuffer(device, graphicsQueue, swapChainFramebuffers.size());
+    CommandBuffer commandBuffer(device, graphicsQueue,
+                                swapChain.imageViewSize());
     if (!commandBuffer.isValid())
         return EXIT_FAILURE;
 
-    // Record same commands for each command buffer.
-    for (size_t i = 0; i < commandBuffer.bufferCount(); i++)
+    // Same commands are used to for each framebufferr
+    for (int i = 0; i < commandBuffer.bufferCount(); i++)
     {
         VkCommandBuffer buffer = commandBuffer.buffer(i);
         commandBuffer.begin(i);
