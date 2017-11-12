@@ -88,6 +88,7 @@ void Mesh::create(std::vector<Vertex> vertices)
     d->vertexCount = uint32_t(vertices.size());
     d->buffer.destroy();
     d->buffer.create(sizeof(vertices[0]) * vertices.size(),
+                     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                      vertices.data());
 }
 

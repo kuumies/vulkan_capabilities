@@ -100,16 +100,21 @@ struct Device::Data
         std::vector<VkDeviceQueueCreateInfo> queueInfos;
         for (const QueueParameters& param : params)
         {
-            uint32_t queueFamilyIndex = findGraphicsQueueFamilyIndex(queueFamilies);
+            uint32_t queueFamilyIndex = 0;
             switch(param.type)
             {
                 case Queue::Type::Graphics:
-                    queueFamilyIndex = findGraphicsQueueFamilyIndex(queueFamilies);
+                    queueFamilyIndex =
+                        findGraphicsQueueFamilyIndex(queueFamilies);
                     break;
                 case Queue::Type::Presentation:
                 {
                     Surface surf = *param.surface;
-                    queueFamilyIndex = findPresentQueueFamilyIndex(queueFamilies, physicalDevice.handle(), surf.handle());
+                    queueFamilyIndex =
+                        findPresentQueueFamilyIndex(
+                            queueFamilies,
+                            physicalDevice.handle(),
+                            surf.handle());
                     break;
                 }
             }

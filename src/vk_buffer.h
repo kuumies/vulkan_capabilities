@@ -32,7 +32,7 @@ public:
     // Creates the buffer of given in size and writes the data in
     // there. Old existing buffer is destroyd beforehand if it
     // exisits.
-    void create(VkDeviceSize size, void* data);
+    void create(VkDeviceSize size, VkBufferUsageFlagBits usage, void* data);
 
     // Destroys the buffer.
     void destroy();

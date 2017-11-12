@@ -25,12 +25,12 @@ struct Semaphore::Data
     Data(const Device& device)
         : device(device)
     {
+        // Fill the semaphore create info
         VkSemaphoreCreateInfo semaphoreInfo = {};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-        // Create semaphore for rendering to know when an image in
-        // swap chain is available
-        VkResult result = vkCreateSemaphore(
+        // Create the semaphore.
+        const VkResult result = vkCreateSemaphore(
             device.handle(),
             &semaphoreInfo,
             nullptr,
@@ -43,21 +43,21 @@ struct Semaphore::Data
 
             return;
         }
-
-        valid = true;
     }
 
     ~Data()
     {
+        // Destroy the semaphore.
         vkDestroySemaphore(
             device.handle(),
             semaphore,
             nullptr);
     }
 
+    // Logical device.
     Device device;
-    VkSemaphore semaphore;
-    bool valid = false;
+    // Handle
+    VkSemaphore semaphore = VkSemaphore();
 };
 
 /* ---------------------------------------------------------------- */
@@ -69,11 +69,16 @@ Semaphore::Semaphore(const Device& device)
 /* ---------------------------------------------------------------- */
 
 bool Semaphore::isValid() const
-{ return d->valid; }
+{ return d->semaphore != VkSemaphore(); }
 
 /* ---------------------------------------------------------------- */
 
 VkSemaphore Semaphore::handle() const
+{ return d->semaphore; }
+
+/* ---------------------------------------------------------------- */
+
+Semaphore::operator VkSemaphore() const
 { return d->semaphore; }
 
 } // namespace vk

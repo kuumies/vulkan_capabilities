@@ -77,7 +77,7 @@ VkBuffer Buffer::handle() const
 
 /* ---------------------------------------------------------------- */
 
-void Buffer::create(VkDeviceSize size, void* bufData)
+void Buffer::create(VkDeviceSize size, VkBufferUsageFlagBits usage, void* bufData)
 {
     // Destroys old buffer if it exists.
     destroy();
@@ -87,7 +87,7 @@ void Buffer::create(VkDeviceSize size, void* bufData)
     d->bufferInfo = VkBufferCreateInfo{};
     d->bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     d->bufferInfo.size        = size;
-    d->bufferInfo.usage       = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    d->bufferInfo.usage       = usage;
     d->bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     VkResult result = vkCreateBuffer(d->device, &d->bufferInfo,

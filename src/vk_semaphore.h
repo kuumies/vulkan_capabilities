@@ -8,12 +8,7 @@
 /* ---------------------------------------------------------------- */
 
 #include <memory>
-#include <vector>
 #include <vulkan/vulkan.h>
-
-/* ---------------------------------------------------------------- */
-
-#include "vk_swap_chain.h"
 
 namespace kuu
 {
@@ -25,19 +20,21 @@ namespace vk
 class Device;
 
 /* ---------------------------------------------------------------- *
-   A semaphore
+   A semaphore for e.g. waiting and signaling queue actions.
  * ---------------------------------------------------------------- */
 class Semaphore
 {
 public:
-    // Constructs the pipeline
+    // Constructs the semaphore.
     Semaphore(const Device& device);
 
-    // Returns true if the semaphore is valid.
+    // Returns true if the semaphore creation succeeded.
     bool isValid() const;
 
     // Returns handle.
     VkSemaphore handle() const;
+    // Cast to handle.
+    operator VkSemaphore() const;
 
 private:
     struct Data;
