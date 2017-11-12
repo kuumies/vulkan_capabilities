@@ -31,19 +31,23 @@ class Queue;
 class CommandBuffer
 {
 public:
-    // Constructs the command buffer.
+    // Constructs command buffer for the given in queue type.
+    // Queue must gave been created from the same logical device
+    // as the argument. Count must be one or more.
     CommandBuffer(const Device& device,
-                  const Queue& graphicsQueue,
+                  const Queue& queue,
                   const int count);
 
     // Returns true if the command buffer is valid. Command buffer
-    // is valid if the command buffer pool and comman buffer 
-    // creation succeeded.
+    // is valid if the command buffer pool creation succeeded and
+    // there is one or more command buffers created.
     bool isValid() const;
 
     // Returns the buffer count.
     int bufferCount() const;
-    // Returns the buffer.
+    // Returns the buffer. If the bufferIndex is less than zero or
+    // larger than the count of buffers then a null buffer is
+    // returned.
     VkCommandBuffer buffer(int bufferIndex) const;
 
     // Begins recording commands into ith buffer.

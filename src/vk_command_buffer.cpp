@@ -24,16 +24,16 @@ namespace vk
 struct CommandBuffer::Data
 {
     Data(const Device& device, 
-         const Queue& graphicsQueue, 
+         const Queue& queue,
          const int count)
         : device(device)
     {
-        // Create the command pool info for graphics queue. Commands
-        // are recorded only once and the executed multiple times on
+        // Create the command pool info for the queue. Commands are
+        // recorded only once and the executed multiple times on
         // the main loop (flags = 0).
         VkCommandPoolCreateInfo poolInfo = {};
         poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        poolInfo.queueFamilyIndex = graphicsQueue.familyIndex();
+        poolInfo.queueFamilyIndex = queue.familyIndex();
         poolInfo.flags            = 0;
 
         // Create command pool.
@@ -47,7 +47,6 @@ struct CommandBuffer::Data
             std::cerr << __FUNCTION__
                       << ": failed to create vulkan command pool"
                       << std::endl;
-
             return;
         }
 
@@ -75,41 +74,52 @@ struct CommandBuffer::Data
 
             return;
         }
-        valid = true;
     }
 
     ~Data()
     {
+        // Destroys the command pool. This will also delete the
+        // created buffers.
         vkDestroyCommandPool(device.handle(), commandPool, nullptr);
     }
 
+    // Logical device.
     Device device;
-    VkCommandPool commandPool;
+    // Pool for commands.
+    VkCommandPool commandPool = VkCommandPool();
+    // Command buffers.
     std::vector<VkCommandBuffer> commandBuffers;
-    bool valid = false;
 };
 
 /* ---------------------------------------------------------------- */
 
 CommandBuffer::CommandBuffer(
         const Device& device,
-        const Queue& graphicsQueue,
+        const Queue& queue,
         const int count)
-    : d(std::make_shared<Data>(device, graphicsQueue, count))
+    : d(std::make_shared<Data>(device, queue, count))
 {}
 
 /* ---------------------------------------------------------------- */
 
 bool CommandBuffer::isValid() const
-{ return d->valid; }
+{
+    return d->commandPool != VkCommandPool() &&
+           d->commandBuffers.size() > 0;
+}
 
 /* ---------------------------------------------------------------- */
 
 int CommandBuffer::bufferCount() const
-{ return d->commandBuffers.size(); }
+{ return int(d->commandBuffers.size()); }
+
+/* ---------------------------------------------------------------- */
 
 VkCommandBuffer CommandBuffer::buffer(int bufferIndex) const
 {
+    if (bufferIndex < 0 || bufferIndex >= d->commandBuffers.size())
+        return VkCommandBuffer();
+
     return d->commandBuffers[bufferIndex];
 }
 
