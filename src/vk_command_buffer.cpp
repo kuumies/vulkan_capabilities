@@ -23,7 +23,9 @@ namespace vk
 
 struct CommandBuffer::Data
 {
-    Data(const Device& device, const Queue& graphicsQueue, const int count)
+    Data(const Device& device, 
+         const Queue& graphicsQueue, 
+         const int count)
         : device(device)
     {
         // Create the command pool info for graphics queue. Commands
@@ -51,7 +53,6 @@ struct CommandBuffer::Data
 
         // Each image in the swap chain needs to have its own
         // command buffer.
-
         commandBuffers.resize(count);
 
         // Create the command buffer allocation information.

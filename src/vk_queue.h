@@ -21,7 +21,14 @@ class Semaphore;
 class SwapChain;
 
 /* ---------------------------------------------------------------- *
-   A queue
+   A queue. All the vulkan commands as submitted into queue before
+   they are processed. There can be multiple types of queues but
+   this class can be used for two types of queue:
+
+    graphics:     rendering queue
+    presentation: present rendered images to user on window surface
+
+    Each queue has a queue family index.
  * ---------------------------------------------------------------- */
 class Queue
 {
@@ -44,12 +51,17 @@ public:
     // Returns handle.
     VkQueue handle() const;
 
+    // Submits a command buffer into queue.
     void submit(VkCommandBuffer buffer,
                 const Semaphore& waitSemaphore,
                 const Semaphore& signalSemaphore);
+
+    // Presents a image in the swap chain into window surface.
     void present(const SwapChain& swapChain,
                  const uint32_t imageIndex,
                  const Semaphore& waitSemaphore);
+
+    // Waits until the queue has been processed.
     void waitIdle();
 
 private:

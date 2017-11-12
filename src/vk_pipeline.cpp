@@ -28,10 +28,48 @@ struct Pipeline::Data
          const Surface& surface,
          const Parameters& params)
         : device(device)
-        , renderPass(device, surface, { params.viewportWidth, params.viewportHeight, params.swapChain })
+        , renderPass(device, surface, { params.viewportWidth, 
+                                        params.viewportHeight, 
+                                        params.swapChain })
     {
+        /* -------------------------------------------------------- *
+           Render pass
+         * -------------------------------------------------------- */
+
         if (!renderPass.isValid())
             return;
+
+        /* -------------------------------------------------------- *
+           Pipeline layout
+         * -------------------------------------------------------- */
+
+        // Fill the pipeline layout info
+        VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+        pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount         = 0;
+        pipelineLayoutInfo.pSetLayouts            = nullptr;
+        pipelineLayoutInfo.pushConstantRangeCount = 0;
+        pipelineLayoutInfo.pPushConstantRanges    = 0;
+
+        // Creat the pipeline layout
+        VkResult result = vkCreatePipelineLayout(
+            device.handle(),
+            &pipelineLayoutInfo,
+            nullptr,
+            &pipelineLayout);
+
+        if (result != VK_SUCCESS)
+        {
+            std::cerr << __FUNCTION__
+                      << ": failed to create vulkan pipeline layout"
+                      << std::endl;
+
+            return;
+        }
+
+        /* -------------------------------------------------------- *
+           Rasterization state
+         * -------------------------------------------------------- */
 
         VkPipelineRasterizationStateCreateInfo rasterizer = {};
         rasterizer.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -46,6 +84,9 @@ struct Pipeline::Data
         rasterizer.depthBiasClamp          = 0.0f;
         rasterizer.depthBiasSlopeFactor    = 0.0f;
 
+        /* -------------------------------------------------------- *
+           Multisampling
+         * -------------------------------------------------------- */
         VkPipelineMultisampleStateCreateInfo multisampling = {};
         multisampling.sType                 = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         multisampling.sampleShadingEnable   = VK_FALSE;
@@ -54,6 +95,10 @@ struct Pipeline::Data
         multisampling.pSampleMask           = nullptr;
         multisampling.alphaToCoverageEnable = VK_FALSE;
         multisampling.alphaToOneEnable      = VK_FALSE;
+
+        /* -------------------------------------------------------- *
+           Color blending
+         * -------------------------------------------------------- */
 
         VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
         colorBlendAttachment.colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -76,30 +121,9 @@ struct Pipeline::Data
         colorBlending.blendConstants[2] = 0.0f;
         colorBlending.blendConstants[3] = 0.0f;
 
-        VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-        pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount         = 0;
-        pipelineLayoutInfo.pSetLayouts            = nullptr;
-        pipelineLayoutInfo.pushConstantRangeCount = 0;
-        pipelineLayoutInfo.pPushConstantRanges    = 0;
-
-        VkResult result = vkCreatePipelineLayout(
-            device.handle(),
-            &pipelineLayoutInfo,
-            nullptr,
-            &pipelineLayout);
-        if (result != VK_SUCCESS)
-        {
-            std::cerr << __FUNCTION__
-                      << ": failed to create vulkan pipeline layout"
-                      << std::endl;
-
-            return;
-        }
-
-        /* ------------------------------------------------------------ *
-           Viewport state.
-         * ------------------------------------------------------------ */
+        /* -------------------------------------------------------- *
+           Viewport
+         * -------------------------------------------------------- */
 
         // Viewport
         VkViewport viewport = {};
@@ -124,91 +148,19 @@ struct Pipeline::Data
         viewportState.scissorCount  = 1;
         viewportState.pScissors     = &scissor;
 
-//        /* ------------------------------------------------------------ *
-//           Render pass
+        /* -------------------------------------------------------- *
+           Vertex input.
+         * -------------------------------------------------------- */
 
-//            * framebuffer attachments
-//            * framebuffer content handling
-
-//         * ------------------------------------------------------------ */
-
-//        // Create the description of the colorbuffer attachment. The
-//        // colorbuffer is an image in the swap chain.
-//        //      * no multisampling
-//        //      * clear the content before rendering
-//        //      * keep the contetn after rendering
-//        //      * do not care stencil operations
-//        //      * do not create what is the pixel layout before rendering
-//        //        as it is going to be cleared
-//        //      * set pixel layout to be presentation format after
-//        //        rendering as its going to be display on the screen
-//        VkAttachmentDescription colorAttachment = {};
-//        colorAttachment.format         = surface.format().format;
-//        colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
-//        colorAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-//        colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-//        colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-//        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-//        colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-//        colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-//        // Attachment descriptions
-//        const VkAttachmentDescription attachmentDescriptions[] =
-//        { colorAttachment };
-
-//        // Graphics attachment reference for subpass which is the color
-//        // attachment above. Use the optimal layout for color attachment
-//        // as thats what it is.
-//        VkAttachmentReference colorAttachmentRef = {};
-//        colorAttachmentRef.attachment = 0;
-//        colorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-//        // Subpass that renders into colorbuffer attachment.
-//        VkSubpassDescription subpass = {};
-//        subpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
-//        subpass.colorAttachmentCount = 1;
-//        subpass.pColorAttachments    = &colorAttachmentRef;
-
-//        // Add a subpass dependecy to prevent the image layout transition
-//        // being run too early. Make render pass to wait by waiting for
-//        // the color attachment output stage.
-//        VkSubpassDependency dependency = {};
-//        dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
-//        dependency.dstSubpass    = 0;
-//        dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-//        dependency.srcAccessMask = 0;
-//        dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-//        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-//        // Fill the render pass info.
-//        VkRenderPassCreateInfo renderPassInfo = {};
-//        renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-//        renderPassInfo.attachmentCount = 1;
-//        renderPassInfo.pAttachments    = attachmentDescriptions;
-//        renderPassInfo.subpassCount    = 1;
-//        renderPassInfo.pSubpasses      = &subpass;
-//        renderPassInfo.dependencyCount = 1;
-//        renderPassInfo.pDependencies   = &dependency;
-
-//        // Create the render pass.
-//        result = vkCreateRenderPass(device.handle(), &renderPassInfo,
-//                                    nullptr, &renderPass);
-//        if (result != VK_SUCCESS)
-//        {
-//            std::cerr << __FUNCTION__
-//                      << ": failed to create vulkan render pass"
-//                      << std::endl;
-
-//            return;
-//        }
-
+        // Create binding and attribute descriptions.
         std::vector<VkVertexInputBindingDescription> bindingDescriptions;
         bindingDescriptions.push_back(params.mesh.bindingDescription());
+
         std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
         for (auto desc : params.mesh.attributeDescriptions())
             attributeDescriptions.push_back(desc);
 
-        // Vertex input
+        // Fill vertex input state info.
         VkPipelineVertexInputStateCreateInfo vertexInput = {};
         vertexInput.sType                           = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
         vertexInput.vertexBindingDescriptionCount   = uint32_t(bindingDescriptions.size());
@@ -216,15 +168,27 @@ struct Pipeline::Data
         vertexInput.vertexAttributeDescriptionCount = uint32_t(attributeDescriptions.size());
         vertexInput.pVertexAttributeDescriptions    = attributeDescriptions.data();
 
-        // Input assemply state
+        /* -------------------------------------------------------- *
+           Input assembly
+         * -------------------------------------------------------- */
+
+        // Fill input assemply state
         VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
         inputAssembly.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
         inputAssembly.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         inputAssembly.primitiveRestartEnable = VK_FALSE;
 
+        /* -------------------------------------------------------- *
+           Shaders
+         * -------------------------------------------------------- */
+
         auto shaderStages = params.shaderStage.shaderStages();
 
-        // Graphics pipeline
+        /* -------------------------------------------------------- *
+           Graphics pipeline
+         * -------------------------------------------------------- */
+
+        // Fill graphics pipeline info
         VkGraphicsPipelineCreateInfo pipelineInfo = {};
         pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
         pipelineInfo.stageCount          = uint32_t(shaderStages.size());
@@ -243,26 +207,35 @@ struct Pipeline::Data
         pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex   = -1;
 
-
-        result = vkCreateGraphicsPipelines(device.handle(),
-                                           VK_NULL_HANDLE,
-                                           1,
-                                           &pipelineInfo,
-                                           nullptr,
-                                           &pipeline);
+        // Create the graphics pipeline
+        result = vkCreateGraphicsPipelines(
+            device.handle(),
+            VK_NULL_HANDLE,
+            1,
+            &pipelineInfo,
+            nullptr,
+            &pipeline);
 
     }
 
     ~Data()
     {
+        // Destrys the pipeline.
         vkDestroyPipeline(device.handle(), pipeline, nullptr);
-//        vkDestroyRenderPass(device.handle(), renderPass, nullptr);
-        vkDestroyPipelineLayout(device.handle(), pipelineLayout, nullptr);
+        // Destroys the pipeline layout.
+        vkDestroyPipelineLayout(
+            device.handle(), 
+            pipelineLayout, 
+            nullptr);
     }
 
+    // Logical device
     Device device;
+    // Render pass
     RenderPass renderPass;
+    // Handle of pipeline layout
     VkPipelineLayout pipelineLayout;
+    // Handle of pipeline
     VkPipeline pipeline;
 };
 
@@ -283,6 +256,8 @@ RenderPass Pipeline::renderPass() const
 
 VkPipeline Pipeline::handle() const
 { return d->pipeline; }
+
+/* ---------------------------------------------------------------- */
 
 void Pipeline::bind(VkCommandBuffer buf)
 {

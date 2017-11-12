@@ -29,13 +29,13 @@ struct RenderPass::Data
         : device(device)
         , params(params)
     {
-        /* ------------------------------------------------------------ *
+        /* -------------------------------------------------------- *
            Render pass
 
             * framebuffer attachments
             * framebuffer content handling
 
-         * ------------------------------------------------------------ */
+         * -------------------------------------------------------- */
 
         // Create the description of the colorbuffer attachment. The
         // colorbuffer is an image in the swap chain.
@@ -43,8 +43,8 @@ struct RenderPass::Data
         //      * clear the content before rendering
         //      * keep the contetn after rendering
         //      * do not care stencil operations
-        //      * do not create what is the pixel layout before rendering
-        //        as it is going to be cleared
+        //      * do not create what is the pixel layout before 
+        //        rendering as it is going to be cleared
         //      * set pixel layout to be presentation format after
         //        rendering as its going to be display on the screen
         VkAttachmentDescription colorAttachment = {};
@@ -74,9 +74,9 @@ struct RenderPass::Data
         subpass.colorAttachmentCount = 1;
         subpass.pColorAttachments    = &colorAttachmentRef;
 
-        // Add a subpass dependecy to prevent the image layout transition
-        // being run too early. Make render pass to wait by waiting for
-        // the color attachment output stage.
+        // Add a subpass dependecy to prevent the image layout 
+        // transition being run too early. Make render pass to wait 
+        // by waiting for the color attachment output stage.
         VkSubpassDependency dependency = {};
         dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
         dependency.dstSubpass    = 0;
@@ -105,18 +105,19 @@ struct RenderPass::Data
         if (result != VK_SUCCESS)
         {
             std::cerr << __FUNCTION__
-                      << ": failed to create vulkan render pass"
+                      << ": failed to create render pass"
                       << std::endl;
 
             return;
         }
 
-        /* ------------------------------------------------------------ *
+        /* -------------------------------------------------------- *
            Framebuffers of swap chain images for render pass.
-         * ------------------------------------------------------------ */
+         * -------------------------------------------------------- */
 
         // Get the swap chain image views.
-        std::vector<VkImageView> swapChainImageViews = params.swapChain.imageViews();
+        std::vector<VkImageView> swapChainImageViews = 
+            params.swapChain.imageViews();
 
         // Each swap chain image view has its own framebuffer.
         swapChainFramebuffers.resize(swapChainImageViews.size());
@@ -124,7 +125,8 @@ struct RenderPass::Data
         // Create the framebuffers
         for (size_t i = 0; i < swapChainImageViews.size(); i++)
         {
-            const VkImageView attachments[] = { swapChainImageViews[i] };
+            const VkImageView attachments[] = 
+            { swapChainImageViews[i] };
 
             // Create the framebuffer info.
             VkFramebufferCreateInfo framebufferInfo = {};
@@ -142,10 +144,11 @@ struct RenderPass::Data
                 &framebufferInfo,
                 nullptr,
                 &swapChainFramebuffers[i]);
+
             if (result != VK_SUCCESS)
             {
                 std::cerr << __FUNCTION__
-                          << ": failed to create vulkan framebuffer"
+                          << ": failed to create framebuffer"
                           << std::endl;
 
                 return;
@@ -157,15 +160,28 @@ struct RenderPass::Data
 
     ~Data()
     {
+        // Destroy the framebuffers.
         for (uint32_t i = 0; i < swapChainFramebuffers.size(); i++)
-            vkDestroyFramebuffer(device.handle(), swapChainFramebuffers[i], nullptr);
+            vkDestroyFramebuffer(
+                device.handle(), 
+                swapChainFramebuffers[i], 
+                nullptr);
+
+        // Destory the render pass 
         vkDestroyRenderPass(device.handle(), renderPass, nullptr);
     }
 
+    // Logical device.
     Device device;
+    // Handle to the render pass.
     VkRenderPass renderPass;
+    // Did the render pass and framebuffer creation succeed?
     bool valid = false;
+    // A vector of framebuffers, one for each image in the 
+    // swap chain.
     std::vector<VkFramebuffer> swapChainFramebuffers;
+
+    // Render pass parameters form user.
     const Parameters params;
 };
 
@@ -187,14 +203,23 @@ bool RenderPass::isValid() const
 VkRenderPass RenderPass::handle() const
 { return d->renderPass; }
 
-void RenderPass::begin(int i, VkCommandBuffer buffer, VkClearValue clearColor)
+void RenderPass::begin(
+    int i, 
+    VkCommandBuffer buffer, 
+    VkClearValue clearColor)
 {
+    // Extent of render area
+    const VkExtent2D extent { 
+        d->params.viewportWidth, 
+        d->params.viewportHeight };
+
+    // Create the begin info.
     VkRenderPassBeginInfo renderPassInfo = {};
     renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass        = d->renderPass;
     renderPassInfo.framebuffer       = d->swapChainFramebuffers[i];
     renderPassInfo.renderArea.offset = { 0, 0 };
-    renderPassInfo.renderArea.extent = VkExtent2D { d->params.viewportWidth, d->params.viewportHeight };
+    renderPassInfo.renderArea.extent = extent;
     renderPassInfo.clearValueCount   = 1;
     renderPassInfo.pClearValues      = &clearColor;
 
@@ -204,6 +229,8 @@ void RenderPass::begin(int i, VkCommandBuffer buffer, VkClearValue clearColor)
         &renderPassInfo,
         VK_SUBPASS_CONTENTS_INLINE);
 }
+
+/* ---------------------------------------------------------------- */
 
 void RenderPass::end(VkCommandBuffer buffer)
 {

@@ -59,6 +59,8 @@ Queue::Type Queue::type() const
 VkQueue Queue::handle() const
 { return d->queue; }
 
+/* ---------------------------------------------------------------- */
+
 void Queue::submit(VkCommandBuffer buffer,
                    const Semaphore& waitSemaphore,
                    const Semaphore& signalSemaphore)
@@ -95,6 +97,8 @@ void Queue::submit(VkCommandBuffer buffer,
     }
 }
 
+/* ---------------------------------------------------------------- */
+
 void Queue::present(const SwapChain& swapChain,
                     const uint32_t imageIndex,
                     const Semaphore& waitSemaphore)
@@ -129,6 +133,8 @@ void Queue::present(const SwapChain& swapChain,
                   << std::endl;
     }
 }
+
+/* ---------------------------------------------------------------- */
 
 void Queue::waitIdle()
 {

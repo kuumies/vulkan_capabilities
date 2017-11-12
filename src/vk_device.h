@@ -27,7 +27,9 @@ class Surface;
 class PhysicalDevice;
 
 /* ---------------------------------------------------------------- *
-   A vulkan logical device.
+   A vulkan logical device for accessing the hardware. Users needs
+   give in a list of queue parameters that should be created,
+   Usually graphics and presentation queues.
  * ---------------------------------------------------------------- */
 class Device
 {

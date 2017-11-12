@@ -21,6 +21,8 @@ namespace vk
 namespace
 {
 
+/* ---------------------------------------------------------------- */
+
 std::vector<VkQueueFamilyProperties> queueFamilyProperties(
     const VkPhysicalDevice& physicalDevice)
 {
@@ -61,6 +63,8 @@ int findGraphicsQueueFamilyIndex(
     }
     return index;
 }
+
+/* ---------------------------------------------------------------- */
 
 int findPresentQueueFamilyIndex(
     const std::vector<VkQueueFamilyProperties> queueFamilies,
