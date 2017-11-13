@@ -19,9 +19,25 @@ typedef struct VkWin32SurfaceCreateInfoKHR
 typedef VkResult (APIENTRY *PFN_vkCreateWin32SurfaceKHR)(VkInstance,const VkWin32SurfaceCreateInfoKHR*,const VkAllocationCallbacks*,VkSurfaceKHR*);
 
 Widget::Widget(QWidget* parent)
-    //: QWidget(parent)
+    : QWidget(parent)
 {
     resize(720, 576);
+    setAttribute(Qt::WA_NativeWindow);
+    setUpdatesEnabled(false);
+    installEventFilter(this);
+}
+
+bool Widget::eventFilter(QObject * o, QEvent * e)
+{
+    if (e->type() == QEvent::Type::Paint)
+        return true;
+    else
+        return false;
+}
+
+void Widget::paintEvent(QPaintEvent *e)
+{
+
 }
 
 void Widget::setAsVulkanSurface(VkInstance instance)

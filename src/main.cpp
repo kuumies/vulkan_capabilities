@@ -14,6 +14,7 @@
 #include <glm/vec3.hpp>
 #include <vulkan/vulkan.h>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QMainWindow>
 
 /* ---------------------------------------------------------------- */
 
@@ -37,8 +38,8 @@
 
 // Window
 static const char* WINDOW_NAME = "Vulkan test";
-static const int WINDOW_WIDTH  = 720;
-static const int WINDOW_HEIGHT = 576;
+static uint32_t WINDOW_WIDTH  = 720;
+static uint32_t WINDOW_HEIGHT = 576;
 
 // Surface
 static const VkFormat SURFACE_FORMAT             = VK_FORMAT_B8G8R8A8_UNORM;
@@ -95,13 +96,20 @@ int main(int argc, char* argv[])
 
 
     QApplication app(argc, argv);
-    Widget w;
-    w.setAsVulkanSurface(instance.handle());
-    w.show();
+    QMainWindow mw;
+    Widget* w = new Widget();
+    w->setAsVulkanSurface(instance.handle());
+    mw.setCentralWidget(w);
+    //mw.resize(720, 567);
+    mw.showMaximized();
+    QApplication::processEvents();
+    WINDOW_WIDTH = mw.width();
+    WINDOW_HEIGHT = mw.height();
+
 
     // Create a surface.
     //Surface surface = instance.createSurface(window);
-    Surface surface(instance, w.surface);
+    Surface surface(instance, w->surface);
     if (!surface.isValid())
         return EXIT_FAILURE;
     surface.setFormat( { SURFACE_FORMAT, SURFACE_COLOR_SPACE });
