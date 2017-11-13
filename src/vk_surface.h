@@ -46,6 +46,7 @@ class Surface
 public:
     // Constructs the surface.
     Surface(const Instance& instance, GLFWwindow* window);
+    Surface(const Instance& instance, VkSurfaceKHR s);
 
     // Returns true if the surface is valid.
     bool isValid() const;

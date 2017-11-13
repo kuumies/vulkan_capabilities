@@ -42,6 +42,23 @@ include_directories(${Vulkan_INCLUDE_DIRS})
 include(add_glfw)
 include(add_glm)
 
+FIND_PACKAGE(Qt5Core REQUIRED)
+INCLUDE_DIRECTORIES(${Qt5Core_INCLUDE_DIRS})
+ADD_DEFINITIONS(${Qt5Core_DEFINITIONS})
+SET(QT_LIBRARIES ${QT_LIBRARIES} ${Qt5Core_LIBRARIES})
+
+FIND_PACKAGE(Qt5Gui REQUIRED)
+INCLUDE_DIRECTORIES(${Qt5Gui_INCLUDE_DIRS})
+include_directories(${Qt5Gui_PRIVATE_INCLUDE_DIRS})
+message(${Qt5Gui_PRIVATE_INCLUDE_DIRS})
+ADD_DEFINITIONS(${Qt5Gui_DEFINITIONS})
+SET(QT_LIBRARIES ${QT_LIBRARIES} ${Qt5Gui_LIBRARIES})
+
+FIND_PACKAGE(Qt5Widgets REQUIRED)
+INCLUDE_DIRECTORIES(${Qt5Widgets_INCLUDE_DIRS})
+ADD_DEFINITIONS(${Qt5Widgets_DEFINITIONS})
+SET(QT_LIBRARIES ${QT_LIBRARIES} ${Qt5Widgets_LIBRARIES})
+
 #---------------------------------------------------------------------
 # Application sources
 
@@ -60,6 +77,7 @@ target_link_libraries(
     ${PROJECT_NAME}
     ${Vulkan_LIBRARIES}
     ${GLFW_LIBRARIES}
+    ${QT_LIBRARIES}
 )
 
 install(TARGETS ${PROJECT_NAME}   RUNTIME DESTINATION bin)

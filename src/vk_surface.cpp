@@ -89,6 +89,16 @@ VkSurfaceFormatKHR compatibleFormat(
 
 struct Surface::Data
 {
+    Data(const Instance& instance)
+        : instance(instance)
+        , valid(false)
+        , format( { VK_FORMAT_B8G8R8A8_UNORM,
+                VK_COLOR_SPACE_SRGB_NONLINEAR_KHR } )
+        , presentMode(VK_PRESENT_MODE_FIFO_KHR)
+        , imageExtent( { 512,512 } )
+        , swapChainImageCount(2)
+    {}
+
     Data(const Instance& instance, GLFWwindow* window)
         : instance(instance)
         , valid(false)
@@ -122,7 +132,7 @@ struct Surface::Data
         vkDestroySurfaceKHR(instance.handle(), surface, nullptr);
     }
 
-    const Instance instance;
+    Instance instance;
     VkSurfaceKHR surface;
     bool valid = false;
 
@@ -137,6 +147,13 @@ struct Surface::Data
 Surface::Surface(const Instance& instance, GLFWwindow* window)
     : d(std::make_shared<Data>(instance, window))
 {}
+
+Surface::Surface(const Instance &instance, VkSurfaceKHR s)
+    : d(std::make_shared<Data>(instance))
+{
+    d->surface = s;
+    d->valid = true;
+}
 
 /* ---------------------------------------------------------------- */
 
@@ -260,15 +277,20 @@ bool Surface::areExtensionsSupported()
 
 std::vector<std::string> Surface::extensions()
 {
-    uint32_t glfwExtensionCount = 0;
-    const char** glfwExtensions =
-        glfwGetRequiredInstanceExtensions(
-            &glfwExtensionCount);
-
     std::vector<std::string> out;
-    for (uint32_t i = 0; i < glfwExtensionCount; ++i)
-        out.push_back(std::string(glfwExtensions[i]));
+    out.push_back("VK_KHR_surface");
+    out.push_back("VK_KHR_win32_surface");
     return out;
+
+//    uint32_t glfwExtensionCount = 0;
+//    const char** glfwExtensions =
+//        glfwGetRequiredInstanceExtensions(
+//            &glfwExtensionCount);
+
+//    std::vector<std::string> out;
+//    for (uint32_t i = 0; i < glfwExtensionCount; ++i)
+//        out.push_back(std::string(glfwExtensions[i]));
+//    return out;
 }
 
 } // namespace vk

@@ -13,6 +13,7 @@
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <vulkan/vulkan.h>
+#include <QtWidgets/QApplication>
 
 /* ---------------------------------------------------------------- */
 
@@ -28,6 +29,7 @@
 #include "vk_shader_stage.h"
 #include "vk_surface.h"
 #include "vk_swap_chain.h"
+#include "widget.h"
 
 /* ---------------------------------------------------------------- *
    Globals.
@@ -48,23 +50,34 @@ static const VkPresentModeKHR PRESENT_MODE = VK_PRESENT_MODE_FIFO_KHR; // v-sync
 // Swap chain
 static const int SWAP_CHAIN_IMAGE_COUNT = 2;
 
-int main()
+int main(int argc, char* argv[])
 {
     // GLFW window.
-    glfwInit();
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE,  GLFW_FALSE);
-    GLFWwindow* window = glfwCreateWindow(
-        WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_NAME,
-        nullptr, nullptr);
-    if (!window)
-    {
-        std::cerr << __FUNCTION__
-                  << ": Failed to create Vulkan GLFW window"
-                  << std::endl;
+//    glfwInit();
+//    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+//    glfwWindowHint(GLFW_RESIZABLE,  GLFW_FALSE);
+//    GLFWwindow* window = glfwCreateWindow(
+//        WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_NAME,
+//        nullptr, nullptr);
+//    if (!window)
+//    {
+//        std::cerr << __FUNCTION__
+//                  << ": Failed to create Vulkan GLFW window"
+//                  << std::endl;
 
-        return EXIT_FAILURE;
-    }
+//        return EXIT_FAILURE;
+//    }
+
+//    uint32_t glfwExtensionCount = 0;
+//    const char** glfwExtensions =
+//        glfwGetRequiredInstanceExtensions(
+//            &glfwExtensionCount);
+
+//    std::vector<std::string> out;
+//    for (uint32_t i = 0; i < glfwExtensionCount; ++i)
+//        out.push_back(std::string(glfwExtensions[i]));
+//    for (auto s : out)
+//        std::cout << s << std::endl;
 
     using namespace kuu::vk;
 
@@ -80,8 +93,15 @@ int main()
     if (!instance.isValid())
         return EXIT_FAILURE;
 
+
+    QApplication app(argc, argv);
+    Widget w;
+    w.setAsVulkanSurface(instance.handle());
+    w.show();
+
     // Create a surface.
-    Surface surface = instance.createSurface(window);
+    //Surface surface = instance.createSurface(window);
+    Surface surface(instance, w.surface);
     if (!surface.isValid())
         return EXIT_FAILURE;
     surface.setFormat( { SURFACE_FORMAT, SURFACE_COLOR_SPACE });
@@ -221,10 +241,12 @@ int main()
        Start the "event" loop.
      * ------------------------------------------------------------ */
 
-    while(!glfwWindowShouldClose(window))
-    {
-        glfwPollEvents();
-    }
+//    while(!glfwWindowShouldClose(window))
+//    {
+//        glfwPollEvents();
+//    }
+
+    app.exec();
 
     vkDeviceWaitIdle(device.handle());
 
@@ -232,8 +254,8 @@ int main()
        Clean up
      * ------------------------------------------------------------ */
 
-    glfwDestroyWindow(window);
-    glfwTerminate();
+    //glfwDestroyWindow(window);
+    //glfwTerminate();
 
     shader.destroy();
     mesh.destroy();
