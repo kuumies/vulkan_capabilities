@@ -3,8 +3,8 @@
    The implementation of kuu::vk::MainWindow class
  * ---------------------------------------------------------------- */
 
-#include "main_window.h"
-#include "ui_main_window.h"
+#include "vk_main_window.h"
+#include "ui_vk_main_window.h"
 
 namespace kuu
 {

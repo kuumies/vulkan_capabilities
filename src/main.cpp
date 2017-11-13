@@ -30,8 +30,8 @@
 #include "vk_shader_stage.h"
 #include "vk_surface.h"
 #include "vk_swap_chain.h"
-#include "widget.h"
-#include "main_window.h"
+#include "vk_widget.h"
+#include "vk_main_window.h"
 
 /* ---------------------------------------------------------------- *
    Globals.

@@ -3,7 +3,7 @@
    The implementation of kuu::vk::Widget class
  * ---------------------------------------------------------------- */
 
-#include "widget.h"
+#include "vk_widget.h"
 
 #include <assert.h>
 #include <iostream>
