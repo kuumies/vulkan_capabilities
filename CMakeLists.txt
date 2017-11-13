@@ -59,6 +59,10 @@ INCLUDE_DIRECTORIES(${Qt5Widgets_INCLUDE_DIRS})
 ADD_DEFINITIONS(${Qt5Widgets_DEFINITIONS})
 SET(QT_LIBRARIES ${QT_LIBRARIES} ${Qt5Widgets_LIBRARIES})
 
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+
 #---------------------------------------------------------------------
 # Application sources
 

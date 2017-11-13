@@ -31,6 +31,7 @@
 #include "vk_surface.h"
 #include "vk_swap_chain.h"
 #include "widget.h"
+#include "main_window.h"
 
 /* ---------------------------------------------------------------- *
    Globals.
@@ -96,20 +97,19 @@ int main(int argc, char* argv[])
 
 
     QApplication app(argc, argv);
-    QMainWindow mw;
-    Widget* w = new Widget();
-    w->setAsVulkanSurface(instance.handle());
+    MainWindow mw;
+    Widget* w = new Widget(instance.handle());
+
     mw.setCentralWidget(w);
-    //mw.resize(720, 567);
     mw.showMaximized();
     QApplication::processEvents();
-    WINDOW_WIDTH = mw.width();
-    WINDOW_HEIGHT = mw.height();
+    WINDOW_WIDTH = w->width();
+    WINDOW_HEIGHT = w->height();
 
 
     // Create a surface.
     //Surface surface = instance.createSurface(window);
-    Surface surface(instance, w->surface);
+    Surface surface(instance, w->surface());
     if (!surface.isValid())
         return EXIT_FAILURE;
     surface.setFormat( { SURFACE_FORMAT, SURFACE_COLOR_SPACE });
