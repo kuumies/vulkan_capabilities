@@ -9,8 +9,8 @@
 #include <ios>
 #include <sstream>
 #include <iomanip>
-#include <QtCore/QDebug>
-#include <QtCore/QUuid>
+
+#include "vk_stringify.h"
 
 namespace kuu
 {
@@ -21,7 +21,8 @@ namespace vk_test
 
 Controller::Controller()
 {
-    createInstance();
+    if (!createInstance())
+        return;
     enumeratePhysicalDevices();
 }
 
@@ -54,8 +55,14 @@ Controller::~Controller()
    https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html#initialization-instances
    https://vulkan-tutorial.com/Drawing_a_triangle/Setup/Instance
  * -------------------------------------------------------------------------- */
-void Controller::createInstance()
+bool Controller::createInstance()
 {
+    std::vector<const char*> extensionNames;
+    extensionNames.push_back("VK_KHR_surface");       // Surface
+    extensionNames.push_back("VK_KHR_win32_surface"); // Surface (Windows OS)
+    const uint32_t extensionCount =
+        static_cast<uint32_t>(extensionNames.size());
+
     VkStructureType appInfoType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     VkApplicationInfo appInfo;
     appInfo.sType              = appInfoType;              // Must be this definition
@@ -68,14 +75,14 @@ void Controller::createInstance()
 
     VkStructureType infoType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     VkInstanceCreateInfo info;
-    info.sType                   = infoType; // Must be this definition
-    info.pNext                   = NULL;     // No extension specific structures
-    info.flags                   = 0;        // Must be 0, reserved for future use
-    info.pApplicationInfo        = &appInfo; // Application information
-    info.enabledLayerCount       = 0;        // Count of requested layers
-    info.ppEnabledLayerNames     = NULL;     // Requested layer names
-    info.enabledExtensionCount   = 0;        // Count of requested extensions
-    info.ppEnabledExtensionNames = NULL;     // Requested extension names
+    info.sType                   = infoType;              // Must be this definition
+    info.pNext                   = NULL;                  // No extension specific structures
+    info.flags                   = 0;                     // Must be 0, reserved for future use
+    info.pApplicationInfo        = &appInfo;              // Application information
+    info.enabledLayerCount       = 0;                     // Count of requested layers
+    info.ppEnabledLayerNames     = NULL;                  // Requested layer names
+    info.enabledExtensionCount   = extensionCount;        // Count of requested extensions
+    info.ppEnabledExtensionNames = extensionNames.data(); // Requested extension names
 
     const VkResult result = vkCreateInstance(
         &info,      // instance create info
@@ -83,59 +90,14 @@ void Controller::createInstance()
         &instance); // created instance
         
     if (result == VK_SUCCESS)
-        return;
+        return true;
         
-    switch(result)
-    {
-        case VK_ERROR_OUT_OF_HOST_MEMORY:
-            std::cerr << __FUNCTION__ 
-                      << ": instance creation failed as a "
-                      << "host memory allocation failed"
-                      << std::endl;
-            break;
-                    
-        case VK_ERROR_OUT_OF_DEVICE_MEMORY:
-            std::cerr << __FUNCTION__ 
-                      << ": instance creation failed as a "
-                      << "device memory allocation failed"
-                      << std::endl;
-            break;
-            
-        case VK_ERROR_INITIALIZATION_FAILED:
-            std::cerr << __FUNCTION__ 
-                      << ": instance creation failed as "
-                      << "initialization of an object could "
-                      << "not be completed for implementation-"
-                      << "specific reasons"
-                      << std::endl;
-            break;
-            
-        case VK_ERROR_LAYER_NOT_PRESENT:
-            std::cerr << __FUNCTION__ 
-                      << ": instance creation failed as a "
-                      << "requested layer is not present or "
-                      << "could not be loaded."
-                      << std::endl;
-            break;
-         
-        case VK_ERROR_EXTENSION_NOT_PRESENT:
-            std::cerr << __FUNCTION__ 
-                      << ": instance creation failed as a "
-                      << "requested extension is not supported."
-                      << std::endl;
-            break;
-            
-        case VK_ERROR_INCOMPATIBLE_DRIVER:
-            std::cerr << __FUNCTION__ 
-                      << ": instance creation failed as the "
-                      << "the requested version of Vulkan is not "
-                      << "supported by the driver or is otherwise "
-                      << "incompatible for implementation-specific "
-                      << "reasons."
-                      << std::endl;
+    std::cerr << __FUNCTION__
+              << ": instance creation failed as "
+              << vk::stringify::toString(result)
+              << std::endl;
 
-        default: break; // should never happen according to spec
-    }
+    return false;
 }
 
 /* -------------------------------------------------------------------------- *
@@ -162,7 +124,7 @@ void Controller::destroyInstance()
 /* -------------------------------------------------------------------------- *
    Enumerates the physical devices.
    
-   A physical device is usually a single device in a system. As spect says it
+   A physical device is usually a single device in a system. As spec says it
    could be made up of several individual hardware devices working together.
    I guess like when using SLI mode?
    
@@ -185,44 +147,11 @@ void Controller::enumeratePhysicalDevices()
         
     if (result != VK_SUCCESS)
     {
-        switch(result)
-        {
-            case VK_ERROR_OUT_OF_HOST_MEMORY:
-                std::cerr << __FUNCTION__ 
-                          << ": physical device enumeration failed as a "
-                          << "host memory allocation failed"
-                          << std::endl;
-                break;
-                        
-            case VK_ERROR_OUT_OF_DEVICE_MEMORY:
-                std::cerr << __FUNCTION__ 
-                          << ": physical device enumeration failed as a "
-                          << "device memory allocation failed"
-                          << std::endl;
-                break;
-                
-            case VK_ERROR_INITIALIZATION_FAILED:
-                std::cerr << __FUNCTION__ 
-                          << ": physical device enumeration failed as "
-                          << "initialization of an object could "
-                          << "not be completed for implementation-"
-                          << "specific reasons"
-                          << std::endl;
-                break;
-                
-            // This should never happen as the count of  physical
-            // devices is asked from the instance.
-            case VK_INCOMPLETE:
+        std::cerr << __FUNCTION__
+                  << ": physical device enumeration failed as "
+                  << vk::stringify::toDescription(result)
+                  << std::endl;
 
-                std::cerr << __FUNCTION__ 
-                          << ": physical device enumeration succeeded "
-                          << "but the list does not contain all of the "
-                          << "devices"
-                          << std::endl;
-
-            default: break; // should never happen according to spec
-        }
-        
         if (result != VK_INCOMPLETE)
             return;
     }
@@ -233,18 +162,6 @@ void Controller::enumeratePhysicalDevices()
         vkGetPhysicalDeviceProperties(
             physicalDevice, // [in]  physical device handle
             &properties);   // [out] physical device properties
-            
-        // Vulkan API version supported by the device.
-        uint32_t versionMajor = VK_VERSION_MAJOR(properties.apiVersion);
-        uint32_t versionMinor = VK_VERSION_MINOR(properties.apiVersion);
-        uint32_t versionPatch = VK_VERSION_PATCH(properties.apiVersion);
-
-        std::cout << versionMajor << "." <<
-                     versionMinor << "." <<
-                     versionPatch << std::endl;
-        
-        // Vendor-specified version of the driver.
-        uint32_t driverVersion = properties.driverVersion;
         
         // Unique identifier for the Vendor of the device. How to process the 
         // ID depends on the whether the device is installed into PCI slot or
@@ -264,39 +181,9 @@ void Controller::enumeratePhysicalDevices()
         
         // Physical device type.
         VkPhysicalDeviceType type = properties.deviceType;
-        std::string typeDesc;
-        switch(type)
-        {
-            case VK_PHYSICAL_DEVICE_TYPE_OTHER:
-                typeDesc += "Other: ";
-                typeDesc += "the device does not match any other available "
-                            "types.";
-                break;
-                
-            case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-                typeDesc += "Integrated GPU: ";
-                typeDesc += "the device is typically one embedded in or "
-                            "tightly coupled with the host.";
-                break;
-                
-            case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-                typeDesc += "Discrete GPU: ";
-                typeDesc += "the device is typically a separate processor "
-                            "connected to the host via an interlink.";
-                break;
-                
-            case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
-                typeDesc += "Integrated GPU: ";
-                typeDesc += "the device is typically a virtual node in a "
-                            "virtualization environment.";
-                break;
-                
-            case VK_PHYSICAL_DEVICE_TYPE_CPU:
-                typeDesc += "Integrated GPU: ";
-                typeDesc += "the device is typically running on the same "
-                            "processors as the host.";
-                break;
-        }
+        std::string typeDesc =
+            vk::stringify::toString(type)      + " (" +
+            vk::stringify::toDescription(type) + ")";
         
         // Device name
         std::string deviceName = properties.deviceName;
@@ -314,9 +201,20 @@ void Controller::enumeratePhysicalDevices()
             if (i == 3 || i == 5 || i == 7)
                 ss << "-";
         }
-
         std::string uuidString = ss.str();
-        std::cout << uuidString << std::endl;
+
+        using namespace vk::stringify;
+        std::string apiVersionStr    = versionNumber(properties.apiVersion);
+        std::string driverVersionStr = versionNumber(properties.driverVersion);
+
+        std::cout << "Physical Device"    << std::endl;
+        std::cout << "  Name:           " << deviceName           << std::endl;
+        std::cout << "  Type:           " << typeDesc             << std::endl;
+        std::cout << "  API version:    " << apiVersionStr        << std::endl;
+        std::cout << "  Driver version: " << driverVersionStr     << std::endl;
+        std::cout << "  Vendor ID:      " << std::hex << vendorId << std::endl;
+        std::cout << "  Device ID:      " << std::hex << deviceId << std::endl;
+        std::cout << "  UUID:           " << uuidString           << std::endl;
     }
 }
 

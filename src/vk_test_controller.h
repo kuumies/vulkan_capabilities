@@ -25,7 +25,7 @@ public:
     ~Controller();
 
 private:
-    void createInstance();
+    bool createInstance();
     void destroyInstance();
     
     void enumeratePhysicalDevices();
