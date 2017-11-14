@@ -32,6 +32,7 @@
 #include "vk_swap_chain.h"
 #include "vk_widget.h"
 #include "vk_main_window.h"
+#include "vk_test_controller.h"
 
 /* ---------------------------------------------------------------- *
    Globals.
@@ -80,6 +81,8 @@ int main(int argc, char* argv[])
 //        out.push_back(std::string(glfwExtensions[i]));
 //    for (auto s : out)
 //        std::cout << s << std::endl;
+
+    kuu::vk_test::Controller controller;
 
     using namespace kuu::vk;
 
