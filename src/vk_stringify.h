@@ -29,6 +29,15 @@ std::string toString(const VkPhysicalDeviceType type);
 // Returns the device type description
 std::string toDescription(const VkPhysicalDeviceType type);
 
+// Returns the UUIID as a string.
+std::string toString(const uint8_t* uuid, int size = VK_UUID_SIZE);
+
+// Returns queue capabilities as a string.
+std::string toString(VkQueueFlags flags);
+
+// Returns the 3D extent as a string.
+std::string toString(const VkExtent3D& e);
+
 } // namespace stringify
 } // namespace vk
 } // namespace kuu

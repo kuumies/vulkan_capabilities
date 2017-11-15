@@ -11,6 +11,7 @@
 #include <iomanip>
 
 #include "vk_stringify.h"
+#include "vk_windows.h"
 
 namespace kuu
 {
@@ -85,9 +86,9 @@ bool Controller::createInstance()
     info.ppEnabledExtensionNames = extensionNames.data(); // Requested extension names
 
     const VkResult result = vkCreateInstance(
-        &info,      // instance create info
-        NULL,       // no allocation callback
-        &instance); // created instance
+        &info,      // [in]  instance create info
+        NULL,       // [in]  no allocation callback
+        &instance); // [out] instance handle
         
     if (result == VK_SUCCESS)
         return true;
@@ -116,8 +117,8 @@ bool Controller::createInstance()
 void Controller::destroyInstance()
 {
     vkDestroyInstance(
-        instance, // handle to instance
-        NULL);    // no allocation callback
+        instance, // [in] handle to instance
+        NULL);    // [in] no allocation callback
     instance = VK_NULL_HANDLE;
 }
 
@@ -134,16 +135,16 @@ void Controller::enumeratePhysicalDevices()
 {
     uint32_t physicalDeviceCount = 0;
     vkEnumeratePhysicalDevices(
-        instance,             // Instance handle [in]
-        &physicalDeviceCount, // Physical device count [out]
-        NULL);                // Pointer to vector of physical devices, NULL
+        instance,             // [in]  Instance handle
+        &physicalDeviceCount, // [out] Physical device count
+        NULL);                // [in]  Pointer to vector of physical devices, NULL
                               // so the physical device count is returned.
         
     std::vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
     const VkResult result = vkEnumeratePhysicalDevices(
-        instance,                // Instance handle [in]
-        &physicalDeviceCount,    // Physical device count [in, out]
-        physicalDevices.data()); // Pointer to vector of physical devices [out]
+        instance,                // [in]      Instance handle
+        &physicalDeviceCount,    // [in, out] Physical device count
+        physicalDevices.data()); // [out]     Pointer to vector of physical devices
         
     if (result != VK_SUCCESS)
     {
@@ -187,23 +188,9 @@ void Controller::enumeratePhysicalDevices()
         
         // Device name
         std::string deviceName = properties.deviceName;
-        
-        // Universally unique identifier string
-        std::stringstream ss;
-        for (int i = 0; i < VK_UUID_SIZE; i++)
-        {
-            uint8_t u = properties.pipelineCacheUUID[i];
-            ss << std::setfill ('0')
-               << std::setw(sizeof(uint8_t) * 2)
-               << std::hex
-               << int(u);
-
-            if (i == 3 || i == 5 || i == 7)
-                ss << "-";
-        }
-        std::string uuidString = ss.str();
 
         using namespace vk::stringify;
+        std::string uuidString       = toString(properties.pipelineCacheUUID);
         std::string apiVersionStr    = versionNumber(properties.apiVersion);
         std::string driverVersionStr = versionNumber(properties.driverVersion);
 
@@ -215,6 +202,43 @@ void Controller::enumeratePhysicalDevices()
         std::cout << "  Vendor ID:      " << std::hex << vendorId << std::endl;
         std::cout << "  Device ID:      " << std::hex << deviceId << std::endl;
         std::cout << "  UUID:           " << uuidString           << std::endl;
+
+        uint32_t queueFamilyPropertyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(
+            physicalDevice,            // [in]  physical device handle
+            &queueFamilyPropertyCount, // [out] queue family property count
+            NULL);                     // [in]  properties, NULL to get count
+
+        std::vector<VkQueueFamilyProperties> queueFamilyProperties(
+            queueFamilyPropertyCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(
+            physicalDevice,                // [in]  physical device handle
+            &queueFamilyPropertyCount,     // [in]  queue family property count
+            queueFamilyProperties.data()); // [out] queue family properties
+
+        for (uint32_t queueFamilyIndex = 0; queueFamilyIndex < queueFamilyPropertyCount; ++queueFamilyIndex)
+        {
+            const VkQueueFamilyProperties& property = queueFamilyProperties[queueFamilyIndex];
+
+            std::cout << "Queue Family Index: " << queueFamilyIndex << std::endl;
+            std::cout << "Queue count: " << property.queueCount  << std::endl;
+
+            std::string capabilitiesStr = toString(property.queueFlags);
+            std::string minImageTransferGranularityStr = toString(property.minImageTransferGranularity);
+            std::cout << "Capabilities: " << capabilitiesStr << std::endl;
+            std::cout << "Count of valid time stamp bits: " << property.timestampValidBits << std::endl;
+            std::cout << "Minimum image transfer granularity: " << minImageTransferGranularityStr << std::endl;
+
+#ifdef _WIN32
+            using namespace vk::windows;
+            const VkBool32 result =
+                vkGetPhysicalDeviceWin32PresentationSupportKHR(
+                    instance,
+                    physicalDevice,    // [in] physical device handle
+                    queueFamilyIndex); // [in] queue family index
+            std::cout << "Presentation support: " << (result == VK_TRUE ? "yes" : "no") << std::endl;
+#endif
+        }
     }
 }
 

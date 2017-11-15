@@ -4,17 +4,10 @@
  * ---------------------------------------------------------------- */
 
 #include "vk_widget.h"
-
 #include <assert.h>
 #include <iostream>
-#include <QWindow>
-#include <qpa/qplatformnativeinterface.h>
-#include <QGuiApplication>
 #include <vulkan/vulkan.h>
-
-#ifdef _WIN32
-    #include <windows.h>
-#endif
+#include "vk_windows.h"
 
 namespace kuu
 {
@@ -25,31 +18,6 @@ namespace
 
 #ifdef _WIN32
 
-/* ---------------------------------------------------------------- *
-   Define surface create flags.
- * ---------------------------------------------------------------- */
-typedef VkFlags VkWin32SurfaceCreateFlagsKHR;
-
-/* ---------------------------------------------------------------- *
-   Define surface create info.
- * ---------------------------------------------------------------- */
-typedef struct VkWin32SurfaceCreateInfoKHR
-{
-    VkStructureType                 sType;
-    const void*                     pNext;
-    VkWin32SurfaceCreateFlagsKHR    flags;
-    HINSTANCE                       hinstance;
-    HWND                            hwnd;
-} VkWin32SurfaceCreateInfoKHR;
-
-/* ---------------------------------------------------------------- *
-   Define surface creation function for windows.
- * ---------------------------------------------------------------- */
-typedef VkResult (APIENTRY *PFN_vkCreateWin32SurfaceKHR)(
-    VkInstance,
-    const VkWin32SurfaceCreateInfoKHR*,
-    const VkAllocationCallbacks*,
-    VkSurfaceKHR*);
 
 /* ---------------------------------------------------------------- *
    Creates the Windows Vulkan surface. If the creation fails then
@@ -59,6 +27,8 @@ VkSurfaceKHR createWindowsSurface(
     const VkInstance& instance,
     const HWND& handle)
 {
+    using namespace windows;
+
     // Fill the Windows surface create info
     VkWin32SurfaceCreateInfoKHR createInfo;
     createInfo.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
@@ -67,22 +37,9 @@ VkSurfaceKHR createWindowsSurface(
     createInfo.hinstance = GetModuleHandle(nullptr);
     createInfo.hwnd      = handle;
 
-    // Get the function pointer.
-    auto CreateWin32SurfaceKHR = (PFN_vkCreateWin32SurfaceKHR)
-        vkGetInstanceProcAddr(instance, "vkCreateWin32SurfaceKHR");
-    if (!CreateWin32SurfaceKHR)
-    {
-        std::cerr << __FUNCTION__
-                  << ": failed to get function pointer to surface "
-                  << "creation function."
-                  << std::endl;
-
-        return VK_NULL_HANDLE;
-    }
-
     // Create the surface.
     VkSurfaceKHR surface = VK_NULL_HANDLE;
-    const VkResult result = CreateWin32SurfaceKHR(
+    const VkResult result = vkCreateWin32SurfaceKHR(
         instance,
         &createInfo,
         nullptr,

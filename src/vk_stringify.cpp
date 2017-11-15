@@ -105,6 +105,56 @@ std::string toDescription(const VkPhysicalDeviceType type)
     return descriptions.at(type);
 }
 
+/* -------------------------------------------------------------------------- */
+
+std::string toString(const uint8_t* uuid, int size)
+{
+    std::stringstream ss;
+    for (int i = 0; i < size; i++)
+    {
+        uint8_t u = uuid[i];
+        ss << std::setfill ('0')
+           << std::setw(sizeof(uint8_t) * 2)
+           << std::hex
+           << int(u);
+
+        if (i == 3 || i == 5 || i == 7)
+            ss << "-";
+    }
+    return ss.str();
+}
+
+/* -------------------------------------------------------------------------- */
+
+std::string toString(VkQueueFlags flags)
+{
+    auto set = [flags](std::string& out, int flag, std::string txt)
+    {
+        if (flags & flag)
+        {
+            if (out.size())
+                out += ", ";
+            out += txt;
+        }
+    };
+
+    std::string capabilitiesStr;
+    set(capabilitiesStr, VK_QUEUE_GRAPHICS_BIT,       "Graphics");
+    set(capabilitiesStr, VK_QUEUE_COMPUTE_BIT,        "Compute");
+    set(capabilitiesStr, VK_QUEUE_TRANSFER_BIT,       "Transfer");
+    set(capabilitiesStr, VK_QUEUE_SPARSE_BINDING_BIT, "Sparse Binding");
+    return capabilitiesStr;
+}
+
+/* -------------------------------------------------------------------------- */
+
+std::string toString(const VkExtent3D& e)
+{
+    return "[" + std::to_string(e.width) + ", "
+               + std::to_string(e.height) + ", "
+               + std::to_string(e.depth) + "]";
+}
+
 } // namespace stringify
 } // namespace vk
 } // namespace kuu
