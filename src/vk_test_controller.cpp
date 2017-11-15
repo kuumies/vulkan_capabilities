@@ -10,8 +10,11 @@
 #include <sstream>
 #include <iomanip>
 
-#include "vk_stringify.h"
-#include "vk_windows.h"
+#include "ui/vk_test_main_window.h"
+#include "ui/vk_test_widget.h"
+#include "ui/vk_test_physical_device_selection_dialog.h"
+#include "vk/vk_stringify.h"
+#include "vk/vk_windows.h"
 
 namespace kuu
 {
@@ -21,17 +24,30 @@ namespace vk_test
 /* -------------------------------------------------------------------------- */
 
 Controller::Controller()
-{
-    if (!createInstance())
-        return;
-    enumeratePhysicalDevices();
-}
+{}
 
 /* -------------------------------------------------------------------------- */
 
 Controller::~Controller()
 {
     destroyInstance();
+    delete mainWindow;
+}
+
+/* -------------------------------------------------------------------------- */
+
+void Controller::runVulkanTest()
+{
+    mainWindow = new MainWindow();
+    mainWindow->showMaximized();
+
+    if (!createInstance())
+        return;
+
+    PhysicalDeviceSelectionDialog selectDevice;
+    selectDevice.setInstance(instance);
+    selectDevice.exec();
+
 }
 
 /* -------------------------------------------------------------------------- *
@@ -120,126 +136,6 @@ void Controller::destroyInstance()
         instance, // [in] handle to instance
         NULL);    // [in] no allocation callback
     instance = VK_NULL_HANDLE;
-}
-
-/* -------------------------------------------------------------------------- *
-   Enumerates the physical devices.
-   
-   A physical device is usually a single device in a system. As spec says it
-   could be made up of several individual hardware devices working together.
-   I guess like when using SLI mode?
-   
-   See: https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html#devsandqueues-physical-device-enumeration
- * -------------------------------------------------------------------------- */
-void Controller::enumeratePhysicalDevices()
-{
-    uint32_t physicalDeviceCount = 0;
-    vkEnumeratePhysicalDevices(
-        instance,             // [in]  Instance handle
-        &physicalDeviceCount, // [out] Physical device count
-        NULL);                // [in]  Pointer to vector of physical devices, NULL
-                              // so the physical device count is returned.
-        
-    std::vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
-    const VkResult result = vkEnumeratePhysicalDevices(
-        instance,                // [in]      Instance handle
-        &physicalDeviceCount,    // [in, out] Physical device count
-        physicalDevices.data()); // [out]     Pointer to vector of physical devices
-        
-    if (result != VK_SUCCESS)
-    {
-        std::cerr << __FUNCTION__
-                  << ": physical device enumeration failed as "
-                  << vk::stringify::toDescription(result)
-                  << std::endl;
-
-        if (result != VK_INCOMPLETE)
-            return;
-    }
-    
-    for (const VkPhysicalDevice& physicalDevice : physicalDevices)
-    {
-        VkPhysicalDeviceProperties properties;
-        vkGetPhysicalDeviceProperties(
-            physicalDevice, // [in]  physical device handle
-            &properties);   // [out] physical device properties
-        
-        // Unique identifier for the Vendor of the device. How to process the 
-        // ID depends on the whether the device is installed into PCI slot or
-        // not.
-        //
-        //      PCI: the low sixteen bits contains PCI vendor ID, remaining bits 
-        //           are zero. ID is issued either PCI-SIG or Khronos.
-        //  Non-PCI: dictated by operating system or platform policies (ARGH)
-        uint32_t vendorId = properties.vendorID;
-        
-        // Unique identifier for the device selected by the Vendor of the 
-        // device. The value identifies both the device version and any major 
-        // configuration options (e.g. core count). The same device ID should 
-        // be used for all physical implementations of that device version and 
-        // configuration [previous is from spec].
-        uint32_t deviceId = properties.deviceID;
-        
-        // Physical device type.
-        VkPhysicalDeviceType type = properties.deviceType;
-        std::string typeDesc =
-            vk::stringify::toString(type)      + " (" +
-            vk::stringify::toDescription(type) + ")";
-        
-        // Device name
-        std::string deviceName = properties.deviceName;
-
-        using namespace vk::stringify;
-        std::string uuidString       = toString(properties.pipelineCacheUUID);
-        std::string apiVersionStr    = versionNumber(properties.apiVersion);
-        std::string driverVersionStr = versionNumber(properties.driverVersion);
-
-        std::cout << "Physical Device"    << std::endl;
-        std::cout << "  Name:           " << deviceName           << std::endl;
-        std::cout << "  Type:           " << typeDesc             << std::endl;
-        std::cout << "  API version:    " << apiVersionStr        << std::endl;
-        std::cout << "  Driver version: " << driverVersionStr     << std::endl;
-        std::cout << "  Vendor ID:      " << std::hex << vendorId << std::endl;
-        std::cout << "  Device ID:      " << std::hex << deviceId << std::endl;
-        std::cout << "  UUID:           " << uuidString           << std::endl;
-
-        uint32_t queueFamilyPropertyCount = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(
-            physicalDevice,            // [in]  physical device handle
-            &queueFamilyPropertyCount, // [out] queue family property count
-            NULL);                     // [in]  properties, NULL to get count
-
-        std::vector<VkQueueFamilyProperties> queueFamilyProperties(
-            queueFamilyPropertyCount);
-        vkGetPhysicalDeviceQueueFamilyProperties(
-            physicalDevice,                // [in]  physical device handle
-            &queueFamilyPropertyCount,     // [in]  queue family property count
-            queueFamilyProperties.data()); // [out] queue family properties
-
-        for (uint32_t queueFamilyIndex = 0; queueFamilyIndex < queueFamilyPropertyCount; ++queueFamilyIndex)
-        {
-            const VkQueueFamilyProperties& property = queueFamilyProperties[queueFamilyIndex];
-
-            std::cout << "Queue Family Index: " << queueFamilyIndex << std::endl;
-            std::cout << "Queue count: " << property.queueCount  << std::endl;
-
-            std::string capabilitiesStr = toString(property.queueFlags);
-            std::string minImageTransferGranularityStr = toString(property.minImageTransferGranularity);
-            std::cout << "Capabilities: " << capabilitiesStr << std::endl;
-            std::cout << "Count of valid time stamp bits: " << property.timestampValidBits << std::endl;
-            std::cout << "Minimum image transfer granularity: " << minImageTransferGranularityStr << std::endl;
-
-#ifdef _WIN32
-            using namespace vk::windows;
-            const VkBool32 result =
-                vkGetPhysicalDeviceWin32PresentationSupportKHR(
-                    instance,
-                    physicalDevice,    // [in] physical device handle
-                    queueFamilyIndex); // [in] queue family index
-            std::cout << "Presentation support: " << (result == VK_TRUE ? "yes" : "no") << std::endl;
-#endif
-        }
-    }
 }
 
 } // namespace vk_test

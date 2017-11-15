@@ -1,45 +1,34 @@
 /* -------------------------------------------------------------------------- *
    Antti Jumpponen <kuumies@gmail.com>
-   The definition of kuu::vk:_test::Controller class
+   The definition of kuu::vk_test::MainWindow class
  * -------------------------------------------------------------------------- */
- 
+
 #pragma once
 
+/* -------------------------------------------------------------------------- */
+
 #include <memory>
-#include <vulkan/vulkan.h>
+#include <QtWidgets/QMainWindow>
 
 namespace kuu
 {
-namespace vk
-{
-    class Widget;
-}
-
 namespace vk_test
 {
 
-class MainWindow;
-
 /* -------------------------------------------------------------------------- *
-   A controller for Vulkan Test application.
+   The main window of Vulkan test application.
  * -------------------------------------------------------------------------- */
-class Controller
+class MainWindow : public QMainWindow
 {
+    Q_OBJECT
+
 public:
-    Controller();
-    ~Controller();
-
-    void runVulkanTest();
+    // Constructs the main window with an optional parent widget.
+    explicit MainWindow(QWidget* parent = nullptr);
 
 private:
-    bool createInstance();
-    void destroyInstance();
-    
-private:
-    MainWindow* mainWindow = nullptr;
-    vk::Widget* widget     = nullptr;
-
-    VkInstance instance    = VK_NULL_HANDLE;
+    struct Data;
+    std::shared_ptr<Data> d;
 };
 
 } // namespace vk_test

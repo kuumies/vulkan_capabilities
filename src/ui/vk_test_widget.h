@@ -1,7 +1,7 @@
-/* ---------------------------------------------------------------- *
+/* -------------------------------------------------------------------------- *
    Antti Jumpponen <kuumies@gmail.com>
-   The definition of kuu::vk::Widget class
- * ---------------------------------------------------------------- */
+   The definition of kuu::vk_test::Widget class
+ * -------------------------------------------------------------------------- */
 
 #pragma once
 
@@ -11,17 +11,17 @@
 
 namespace kuu
 {
-namespace vk
+namespace vk_test
 {
 
-/* ---------------------------------------------------------------- *
+/* -------------------------------------------------------------------------- *
    A widget to present a Vulkan-framebuffer.
 
    Note that at the moment only Windows OS is supported.
 
    The surface is destroyd when the widget goes out-of-scope. This
    needs to happen before Vulkan instance is destroyed.
- * ---------------------------------------------------------------- */
+ * -------------------------------------------------------------------------- */
 class Widget : public QWidget
 {
 public:
@@ -46,5 +46,5 @@ private:
     std::shared_ptr<Data> d;
 };
 
-} // namespace vk
+} // namespace vk_test
 } // namespace kuu

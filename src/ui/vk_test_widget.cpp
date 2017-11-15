@@ -1,33 +1,38 @@
-/* ---------------------------------------------------------------- *
+/* -------------------------------------------------------------------------- *
    Antti Jumpponen <kuumies@gmail.com>
-   The implementation of kuu::vk::Widget class
- * ---------------------------------------------------------------- */
+   The implementation of kuu::vk_test::Widget class
+ * -------------------------------------------------------------------------- */
 
-#include "vk_widget.h"
+#include "vk_test_widget.h"
+
+/* -------------------------------------------------------------------------- */
+
 #include <assert.h>
 #include <iostream>
 #include <vulkan/vulkan.h>
-#include "vk_windows.h"
+
+/* -------------------------------------------------------------------------- */
+
+#include "../vk/vk_windows.h"
 
 namespace kuu
 {
-namespace vk
+namespace vk_test
 {
 namespace
 {
 
 #ifdef _WIN32
 
-
-/* ---------------------------------------------------------------- *
+/* -------------------------------------------------------------------------- *
    Creates the Windows Vulkan surface. If the creation fails then
    a VK_NULL_HANDLE is returned.
- * ---------------------------------------------------------------- */
+ * -------------------------------------------------------------------------- */
 VkSurfaceKHR createWindowsSurface(
     const VkInstance& instance,
     const HWND& handle)
 {
-    using namespace windows;
+    using namespace vk::windows;
 
     // Fill the Windows surface create info
     VkWin32SurfaceCreateInfoKHR createInfo;
@@ -60,6 +65,8 @@ VkSurfaceKHR createWindowsSurface(
 
 } // anonymous namespace
 
+/* -------------------------------------------------------------------------- */
+
 struct Widget::Data
 {
     Data(const VkInstance& instance, const HWND& winId)
@@ -86,6 +93,8 @@ struct Widget::Data
     VkSurfaceKHR surface = VK_NULL_HANDLE;
 };
 
+/* -------------------------------------------------------------------------- */
+
 Widget::Widget(const VkInstance& instance, QWidget* parent)
     : QWidget(parent)
     , d(std::make_shared<Data>(instance, (HWND) winId()))
@@ -94,14 +103,20 @@ Widget::Widget(const VkInstance& instance, QWidget* parent)
     setUpdatesEnabled(false);
 }
 
+/* -------------------------------------------------------------------------- */
+
 bool Widget::isValid() const
 { return d->surface == VK_NULL_HANDLE; }
+
+/* -------------------------------------------------------------------------- */
 
 VkSurfaceKHR Widget::surface() const
 { return d->surface; }
 
+/* -------------------------------------------------------------------------- */
+
 void Widget::paintEvent(QPaintEvent* /*e*/)
 {}
 
-} // namespace vk
+} // namespace vk_test
 } // namespace kuu
