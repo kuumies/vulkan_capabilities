@@ -62,6 +62,7 @@ SET(QT_LIBRARIES ${QT_LIBRARIES} ${Qt5Widgets_LIBRARIES})
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
 
 #---------------------------------------------------------------------
 # Application sources
@@ -72,10 +73,12 @@ file(GLOB_RECURSE GLSL_SOURCES
     "src/shaders/*.frag"
     )
 file(GLOB_RECURSE UI_SOURCES src/*.ui)
+file(GLOB_RECURSE QRC_SOURCES src/*.qrc)
 
 add_executable(${PROJECT_NAME}
     ${CPP_SOURCES}
     ${UI_SOURCES}
+    ${QRC_SOURCES}
     ${GLSL_SOURCES}
 )
 
