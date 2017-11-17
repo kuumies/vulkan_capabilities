@@ -5,7 +5,6 @@
  
 #pragma once
 
-#include <memory>
 #include <string>
 #include <vulkan/vulkan.h>
 

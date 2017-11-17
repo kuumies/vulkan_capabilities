@@ -13,6 +13,7 @@
 
 #include "vk_capabilities_data.h"
 #include "vk_capabilities_main_window.h"
+#include "vk_helper.h"
 #include "vk_stringify.h"
 
 namespace kuu
@@ -42,8 +43,13 @@ struct VulkanObjects
            Create instance
          * ------------------------------------------------------------------ */
 
+        physicalDeviceProperties2 =
+            vk::helper::isInstanceExtensionSupported(
+                "VK_KHR_get_physical_device_properties2");
+
         std::vector<const char*> extensionNames;
-        extensionNames.push_back("VK_KHR_get_physical_device_properties2");
+        if (physicalDeviceProperties2)
+            extensionNames.push_back("VK_KHR_get_physical_device_properties2");
         const uint32_t extensionCount =
             static_cast<uint32_t>(extensionNames.size());
 
@@ -135,6 +141,8 @@ struct VulkanObjects
     VkInstance instance = VK_NULL_HANDLE;
     // Vulkan physical device handles
     std::vector<PhysicalDevice> physicalDevices;
+    // True if the VK_KHR_get_physical_device_properties2 extension is supported.
+    bool physicalDeviceProperties2 = false;
 };
 
 /* -------------------------------------------------------------------------- *
