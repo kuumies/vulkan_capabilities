@@ -1,0 +1,13 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/agp.png</file>
+        <file>icons/arrow_right.png</file>
+        <file>icons/ddr_memory.png</file>
+        <file>icons/information.png</file>
+        <file>icons/layer.png</file>
+        <file>icons/layer_stack_arrange.png</file>
+        <file>icons/layered_pane.png</file>
+        <file>icons/limit_bandwidth_usage.png</file>
+        <file>icons/text_list_bullets.png</file>
+    </qresource>
+</RCC>

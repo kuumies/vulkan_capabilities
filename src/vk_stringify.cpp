@@ -152,7 +152,16 @@ std::string toString(const VkExtent3D& e)
 {
     return "[" + std::to_string(e.width) + ", "
                + std::to_string(e.height) + ", "
-               + std::to_string(e.depth) + "]";
+            + std::to_string(e.depth) + "]";
+}
+
+/* -------------------------------------------------------------------------- */
+
+std::string hexValueToString(uint32_t v)
+{
+    std::stringstream ss;
+    ss << "0x" << std::hex << v;
+    return ss.str();
 }
 
 } // namespace stringify

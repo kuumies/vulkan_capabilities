@@ -1,6 +1,6 @@
 /* -------------------------------------------------------------------------- *
    Antti Jumpponen <kuumies@gmail.com>
-   The definition of kuu::vk_test::MainWindow class
+   The definition of kuu::vk_capabilities::MainWindow class
  * -------------------------------------------------------------------------- */
 
 #pragma once
@@ -12,11 +12,15 @@
 
 namespace kuu
 {
-namespace vk_test
+namespace vk_capabilities
 {
 
+/* -------------------------------------------------------------------------- */
+
+struct Data;
+
 /* -------------------------------------------------------------------------- *
-   The main window of Vulkan test application.
+   The main window of Vulkan Capabilities application.
  * -------------------------------------------------------------------------- */
 class MainWindow : public QMainWindow
 {
@@ -26,10 +30,15 @@ public:
     // Constructs the main window with an optional parent widget.
     explicit MainWindow(QWidget* parent = nullptr);
 
+    // Sets the data model to fill the UI fields. If the system does not
+    // contain a Vulkan implementation then a special message about this
+    // is visible.
+    void setData(std::shared_ptr<Data> data);
+
 private:
-    struct Data;
-    std::shared_ptr<Data> d;
+    struct Impl;
+    std::shared_ptr<Impl> impl;
 };
 
-} // namespace vk_test
+} // namespace vk_capabilities
 } // namespace kuu

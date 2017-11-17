@@ -38,6 +38,9 @@ std::string toString(VkQueueFlags flags);
 // Returns the 3D extent as a string.
 std::string toString(const VkExtent3D& e);
 
+// Returns the hex value as a string.
+std::string hexValueToString(uint32_t v);
+
 } // namespace stringify
 } // namespace vk
 } // namespace kuu
