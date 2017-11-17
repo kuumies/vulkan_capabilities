@@ -9,5 +9,6 @@
         <file>icons/layered_pane.png</file>
         <file>icons/limit_bandwidth_usage.png</file>
         <file>icons/text_list_bullets.png</file>
+        <file>stylesheets/stylesheet.qss</file>
     </qresource>
 </RCC>

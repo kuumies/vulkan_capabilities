@@ -3,16 +3,38 @@
    The main entry point of Vulkan Capabilities application.
  * ---------------------------------------------------------------- */
 
-#include <vulkan/vulkan.h>
+#include <iostream>
+#include <QtCore/QFile>
+#include <QtCore/QTextStream>
 #include <QtWidgets/QApplication>
+#include <vulkan/vulkan.h>
 
 /* ---------------------------------------------------------------- */
 
 #include "vk_capabilities_controller.h"
 
+/* ---------------------------------------------------------------- */
+
+QString readStyleSheet()
+{
+    QFile qssFile("://stylesheets/stylesheet.qss");
+    if (!qssFile.open(QIODevice::ReadOnly))
+    {
+        std::cerr << __FUNCTION__
+                  << "Failed to read stylesheet from resource"
+                  << std::endl;
+        return QString();
+    }
+
+    return QTextStream(&qssFile).readAll();
+}
+
+/* ---------------------------------------------------------------- */
+
 int main(int argc, char* argv[])
 {
     QApplication app(argc, argv);
+    app.setStyleSheet(readStyleSheet());
 
     kuu::vk_capabilities::Controller controller;
     controller.showUi();

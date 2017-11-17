@@ -1,0 +1,58 @@
+*[headerLabel="true"]
+{
+    font: bold 12pt "Segoe UI";
+}
+
+QFrame#capabilitiesStackedWidgetFrame
+{
+    background-color: white;
+}
+
+QFrame#sideFrame
+{
+    background-color: rgb(64, 66, 68);
+}
+
+QFrame#errorFrame
+{
+    background-color: rgb(64, 66, 68);
+}
+
+QLabel#errorMessage
+{
+    font: bold 36pt "Segoe UI";
+    background-color: rgb(255, 255, 255);
+    border: 2px solid black;
+    border-radius: 10px;
+    padding: 12px;
+}
+
+*[nameValueLabel="true"]
+{
+    font: 10pt "Segoe UI";
+}
+
+*[propertyButton="true"]
+{
+    font: 8pt "Segoe UI";
+    color: white;
+    border: 2px solid rgb(64, 66, 68);
+    border-radius: 6px;
+    background-color: rgb(64, 66, 68);
+    padding: 6px;
+}
+
+*[propertyButton="true"]:checked
+{
+    font: 8pt "Segoe UI";
+    color: white;
+    background-color: rgb(38, 40, 41);
+    padding: 6px;
+}
+
+QMenuBar#menubar
+{
+    font: 8pt "Segoe UI";
+    color: black;
+    background-color: rgb(213, 213, 214);
+}

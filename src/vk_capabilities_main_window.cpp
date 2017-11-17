@@ -52,9 +52,9 @@ void updateUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
     for (const std::pair<std::string, std::string>& v : dev.mainProperties)
     {
         QLabel* name  = new QLabel(QString::fromStdString(v.first));
-        name->setFont(QFont("Segoe UI", 10));
+        name->setProperty("nameValueLabel", true);
         QLabel* value = new QLabel(QString::fromStdString(v.second));
-        value->setFont(QFont("Segoe UI", 10));
+        value->setProperty("nameValueLabel", true);
         value->setFrameShape(QFrame::Panel);
         value->setFrameShadow(QFrame::Sunken);
 

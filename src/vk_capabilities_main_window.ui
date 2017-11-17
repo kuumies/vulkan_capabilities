@@ -40,7 +40,7 @@
     <item>
      <widget class="QStackedWidget" name="mainStackedWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="page_8">
        <layout class="QHBoxLayout" name="horizontalLayout">
@@ -62,7 +62,7 @@
         <item>
          <widget class="QFrame" name="sideFrame">
           <property name="styleSheet">
-           <string notr="true">background-color: rgb(64, 66, 68);</string>
+           <string notr="true"/>
           </property>
           <property name="frameShape">
            <enum>QFrame::StyledPanel</enum>
@@ -100,21 +100,7 @@
               </font>
              </property>
              <property name="styleSheet">
-              <string notr="true">QToolButton
-{
-color: white;
-border: 2px solid rgb(64, 66, 68);
-border-radius: 6px;
-background-color: rgb(64, 66, 68);
- padding: 6px;
-}
-
-QToolButton:checked 
-{
-	color: white;
-    background-color: rgb(38, 40, 41);
- padding: 6px;
-}</string>
+              <string notr="true"/>
              </property>
              <property name="text">
               <string>Main</string>
@@ -141,6 +127,9 @@ QToolButton:checked
              <property name="toolButtonStyle">
               <enum>Qt::ToolButtonTextUnderIcon</enum>
              </property>
+             <property name="propertyButton" stdset="0">
+              <bool>true</bool>
+             </property>
             </widget>
            </item>
            <item>
@@ -157,21 +146,7 @@ QToolButton:checked
               </font>
              </property>
              <property name="styleSheet">
-              <string notr="true">QToolButton
-{
-color: white;
-border: 2px solid rgb(64, 66, 68);
-border-radius: 6px;
-background-color: rgb(64, 66, 68);
- padding: 6px;
-}
-
-QToolButton:checked 
-{
-	color: white;
-    background-color: rgb(38, 40, 41);
- padding: 6px;
-}</string>
+              <string notr="true"/>
              </property>
              <property name="text">
               <string>Extensions</string>
@@ -195,6 +170,9 @@ QToolButton:checked
              <property name="toolButtonStyle">
               <enum>Qt::ToolButtonTextUnderIcon</enum>
              </property>
+             <property name="propertyButton" stdset="0">
+              <bool>true</bool>
+             </property>
             </widget>
            </item>
            <item>
@@ -211,21 +189,7 @@ QToolButton:checked
               </font>
              </property>
              <property name="styleSheet">
-              <string notr="true">QToolButton
-{
-color: white;
-border: 2px solid rgb(64, 66, 68);
-border-radius: 6px;
-background-color: rgb(64, 66, 68);
- padding: 6px;
-}
-
-QToolButton:checked 
-{
-	color: white;
-    background-color: rgb(38, 40, 41);
- padding: 6px;
-}</string>
+              <string notr="true"/>
              </property>
              <property name="text">
               <string>Layers</string>
@@ -249,6 +213,9 @@ QToolButton:checked
              <property name="toolButtonStyle">
               <enum>Qt::ToolButtonTextUnderIcon</enum>
              </property>
+             <property name="propertyButton" stdset="0">
+              <bool>true</bool>
+             </property>
             </widget>
            </item>
            <item>
@@ -265,21 +232,7 @@ QToolButton:checked
               </font>
              </property>
              <property name="styleSheet">
-              <string notr="true">QToolButton
-{
-color: white;
-border: 2px solid rgb(64, 66, 68);
-border-radius: 6px;
-background-color: rgb(64, 66, 68);
- padding: 6px;
-}
-
-QToolButton:checked 
-{
-	color: white;
-    background-color: rgb(38, 40, 41);
- padding: 6px;
-}</string>
+              <string notr="true"/>
              </property>
              <property name="text">
               <string>Features</string>
@@ -303,6 +256,9 @@ QToolButton:checked
              <property name="toolButtonStyle">
               <enum>Qt::ToolButtonTextUnderIcon</enum>
              </property>
+             <property name="propertyButton" stdset="0">
+              <bool>true</bool>
+             </property>
             </widget>
            </item>
            <item>
@@ -319,21 +275,7 @@ QToolButton:checked
               </font>
              </property>
              <property name="styleSheet">
-              <string notr="true">QToolButton
-{
-color: white;
-border: 2px solid rgb(64, 66, 68);
-border-radius: 6px;
-background-color: rgb(64, 66, 68);
- padding: 6px;
-}
-
-QToolButton:checked 
-{
-	color: white;
-    background-color: rgb(38, 40, 41);
- padding: 6px;
-}</string>
+              <string notr="true"/>
              </property>
              <property name="text">
               <string>Memory</string>
@@ -357,6 +299,9 @@ QToolButton:checked
              <property name="toolButtonStyle">
               <enum>Qt::ToolButtonTextUnderIcon</enum>
              </property>
+             <property name="propertyButton" stdset="0">
+              <bool>true</bool>
+             </property>
             </widget>
            </item>
            <item>
@@ -373,21 +318,7 @@ QToolButton:checked
               </font>
              </property>
              <property name="styleSheet">
-              <string notr="true">QToolButton
-{
-color: white;
-border: 2px solid rgb(64, 66, 68);
-border-radius: 6px;
-background-color: rgb(64, 66, 68);
- padding: 6px;
-}
-
-QToolButton:checked 
-{
-	color: white;
-    background-color: rgb(38, 40, 41);
- padding: 6px;
-}</string>
+              <string notr="true"/>
              </property>
              <property name="text">
               <string>Queues</string>
@@ -411,6 +342,9 @@ QToolButton:checked
              <property name="toolButtonStyle">
               <enum>Qt::ToolButtonTextUnderIcon</enum>
              </property>
+             <property name="propertyButton" stdset="0">
+              <bool>true</bool>
+             </property>
             </widget>
            </item>
            <item>
@@ -427,21 +361,7 @@ QToolButton:checked
               </font>
              </property>
              <property name="styleSheet">
-              <string notr="true">QToolButton
-{
-color: white;
-border: 2px solid rgb(64, 66, 68);
-border-radius: 6px;
-background-color: rgb(64, 66, 68);
- padding: 6px;
-}
-
-QToolButton:checked 
-{
-	color: white;
-    background-color: rgb(38, 40, 41);
- padding: 6px;
-}</string>
+              <string notr="true"/>
              </property>
              <property name="text">
               <string>Limits</string>
@@ -464,6 +384,9 @@ QToolButton:checked
              </property>
              <property name="toolButtonStyle">
               <enum>Qt::ToolButtonTextUnderIcon</enum>
+             </property>
+             <property name="propertyButton" stdset="0">
+              <bool>true</bool>
              </property>
             </widget>
            </item>
@@ -494,21 +417,7 @@ QToolButton:checked
               </font>
              </property>
              <property name="styleSheet">
-              <string notr="true">QToolButton
-{
-color: white;
-border: 2px solid rgb(64, 66, 68);
-border-radius: 6px;
-background-color: rgb(64, 66, 68);
- padding: 6px;
-}
-
-QToolButton:checked 
-{
-	color: white;
-    background-color: rgb(38, 40, 41);
- padding: 6px;
-}</string>
+              <string notr="true"/>
              </property>
              <property name="text">
               <string>GeF...080TI</string>
@@ -538,6 +447,9 @@ QToolButton:checked
              <property name="toolButtonStyle">
               <enum>Qt::ToolButtonTextUnderIcon</enum>
              </property>
+             <property name="propertyButton" stdset="0">
+              <bool>true</bool>
+             </property>
             </widget>
            </item>
           </layout>
@@ -546,8 +458,7 @@ QToolButton:checked
         <item>
          <widget class="QFrame" name="capabilitiesStackedWidgetFrame">
           <property name="styleSheet">
-           <string notr="true">background-color: rgb(255, 255, 255);
-</string>
+           <string notr="true"/>
           </property>
           <property name="frameShape">
            <enum>QFrame::Box</enum>
@@ -586,12 +497,19 @@ QToolButton:checked
                     <font>
                      <family>Segoe UI</family>
                      <pointsize>10</pointsize>
-                     <weight>75</weight>
-                     <bold>true</bold>
+                     <weight>50</weight>
+                     <italic>false</italic>
+                     <bold>false</bold>
                     </font>
                    </property>
+                   <property name="styleSheet">
+                    <string notr="true"/>
+                   </property>
                    <property name="text">
-                    <string>  Properties</string>
+                    <string> Properties</string>
+                   </property>
+                   <property name="headerLabel" stdset="0">
+                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>
@@ -645,6 +563,9 @@ QToolButton:checked
                    <property name="text">
                     <string>Extensions</string>
                    </property>
+                   <property name="headerLabel" stdset="0">
+                    <bool>true</bool>
+                   </property>
                   </widget>
                  </item>
                  <item>
@@ -693,6 +614,9 @@ QToolButton:checked
                    </property>
                    <property name="text">
                     <string>Layers</string>
+                   </property>
+                   <property name="headerLabel" stdset="0">
+                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>
@@ -743,6 +667,9 @@ QToolButton:checked
                    <property name="text">
                     <string>Features</string>
                    </property>
+                   <property name="headerLabel" stdset="0">
+                    <bool>true</bool>
+                   </property>
                   </widget>
                  </item>
                  <item>
@@ -791,6 +718,9 @@ QToolButton:checked
                    </property>
                    <property name="text">
                     <string>Memory</string>
+                   </property>
+                   <property name="headerLabel" stdset="0">
+                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>
@@ -841,6 +771,9 @@ QToolButton:checked
                    <property name="text">
                     <string>Queues</string>
                    </property>
+                   <property name="headerLabel" stdset="0">
+                    <bool>true</bool>
+                   </property>
                   </widget>
                  </item>
                  <item>
@@ -890,6 +823,9 @@ QToolButton:checked
                    <property name="text">
                     <string>Limits</string>
                    </property>
+                   <property name="headerLabel" stdset="0">
+                    <bool>true</bool>
+                   </property>
                   </widget>
                  </item>
                  <item>
@@ -928,10 +864,6 @@ QToolButton:checked
          </widget>
         </item>
        </layout>
-       <zorder>sideFrame</zorder>
-       <zorder>capabilitiesStackedWidget</zorder>
-       <zorder>sideFrame</zorder>
-       <zorder>capabilitiesStackedWidgetFrame</zorder>
       </widget>
       <widget class="QWidget" name="page_9">
        <layout class="QGridLayout" name="gridLayout">
@@ -950,7 +882,7 @@ QToolButton:checked
         <item row="0" column="0">
          <widget class="QFrame" name="sideFrame_2">
           <property name="styleSheet">
-           <string notr="true">background-color: rgb(64, 66, 68);</string>
+           <string notr="true"/>
           </property>
           <property name="frameShape">
            <enum>QFrame::StyledPanel</enum>
@@ -975,7 +907,10 @@ QToolButton:checked
             <number>0</number>
            </property>
            <item>
-            <widget class="QFrame" name="frame">
+            <widget class="QFrame" name="errorFrame">
+             <property name="styleSheet">
+              <string notr="true"/>
+             </property>
              <property name="frameShape">
               <enum>QFrame::StyledPanel</enum>
              </property>
@@ -1020,12 +955,10 @@ QToolButton:checked
                  </font>
                 </property>
                 <property name="styleSheet">
-                 <string notr="true">background-color: rgb(255, 255, 255);
-border: 2px solid black;
-border-radius: 10px;</string>
+                 <string notr="true"/>
                 </property>
                 <property name="text">
-                 <string>No Devices with Vulkan capability</string>
+                 <string>Error Message</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignCenter</set>
