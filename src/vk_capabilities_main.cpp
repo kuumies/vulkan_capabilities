@@ -6,6 +6,7 @@
 #include <iostream>
 #include <QtCore/QFile>
 #include <QtCore/QTextStream>
+#include <QtGui/QIcon>
 #include <QtWidgets/QApplication>
 #include <vulkan/vulkan.h>
 
@@ -35,6 +36,7 @@ int main(int argc, char* argv[])
 {
     QApplication app(argc, argv);
     app.setStyleSheet(readStyleSheet());
+    app.setWindowIcon(QIcon("://icons/kuu.png"));
 
     kuu::vk_capabilities::Controller controller;
     controller.showUi();

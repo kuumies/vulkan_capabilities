@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Vulkan Capabilities</string>
+   <string>CAPS-V - Vulkan Capabilities</string>
   </property>
   <property name="styleSheet">
    <string notr="true">QMenuBar
