@@ -8,6 +8,7 @@
 
 /* -------------------------------------------------------------------------- */
 
+#include <array>
 #include <iostream>
 #include <sstream>
 
@@ -140,6 +141,50 @@ void PhysicalDeviceWidget::setPhysicalDevice(
                 queueFamilyIndex); // [in] queue family index
         std::cout << "Presentation support: " << (result == VK_TRUE ? "yes" : "no") << std::endl;
 #endif
+    }
+
+    // Get the features of Vulkan 1.0 API
+    VkPhysicalDeviceFeatures features;
+    vkGetPhysicalDeviceFeatures(
+        physicalDevice, // [in]  physical device handle
+        &features);     // [out] physical device features
+
+    auto fun = (PFN_vkGetPhysicalDeviceFeatures2KHR)
+        vkGetInstanceProcAddr(
+            instance,
+            "vkGetPhysicalDeviceFeatures2KHR");
+    if (fun)
+    {
+        // Query SPIR-V VariablePointers and VariablePointersStorageBuffer capabilities.
+        VkPhysicalDeviceVariablePointerFeaturesKHR featuresVariablePointer;
+        featuresVariablePointer.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VARIABLE_POINTER_FEATURES_KHR;
+        featuresVariablePointer.pNext = NULL; // end of the chain, must be NULL!
+
+        // Query render pass mutltiview capablities
+        VkPhysicalDeviceMultiviewFeaturesKHX multiviewFeatures;
+        multiviewFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHX;
+        multiviewFeatures.pNext = &featuresVariablePointer;
+
+        // Query storage 16 bit capabilities
+        VkPhysicalDevice16BitStorageFeaturesKHR features16ButStorage;
+        features16ButStorage.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES_KHR;
+        features16ButStorage.pNext = &multiviewFeatures;
+
+        // Query samper Yuv conversion capability
+        VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR yuvSamplerFeatures;
+        yuvSamplerFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES_KHR;
+        yuvSamplerFeatures.pNext = &features16ButStorage;
+
+        // Query advanced blending operation capability
+        VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT blendFeatures;
+        blendFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BLEND_OPERATION_ADVANCED_FEATURES_EXT;
+        blendFeatures.pNext = &yuvSamplerFeatures;
+
+        // Get the features of Vulkan 1.0 and beyond API
+        VkPhysicalDeviceFeatures2KHR features2;
+        features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
+        features2.pNext = &blendFeatures;
+        fun(physicalDevice, &features2);
     }
 }
 

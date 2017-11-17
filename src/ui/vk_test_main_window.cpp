@@ -6,6 +6,12 @@
 #include "vk_test_main_window.h"
 #include "ui_vk_test_main_window.h"
 
+/* -------------------------------------------------------------------------- */
+
+#include <QtWidgets/QComboBox>
+#include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QLabel>
+
 namespace kuu
 {
 namespace vk_test

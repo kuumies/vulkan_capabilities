@@ -71,9 +71,11 @@ file(GLOB_RECURSE GLSL_SOURCES
     "src/shaders/*.vert"
     "src/shaders/*.frag"
     )
+file(GLOB_RECURSE UI_SOURCES src/*.ui)
 
 add_executable(${PROJECT_NAME}
     ${CPP_SOURCES}
+    ${UI_SOURCES}
     ${GLSL_SOURCES}
 )
 

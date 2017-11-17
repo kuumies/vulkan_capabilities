@@ -39,7 +39,7 @@ Controller::~Controller()
 void Controller::runVulkanTest()
 {
     mainWindow = new MainWindow();
-    mainWindow->showMaximized();
+    mainWindow->show();
 
     if (!createInstance())
         return;
@@ -75,6 +75,7 @@ void Controller::runVulkanTest()
 bool Controller::createInstance()
 {
     std::vector<const char*> extensionNames;
+    extensionNames.push_back("VK_KHR_get_physical_device_properties2");
     extensionNames.push_back("VK_KHR_surface");       // Surface
     extensionNames.push_back("VK_KHR_win32_surface"); // Surface (Windows OS)
     const uint32_t extensionCount =
