@@ -1,2 +1,2 @@
-# vulkan_test
-A Vulkan test application
+# Caps-V: Vulkan Capabilities
+A Vulkan capabilities application
