@@ -30,6 +30,8 @@ struct Data
     {
         // Main properties, [key -> label name, value -> label value]
         std::vector<std::pair<std::string, std::string>> mainProperties;
+        // Features, [key -> label name, value -> checkboc value]
+        std::vector<std::pair<std::string, bool>> mainFeatures;
 
         // Returns the name string. If the name does not exits then a
         // empty string is returned.
