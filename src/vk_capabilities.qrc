@@ -12,5 +12,7 @@
         <file>stylesheets/stylesheet.qss</file>
         <file>icons/kuu.png</file>
         <file>descriptions/limits.txt</file>
+        <file>descriptions/formats.txt</file>
+        <file>icons/database.png</file>
     </qresource>
 </RCC>

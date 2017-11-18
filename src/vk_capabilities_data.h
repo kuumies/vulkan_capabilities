@@ -61,6 +61,16 @@ struct Data
         const std::string timestampValidBits;
     };
 
+    // Format data
+    struct Format
+    {
+        const std::string format;
+        const std::string desc;
+        const std::string linearTilingFeatures;
+        const std::string optimalTilingFeatures;
+        const std::string bufferFeatures;
+    };
+
     // True if the system has Vulkan implementation.
     bool hasVulkan = false;
 
@@ -84,6 +94,8 @@ struct Data
         std::vector<Queue> queues;
         // Memory
         Memory memory;
+        // Formats
+        std::vector<Format> formats;
 
         // Returns the name string. If the name does not exits then a
         // empty string is returned.

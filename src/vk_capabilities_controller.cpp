@@ -28,6 +28,78 @@ namespace
 
 /* ---------------------------------------------------------------- */
 
+std::vector<std::pair<std::string, std::string>> readFormat(const QString& filepath)
+{
+    // Transforms a variable name from 'VK_FORMAT_B5G5R5A1_UNORM_PACK16' to
+    // 'B5G5R5A1 UNORM PACK16'.
+    auto transformVariable = [](QString in)
+    {
+//        in = in.remove("VK_FORMAT_");
+//        in = in.replace("_", " ");
+        return in;
+    };
+
+    // Splits a long description text into smaller lines.
+    auto splitToLines = [](const QString& in, const int wordMax = 10)
+    {
+        QStringList inWords = in.split(" ");
+        QStringList outWords;
+        QString out;
+        int wordCount = 0;
+        for (int i = 0; i < inWords.size(); ++i)
+        {
+            if (wordCount < wordMax)
+            {
+                outWords << inWords[i];
+                wordCount++;
+            }
+            else
+            {
+                wordCount = 0;
+                out += outWords.join(" ") += "\n";
+                outWords.clear();
+            }
+        }
+        out += outWords.join(" ");
+        return out;
+    };
+
+    QFile qssFile(filepath);
+    if (!qssFile.open(QIODevice::ReadOnly))
+    {
+        std::cerr << __FUNCTION__
+                  << "Failed to read formats from "
+                  << filepath.toStdString()
+                  << std::endl;
+        return std::vector<std::pair<std::string, std::string>>();
+    }
+
+    std::vector<std::pair<std::string, std::string>> out;
+    QTextStream ts(&qssFile);
+    while(!ts.atEnd())
+    {
+        QString line = ts.readLine().trimmed();
+        if (line.startsWith(";"))
+            continue;
+        if (line.isEmpty())
+            continue;
+
+        QString variable = line.section(" ", 0, 0);
+        variable = transformVariable(variable);
+
+        QString desc = variable + " " + line.section(" ", 1);
+        desc = splitToLines(desc);
+
+        out.push_back(std::make_pair(
+            variable.toStdString(),
+            desc.toStdString()));
+    }
+
+    return out;
+}
+
+/* ---------------------------------------------------------------- */
+
 std::vector<std::pair<std::string, std::string>> readDescription(const QString& filepath)
 {
     // Transforms a variable name from 'myVeryOwnVariable' to
@@ -107,12 +179,20 @@ std::vector<std::pair<std::string, std::string>> readDescription(const QString& 
     return out;
 }
 
-
 /* -------------------------------------------------------------------------- *
    Maintains (creates, destroys) the Vulkan objects.
  * -------------------------------------------------------------------------- */
 struct VulkanObjects
 {
+    /* ---------------------------------------------------------------------- *
+       Defines a format struct.
+     * ---------------------------------------------------------------------- */
+    struct Format
+    {
+        VkFormat format;
+        VkFormatProperties properties;
+    };
+
     /* ---------------------------------------------------------------------- *
        Defines a physical device data struct.
      * ---------------------------------------------------------------------- */
@@ -137,6 +217,7 @@ struct VulkanObjects
         const std::vector<VkExtensionProperties> extensions;                        // Extensions
         const std::vector<Queue> queues;                                            // Queues
         const VkPhysicalDeviceMemoryProperties memoryProperties;                    // Memory properties
+        const std::vector<Format> formats;                                          // Formats
     };
 
     VulkanObjects()
@@ -352,6 +433,19 @@ struct VulkanObjects
                 physicalDevice,
                 &memoryProperties);
 
+
+            std::vector<Format> formats;
+            for (int f = VK_FORMAT_R4G4_UNORM_PACK8; f <= VK_FORMAT_ASTC_12x12_SRGB_BLOCK; ++f)
+            {
+                VkFormat fmt = VkFormat(f);
+                VkFormatProperties props;
+                vkGetPhysicalDeviceFormatProperties(
+                    physicalDevice,
+                    fmt,
+                    &props);
+                formats.push_back( { fmt, props} );
+            }
+
             this->physicalDevices.push_back( 
                 {  
                     physicalDevice, 
@@ -365,7 +459,8 @@ struct VulkanObjects
                     blendFeatures,
                     devExtensions,
                     queues,
-                    memoryProperties
+                    memoryProperties,
+                    formats
                 });
         }
     }
@@ -713,6 +808,23 @@ std::shared_ptr<Data> createCapabilitiesData(
             }
 
             d.memory.heaps.push_back( { heapIndex, size, properties, flags} );
+        }
+
+        const std::vector<std::pair<std::string, std::string>> formatStrings =
+            readFormat("://descriptions/formats.txt");
+
+
+        for (int i = 0; i < device.formats.size(); ++i)
+        {
+            const VulkanObjects::Format& f = device.formats[i];
+            d.formats.push_back(
+            {
+                formatStrings[i].first,
+                formatStrings[i].second,
+                formatFeature(f.properties.linearTilingFeatures),
+                formatFeature(f.properties.optimalTilingFeatures),
+                formatFeature(f.properties.bufferFeatures),
+            });
         }
 
         out->physicalDeviceData.push_back(d);

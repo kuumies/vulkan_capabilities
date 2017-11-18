@@ -16,6 +16,23 @@ namespace vk
 {
 namespace stringify
 {
+namespace
+{
+
+/* -------------------------------------------------------------------------- */
+
+std::string set(std::string& out, int flag, int flags, std::string txt, std::string seperator = ", ")
+{
+    if (flags & flag)
+    {
+        if (out.size())
+            out += seperator;
+        out += txt;
+    }
+    return out;
+}
+
+} // Anonymous namespace
 
 /* -------------------------------------------------------------------------- */
 
@@ -144,6 +161,26 @@ std::string toString(VkQueueFlags flags)
     set(capabilitiesStr, VK_QUEUE_TRANSFER_BIT,       "Transfer");
     set(capabilitiesStr, VK_QUEUE_SPARSE_BINDING_BIT, "Sparse Binding");
     return capabilitiesStr;
+}
+
+/* -------------------------------------------------------------------------- */
+
+std::string formatFeature(VkFormatFeatureFlags flags)
+{
+    std::string formatsStr;
+    set(formatsStr, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT,               flags, "VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT", "\n");
+    set(formatsStr, VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT,               flags, "VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT", "\n");
+    set(formatsStr, VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT,        flags, "VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT", "\n");
+    set(formatsStr, VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT,        flags, "VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT", "\n");
+    set(formatsStr, VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT, flags, "VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT", "\n");
+    set(formatsStr, VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT,               flags, "VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT", "\n");
+    set(formatsStr, VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT,            flags, "VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT", "\n");
+    set(formatsStr, VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT,      flags, "VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT", "\n");
+    set(formatsStr, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT,    flags, "VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT", "\n");
+    set(formatsStr, VK_FORMAT_FEATURE_BLIT_SRC_BIT,                    flags, "VK_FORMAT_FEATURE_BLIT_SRC_BIT", "\n");
+    set(formatsStr, VK_FORMAT_FEATURE_BLIT_DST_BIT,                    flags, "VK_FORMAT_FEATURE_BLIT_DST_BIT", "\n");
+    set(formatsStr, VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT, flags, "VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT", "\n");
+    return formatsStr;
 }
 
 /* -------------------------------------------------------------------------- */

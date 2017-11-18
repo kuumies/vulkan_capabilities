@@ -335,7 +335,88 @@ void updateMemoryUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
         l->addWidget(heapProperties);
         l->addWidget(flags);
         layout->addLayout(l);
+    }
+}
 
+/* -------------------------------------------------------------------------- *
+   Update the formats UI from the data.
+ * -------------------------------------------------------------------------- */
+void updateFormatsUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
+{
+    const int FormatMaxWidth  = 80;
+    const int IndexMaxWidth = 80;
+    const int FlagsMaxWidth = 200;
+
+    QWidget* widget = ui.formats;
+    delete widget->layout();
+    QVBoxLayout* layout = new QVBoxLayout();
+    widget->setLayout(layout);
+
+    QLabel* formatHeader  = new QLabel("Format");
+    formatHeader->setProperty("nameHeaderLabel", true);
+    //formatHeader->setMinimumWidth(FormatMaxWidth);
+    //formatHeader->setMaximumWidth(FormatMaxWidth);
+
+    QLabel* linearTilingHeader = new QLabel("Linear Tiling");
+    linearTilingHeader->setProperty("nameHeaderLabel", true);
+
+    QLabel* optimalTilingHeader  = new QLabel("Optimal Tiling");
+    optimalTilingHeader->setProperty("nameHeaderLabel", true);
+    optimalTilingHeader->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    //optimalTilingHeader->setMinimumWidth(FormatMaxWidth);
+    //optimalTilingHeader->setMaximumWidth(FormatMaxWidth);
+
+    QLabel* bufferFeaturesHeader = new QLabel("Buffer Features");
+    bufferFeaturesHeader->setProperty("nameHeaderLabel", true);
+//    bufferFeaturesHeader->setMinimumWidth(FlagsMaxWidth);
+//    bufferFeaturesHeader->setMaximumWidth(FlagsMaxWidth);
+
+    QHBoxLayout* l = new QHBoxLayout();
+    l->addWidget(formatHeader);
+    l->addWidget(linearTilingHeader);
+    l->addWidget(optimalTilingHeader);
+    l->addWidget(bufferFeaturesHeader);
+    layout->addLayout(l);
+
+    Data::PhysicalDeviceData& dev = d.physicalDeviceData[deviceIndex];
+    for (const Data::Format& t : dev.formats)
+    {
+        QLabel* format  = new QLabel(QString::fromStdString(t.format));
+        format->setProperty("nameValueLabel", true);
+        //format->setMinimumWidth(IndexMaxWidth);
+        //format->setMaximumWidth(IndexMaxWidth);
+        format->setToolTip(QString::fromStdString(t.desc));
+        format->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+
+        QLabel* linearTiling = new QLabel(QString::fromStdString(t.linearTilingFeatures));
+        linearTiling->setProperty("nameValueLabel", true);
+        linearTiling->setFrameShape(QFrame::Panel);
+        linearTiling->setFrameShadow(QFrame::Sunken);
+        linearTiling->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+
+        QLabel* optimalTiling = new QLabel(QString::fromStdString(t.optimalTilingFeatures));
+        optimalTiling->setProperty("nameValueLabel", true);
+        optimalTiling->setFrameShape(QFrame::Panel);
+        optimalTiling->setFrameShadow(QFrame::Sunken);
+        optimalTiling->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+        //optimalTiling->setMinimumWidth(FlagsMaxWidth);
+        //optimalTiling->setMaximumWidth(FlagsMaxWidth);
+
+        QLabel* bufferfeatures  = new QLabel(QString::fromStdString(t.bufferFeatures));
+        bufferfeatures->setProperty("nameValueLabel", true);
+        bufferfeatures->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        bufferfeatures->setFrameShape(QFrame::Panel);
+        bufferfeatures->setFrameShadow(QFrame::Sunken);
+        bufferfeatures->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+        //bufferfeatures->setMinimumWidth(FormatMaxWidth);
+        //bufferfeatures->setMaximumWidth(FormatMaxWidth);
+
+        QHBoxLayout* l = new QHBoxLayout();
+        l->addWidget(format);
+        l->addWidget(linearTiling);
+        l->addWidget(optimalTiling);
+        l->addWidget(bufferfeatures);
+        layout->addLayout(l);
     }
 }
 
@@ -420,6 +501,7 @@ void updateUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
     updateLimitsUi(ui, d, deviceIndex);
     updateQueuesUi(ui, d, deviceIndex);
     updateMemoryUi(ui, d, deviceIndex);
+    updateFormatsUi(ui, d, deviceIndex);
 
     QMenu* deviceMenu = new QMenu();
     deviceMenu->setFont(QFont("Segoe UI", 10));
@@ -453,6 +535,7 @@ struct MainWindow::Impl
             { ui.memoryButton,     4 },
             { ui.queuesButton,     5 },
             { ui.limitsButton,     6 },
+            { ui.formatsButton,    7 },
         };
 
         for (auto button : buttons)

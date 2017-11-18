@@ -33,6 +33,8 @@ std::string toString(const uint8_t* uuid, int size = VK_UUID_SIZE);
 
 // Returns queue capabilities as a string.
 std::string toString(VkQueueFlags flags);
+// Returns format features as a string.
+std::string formatFeature(VkFormatFeatureFlags flags);
 
 // Returns the 3D extent as a string.
 std::string toString(const VkExtent3D& e);
