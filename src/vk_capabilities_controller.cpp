@@ -42,6 +42,7 @@ struct VulkanObjects
         const VkPhysicalDevice16BitStorageFeaturesKHR features16ButStorage;         // 16 bit storage
         const VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR yuvSamplerFeatures; // YUV sampler
         const VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT blendFeatures;      // Blend features
+        const std::vector<VkExtensionProperties> extensions;                        // Extensions
     };
 
     VulkanObjects()
@@ -93,6 +94,24 @@ struct VulkanObjects
                       << vk::stringify::toString(result)
                     << std::endl;
             return;
+        }
+
+        /* ------------------------------------------------------------------ *
+           Get the instance extensions.
+         * ------------------------------------------------------------------ */
+
+        uint32_t instanceExtensionCount = 0;
+        vkEnumerateInstanceExtensionProperties(
+            NULL,                    // [in]  NULL -> Vulkan implementation extensions
+            &instanceExtensionCount, // [out] Extensions count
+            NULL);                   // [out] NULL -> Get only count
+        if (instanceExtensionCount)
+        {
+            instanceExtensions.resize(instanceExtensionCount);
+            vkEnumerateInstanceExtensionProperties(
+                nullptr,                    // [in]  NULL -> Vulkan implementation extensions
+                &instanceExtensionCount,    // [in, out] Extensions count
+                instanceExtensions.data()); // [out] Extensions
         }
 
         /* ------------------------------------------------------------------ *
@@ -180,6 +199,21 @@ struct VulkanObjects
                 }
             }
 
+            uint32_t devInstanceCount = 0;
+            vkEnumerateDeviceExtensionProperties(
+                physicalDevice,     // [in]  physical device handle
+                NULL,               // [in]  NULL -> implementation extensions
+                &devInstanceCount,  // [out] Count of physical device extensions.
+                NULL);              // [in]  NULL -> get only count.
+
+            std::vector<VkExtensionProperties> devExtensions;
+            devExtensions.resize(devInstanceCount);
+            vkEnumerateDeviceExtensionProperties(
+                physicalDevice,        // [in]  physical device handle
+                NULL,                  // [in]  NULL -> implementation extensions
+                &devInstanceCount,     // [out] Count of physical device extensions.
+                devExtensions.data()); // [in]  Physical device extensions
+
             this->physicalDevices.push_back( 
                 {  
                     physicalDevice, 
@@ -191,6 +225,7 @@ struct VulkanObjects
                     features16ButStorage,
                     yuvSamplerFeatures,
                     blendFeatures,
+                    devExtensions
                 });
         }
     }
@@ -205,6 +240,8 @@ struct VulkanObjects
     // Vulkan instance handle. This a null handle if the system does not
     // contain a Vulkan implementation.
     VkInstance instance = VK_NULL_HANDLE;
+    // Instance extensions
+    std::vector<VkExtensionProperties> instanceExtensions;
     // Vulkan physical device handles
     std::vector<PhysicalDevice> physicalDevices;
     // True if the VK_KHR_get_physical_device_properties2 extension is supported.
@@ -223,6 +260,13 @@ std::shared_ptr<Data> createCapabilitiesData(
     if (vulkanObjects->instance == VK_NULL_HANDLE)
         return out; // No Vulkan implementation
     out->hasVulkan = true;
+
+    for (const VkExtensionProperties& ex : vulkanObjects->instanceExtensions)
+    {
+        out->instanceExtensions.push_back(
+            std::make_pair(ex.extensionName,
+                           std::to_string(ex.specVersion)));
+    }
 
     for (const VulkanObjects::PhysicalDevice& device : vulkanObjects->physicalDevices)
     {
@@ -290,6 +334,13 @@ std::shared_ptr<Data> createCapabilitiesData(
         d.mainFeatures.push_back( { "Sparse Residency Aliased", bool(device.features.sparseResidencyAliased) } );
         d.mainFeatures.push_back( { "Variable Multisample Rate", bool(device.features.variableMultisampleRate) } );
         d.mainFeatures.push_back( { "Inherited Queries", bool(device.features.inheritedQueries) } );
+
+        for (const VkExtensionProperties& ex : device.extensions)
+        {
+            d.extensions.push_back(
+                std::make_pair(ex.extensionName,
+                               std::to_string(ex.specVersion)));
+        }
 
         out->physicalDeviceData.push_back(d);
     }

@@ -13,6 +13,11 @@ QWidget#scrollAreaWidgetContents
     background-color: white;
 }
 
+QWidget#extensionsScrollAreaContainter
+{
+    background-color: white;
+}
+
 QFrame#sideFrame
 {
     background-color: rgb(64, 66, 68);
@@ -30,6 +35,11 @@ QLabel#errorMessage
     border: 2px solid black;
     border-radius: 10px;
     padding: 12px;
+}
+
+*[nameHeaderLabel="true"]
+{
+    font: bold underline 10pt "Segoe UI";
 }
 
 *[nameValueLabel="true"]

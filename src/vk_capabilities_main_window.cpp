@@ -22,9 +22,70 @@ namespace
 {
 
 /* -------------------------------------------------------------------------- *
+   Update the extensions UI from the data.
+ * -------------------------------------------------------------------------- */
+void updateExtensionsUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
+{
+    QWidget* widget = ui.extensions;
+    delete widget->layout();
+    QVBoxLayout* layout = new QVBoxLayout();
+    widget->setLayout(layout);
+
+    QLabel* nameHeader1  = new QLabel("Supported Instance Extension");
+    nameHeader1->setProperty("nameHeaderLabel", true);
+    QLabel* valueHeader1 = new QLabel("Version");
+    valueHeader1->setProperty("nameHeaderLabel", true);
+
+    QHBoxLayout* l = new QHBoxLayout();
+    l->addWidget(nameHeader1);
+    l->addWidget(valueHeader1);
+    layout->addLayout(l);
+
+    for (const std::pair<std::string, std::string>& v : d.instanceExtensions)
+    {
+        QLabel* name  = new QLabel(QString::fromStdString(v.first));
+        name->setProperty("nameValueLabel", true);
+        QLabel* value = new QLabel(QString::fromStdString(v.second));
+        value->setProperty("nameValueLabel", true);
+        value->setFrameShape(QFrame::Panel);
+        value->setFrameShadow(QFrame::Sunken);
+
+        QHBoxLayout* l = new QHBoxLayout();
+        l->addWidget(name);
+        l->addWidget(value);
+        layout->addLayout(l);
+    }
+
+    QLabel* nameHeader2  = new QLabel("Supported Device Extension");
+    nameHeader2->setProperty("nameHeaderLabel", true);
+    QLabel* valueHeader2 = new QLabel("Version");
+    valueHeader2->setProperty("nameHeaderLabel", true);
+
+    QHBoxLayout* l2 = new QHBoxLayout();
+    l2->addWidget(nameHeader2);
+    l2->addWidget(valueHeader2);
+    layout->addLayout(l2);
+
+    Data::PhysicalDeviceData& dev = d.physicalDeviceData[deviceIndex];
+    for (const std::pair<std::string, std::string>& v : dev.extensions)
+    {
+        QLabel* name  = new QLabel(QString::fromStdString(v.first));
+        name->setProperty("nameValueLabel", true);
+        QLabel* value = new QLabel(QString::fromStdString(v.second));
+        value->setProperty("nameValueLabel", true);
+        value->setFrameShape(QFrame::Panel);
+        value->setFrameShadow(QFrame::Sunken);
+
+        QHBoxLayout* l = new QHBoxLayout();
+        l->addWidget(name);
+        l->addWidget(value);
+        layout->addLayout(l);
+    }
+}
+
+/* -------------------------------------------------------------------------- *
    Update the UI from the data.
  * -------------------------------------------------------------------------- */
-
 void updateUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
 {
     QVBoxLayout* propertiesLayout = new QVBoxLayout();
@@ -77,26 +138,28 @@ void updateUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
         QLabel* name  = new QLabel(QString::fromStdString(v.first));
         name->setProperty("nameValueLabel", true);
 
-        QLabel* value = new QLabel(QString::fromStdString(v.second ? "Supported" : "Unsupported"));
-        if (v.second)
-            value->setProperty("nameValueValidLabel", true);
-        else
-            value->setProperty("nameValueInvalidLabel", true);
-
+        QLabel* value = new QLabel();
         value->setFrameShape(QFrame::Panel);
         value->setFrameShadow(QFrame::Sunken);
+        if (v.second)
+        {
+            value->setText("Supported");
+            value->setProperty("nameValueValidLabel", true);
+        }
+        else
+        {
+            value->setText("Unsupported");
+            value->setProperty("nameValueInvalidLabel", true);
+        }
 
-//        QCheckBox* value = new QCheckBox();
-//        value->setChecked(v.second);
-        //value->setProperty("nameValueLabel", true);
-        //value->setFrameShape(QFrame::Panel);
-        //value->setFrameShadow(QFrame::Sunken);
 
         QHBoxLayout* l = new QHBoxLayout();
         l->addWidget(name);
         l->addWidget(value);
         featuresLayout->addLayout(l);
     }
+
+    updateExtensionsUi(ui, d, deviceIndex);
 
     QMenu* deviceMenu = new QMenu();
     deviceMenu->setFont(QFont("Segoe UI", 10));

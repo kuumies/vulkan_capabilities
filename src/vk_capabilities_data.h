@@ -25,13 +25,18 @@ struct Data
     // True if the system has Vulkan implementation.
     bool hasVulkan = false;
 
+    // Instance extensions
+    std::vector<std::pair<std::string, std::string>> instanceExtensions;
+
     // Physical device data.
     struct PhysicalDeviceData
     {
         // Main properties, [key -> label name, value -> label value]
         std::vector<std::pair<std::string, std::string>> mainProperties;
-        // Features, [key -> label name, value -> checkboc value]
+        // Features, [key -> label name, value -> label value, supported/unsupported]
         std::vector<std::pair<std::string, bool>> mainFeatures;
+        // Extensions, [key -> label name, value -> label value]
+        std::vector<std::pair<std::string, std::string>> extensions;
 
         // Returns the name string. If the name does not exits then a
         // empty string is returned.
