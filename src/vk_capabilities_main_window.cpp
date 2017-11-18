@@ -8,6 +8,10 @@
 
 /* -------------------------------------------------------------------------- */
 
+#include <QtWidgets/QCheckBox>
+
+/* -------------------------------------------------------------------------- */
+
 #include "vk_capabilities_data.h"
 
 namespace kuu
@@ -27,6 +31,11 @@ void updateUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
     QWidget* properties = ui.properties;
     delete properties->layout();
     properties->setLayout(propertiesLayout);
+
+    QVBoxLayout* featuresLayout = new QVBoxLayout();
+    QWidget* features = ui.features;
+    delete features->layout();
+    features->setLayout(featuresLayout);
 
     if (!d.hasVulkan)
     {
@@ -62,6 +71,31 @@ void updateUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
         l->addWidget(name);
         l->addWidget(value);
         propertiesLayout->addLayout(l);
+    }
+    for (const std::pair<std::string, bool>& v : dev.mainFeatures)
+    {
+        QLabel* name  = new QLabel(QString::fromStdString(v.first));
+        name->setProperty("nameValueLabel", true);
+
+        QLabel* value = new QLabel(QString::fromStdString(v.second ? "Supported" : "Unsupported"));
+        if (v.second)
+            value->setProperty("nameValueValidLabel", true);
+        else
+            value->setProperty("nameValueInvalidLabel", true);
+
+        value->setFrameShape(QFrame::Panel);
+        value->setFrameShadow(QFrame::Sunken);
+
+//        QCheckBox* value = new QCheckBox();
+//        value->setChecked(v.second);
+        //value->setProperty("nameValueLabel", true);
+        //value->setFrameShape(QFrame::Panel);
+        //value->setFrameShadow(QFrame::Sunken);
+
+        QHBoxLayout* l = new QHBoxLayout();
+        l->addWidget(name);
+        l->addWidget(value);
+        featuresLayout->addLayout(l);
     }
 
     QMenu* deviceMenu = new QMenu();

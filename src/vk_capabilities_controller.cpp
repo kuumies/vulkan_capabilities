@@ -38,7 +38,7 @@ struct VulkanObjects
         const VkPhysicalDeviceFeatures features;                                    // Features
         const VkPhysicalDeviceFeatures2KHR features2;                               // Features2
         const VkPhysicalDeviceVariablePointerFeaturesKHR featuresVariablePointer;   // Variable pointer
-        const VkPhysconst icalDeviceMultiviewFeaturesKHX multiviewFeatures;         // Multiview
+        const VkPhysicalDeviceMultiviewFeaturesKHX multiviewFeatures;               // Multiview
         const VkPhysicalDevice16BitStorageFeaturesKHR features16ButStorage;         // 16 bit storage
         const VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR yuvSamplerFeatures; // YUV sampler
         const VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT blendFeatures;      // Blend features
@@ -137,19 +137,19 @@ struct VulkanObjects
                 physicalDevice,
                 &features);
 
+            VkPhysicalDeviceVariablePointerFeaturesKHR featuresVariablePointer;
+            VkPhysicalDeviceMultiviewFeaturesKHX multiviewFeatures;
+            VkPhysicalDevice16BitStorageFeaturesKHR features16ButStorage;
+            VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR yuvSamplerFeatures;
+            VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT blendFeatures;
+            VkPhysicalDeviceFeatures2KHR features2;
+
             if (physicalDeviceProperties2)
             {
                 auto fun = (PFN_vkGetPhysicalDeviceFeatures2KHR)
                     vkGetInstanceProcAddr(
                         instance,
                         "vkGetPhysicalDeviceFeatures2KHR");
-
-                VkPhysicalDeviceVariablePointerFeaturesKHR featuresVariablePointer;
-                VkPhysicalDeviceMultiviewFeaturesKHX multiviewFeatures;
-                VkPhysicalDevice16BitStorageFeaturesKHR features16ButStorage;
-                VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR yuvSamplerFeatures;
-                VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT blendFeatures;
-                VkPhysicalDeviceFeatures2KHR features2;
 
                 if (fun)
                 {
@@ -186,11 +186,11 @@ struct VulkanObjects
                     properties,
                     features,
                     features2,
-                    featuresVariablePointer;
-                    multiviewFeatures;
-                    features16ButStorage;
-                    yuvSamplerFeatures;
-                    blendFeatures;
+                    featuresVariablePointer,
+                    multiviewFeatures,
+                    features16ButStorage,
+                    yuvSamplerFeatures,
+                    blendFeatures,
                 });
         }
     }
@@ -235,61 +235,61 @@ std::shared_ptr<Data> createCapabilitiesData(
         d.mainProperties.push_back( { "Device ID",           hexValueToString(device.properties.deviceID) });
         d.mainProperties.push_back( { "Pipeline Cache UUID", toString(device.properties.pipelineCacheUUID) });
 
-        d.features.push_back( { "Robust Buffer Access",   bool(device.features.robustBufferAccess) } );
-        d.features.push_back( { "Full Draw Index Uint32", bool(device.features.fullDrawIndexUint32) } );
-        d.features.push_back( { "Image Cube Array",       bool(device.features.imageCubeArray) } );
-        d.features.push_back( { "Independent Blend",      bool(device.features.independentBlend) } );
-        d.features.push_back( { "Geometry Shader",        bool(device.features.geometryShader) } );
-        d.features.push_back( { "Tesselation Shader",     bool(device.features.tessellationShader) } );
-    VkBool32    sampleRateShading) } );
-    VkBool32    dualSrcBlend) } );
-    VkBool32    logicOp) } );
-    VkBool32    multiDrawIndirect) } );
-    VkBool32    drawIndirectFirstInstance) } );
-    VkBool32    depthClamp) } );
-    VkBool32    depthBiasClamp) } );
-    VkBool32    fillModeNonSolid) } );
-    VkBool32    depthBounds) } );
-    VkBool32    wideLines) } );
-    VkBool32    largePoints) } );
-    VkBool32    alphaToOne) } );
-    VkBool32    multiViewport) } );
-    VkBool32    samplerAnisotropy) } );
-    VkBool32    textureCompressionETC2) } );
-    VkBool32    textureCompressionASTC_LDR) } );
-    VkBool32    textureCompressionBC) } );
-    VkBool32    occlusionQueryPrecise) } );
-    VkBool32    pipelineStatisticsQuery) } );
-    VkBool32    vertexPipelineStoresAndAtomics) } );
-    VkBool32    fragmentStoresAndAtomics) } );
-    VkBool32    shaderTessellationAndGeometryPointSize) } );
-    VkBool32    shaderImageGatherExtended) } );
-    VkBool32    shaderStorageImageExtendedFormats) } );
-    VkBool32    shaderStorageImageMultisample) } );
-    VkBool32    shaderStorageImageReadWithoutFormat) } );
-    VkBool32    shaderStorageImageWriteWithoutFormat) } );
-    VkBool32    shaderUniformBufferArrayDynamicIndexing) } );
-    VkBool32    shaderSampledImageArrayDynamicIndexing) } );
-    VkBool32    shaderStorageBufferArrayDynamicIndexing) } );
-    VkBool32    shaderStorageImageArrayDynamicIndexing) } );
-    VkBool32    shaderClipDistance) } );
-    VkBool32    shaderCullDistance) } );
-    VkBool32    shaderFloat64) } );
-    VkBool32    shaderInt64) } );
-    VkBool32    shaderInt16) } );
-    VkBool32    shaderResourceResidency) } );
-    VkBool32    shaderResourceMinLod) } );
-    VkBool32    sparseBinding) } );
-    VkBool32    sparseResidencyBuffer) } );
-    VkBool32    sparseResidencyImage2D) } );
-    VkBool32    sparseResidencyImage3D) } );
-    VkBool32    sparseResidency2Samples) } );
-    VkBool32    sparseResidency4Samples) } );
-    VkBool32    sparseResidency8Samples) } );
-    VkBool32    sparseResidency16Samples) } );
-    VkBool32    sparseResidencyAliased) } );
-    VkBool32    variableMultisampleRate) } );
-    VkBool32    inheritedQueries) } );
+        d.mainFeatures.push_back( { "Robust Buffer Access",   bool(device.features.robustBufferAccess) } );
+        d.mainFeatures.push_back( { "Full Draw Index Uint32", bool(device.features.fullDrawIndexUint32) } );
+        d.mainFeatures.push_back( { "Image Cube Array",       bool(device.features.imageCubeArray) } );
+        d.mainFeatures.push_back( { "Independent Blend",      bool(device.features.independentBlend) } );
+        d.mainFeatures.push_back( { "Geometry Shader",        bool(device.features.geometryShader) } );
+        d.mainFeatures.push_back( { "Tesselation Shader",     bool(device.features.tessellationShader) } );
+        d.mainFeatures.push_back( { "Sample Rate Shading", bool(device.features.sampleRateShading) } );
+        d.mainFeatures.push_back( { "Dual SRC Blend", bool(device.features.dualSrcBlend) } );
+        d.mainFeatures.push_back( { "Logic OP", bool(device.features.logicOp) } );
+        d.mainFeatures.push_back( { "Multi Draw Indirect", bool(device.features.multiDrawIndirect) } );
+        d.mainFeatures.push_back( { "Draw Inderect First Instance", bool(device.features.drawIndirectFirstInstance) } );
+        d.mainFeatures.push_back( { "Depth CLamp", bool(device.features.depthClamp) } );
+        d.mainFeatures.push_back( { "Depth Bias Clamp", bool(device.features.depthBiasClamp) } );
+        d.mainFeatures.push_back( { "Fill Mode Non Solid", bool(device.features.fillModeNonSolid) } );
+        d.mainFeatures.push_back( { "Depth Bounds", bool(device.features.depthBounds) } );
+        d.mainFeatures.push_back( { "Wide Lines", bool(device.features.wideLines) } );
+        d.mainFeatures.push_back( { "Large Points", bool(device.features.largePoints) } );
+        d.mainFeatures.push_back( { "Alpha To One", bool(device.features.alphaToOne) } );
+        d.mainFeatures.push_back( { "Multi Viewport", bool(device.features.multiViewport) } );
+        d.mainFeatures.push_back( { "Sampler Anisotropy", bool(device.features.samplerAnisotropy) } );
+        d.mainFeatures.push_back( { "Texture Compression ETC2", bool(device.features.textureCompressionETC2) } );
+        d.mainFeatures.push_back( { "Texture Compression ASTC_LDR", bool(device.features.textureCompressionASTC_LDR) } );
+        d.mainFeatures.push_back( { "Texture Compression BC", bool(device.features.textureCompressionBC) } );
+        d.mainFeatures.push_back( { "Occlusion Query Precise", bool(device.features.occlusionQueryPrecise) } );
+        d.mainFeatures.push_back( { "Pipeline Staticstics Query", bool(device.features.pipelineStatisticsQuery) } );
+        d.mainFeatures.push_back( { "Vertex Pipeline Stores and Atomics", bool(device.features.vertexPipelineStoresAndAtomics) } );
+        d.mainFeatures.push_back( { "Fragment Stores and Atomics", bool(device.features.fragmentStoresAndAtomics) } );
+        d.mainFeatures.push_back( { "Shader Tesselation And Geometry Point Size", bool(device.features.shaderTessellationAndGeometryPointSize) } );
+        d.mainFeatures.push_back( { "Shader Image Gather Extended", bool(device.features.shaderImageGatherExtended) } );
+        d.mainFeatures.push_back( { "Shader Storage Image Extended Formats", bool(device.features.shaderStorageImageExtendedFormats) } );
+        d.mainFeatures.push_back( { "Shader Storage Image Multisample", bool(device.features.shaderStorageImageMultisample) } );
+        d.mainFeatures.push_back( { "Shader Storage Image Read Without Format", bool(device.features.shaderStorageImageReadWithoutFormat) } );
+        d.mainFeatures.push_back( { "Shader Storage image Write Without Format", bool(device.features.shaderStorageImageWriteWithoutFormat) } );
+        d.mainFeatures.push_back( { "Shader Uniform Buffer Array Dynamic Indexing", bool(device.features.shaderUniformBufferArrayDynamicIndexing) } );
+        d.mainFeatures.push_back( { "Shader Sampled Array Dynamic Indexing", bool(device.features.shaderSampledImageArrayDynamicIndexing) } );
+        d.mainFeatures.push_back( { "Shader Storage Buffer Array Dynamic Indexing", bool(device.features.shaderStorageBufferArrayDynamicIndexing) } );
+        d.mainFeatures.push_back( { "Shader Storage Image Array Dynamic Indexing", bool(device.features.shaderStorageImageArrayDynamicIndexing) } );
+        d.mainFeatures.push_back( { "Shader Clip Distance", bool(device.features.shaderClipDistance) } );
+        d.mainFeatures.push_back( { "Shader Cull Distance", bool(device.features.shaderCullDistance) } );
+        d.mainFeatures.push_back( { "Shader Float64", bool(device.features.shaderFloat64) } );
+        d.mainFeatures.push_back( { "Shader Int64", bool(device.features.shaderInt64) } );
+        d.mainFeatures.push_back( { "Shader Int16", bool(device.features.shaderInt16) } );
+        d.mainFeatures.push_back( { "Shader Resource Residency", bool(device.features.shaderResourceResidency) } );
+        d.mainFeatures.push_back( { "Shader Resource Min LOD", bool(device.features.shaderResourceMinLod) } );
+        d.mainFeatures.push_back( { "Sparse Binding", bool(device.features.sparseBinding) } );
+        d.mainFeatures.push_back( { "Sparse Residency Buffer", bool(device.features.sparseResidencyBuffer) } );
+        d.mainFeatures.push_back( { "Sparse Residency Image 2D", bool(device.features.sparseResidencyImage2D) } );
+        d.mainFeatures.push_back( { "Sparse Residency Image 3D", bool(device.features.sparseResidencyImage3D) } );
+        d.mainFeatures.push_back( { "Sparse Residency 2 Samples", bool(device.features.sparseResidency2Samples) } );
+        d.mainFeatures.push_back( { "Sparse Residency 4 Samples", bool(device.features.sparseResidency4Samples) } );
+        d.mainFeatures.push_back( { "Sparse Residency 8 Samples", bool(device.features.sparseResidency8Samples) } );
+        d.mainFeatures.push_back( { "Sparse Residency 16 Samples", bool(device.features.sparseResidency16Samples) } );
+        d.mainFeatures.push_back( { "Sparse Residency Aliased", bool(device.features.sparseResidencyAliased) } );
+        d.mainFeatures.push_back( { "Variable Multisample Rate", bool(device.features.variableMultisampleRate) } );
+        d.mainFeatures.push_back( { "Inherited Queries", bool(device.features.inheritedQueries) } );
 
         out->physicalDeviceData.push_back(d);
     }

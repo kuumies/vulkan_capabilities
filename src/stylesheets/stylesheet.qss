@@ -8,6 +8,11 @@ QFrame#capabilitiesStackedWidgetFrame
     background-color: white;
 }
 
+QWidget#scrollAreaWidgetContents
+{
+    background-color: white;
+}
+
 QFrame#sideFrame
 {
     background-color: rgb(64, 66, 68);
@@ -29,6 +34,18 @@ QLabel#errorMessage
 
 *[nameValueLabel="true"]
 {
+    font: 10pt "Segoe UI";
+}
+
+*[nameValueValidLabel="true"]
+{
+    color: green;
+    font: bold 10pt "Segoe UI";
+}
+
+*[nameValueInvalidLabel="true"]
+{
+    color: red;
     font: 10pt "Segoe UI";
 }
 
