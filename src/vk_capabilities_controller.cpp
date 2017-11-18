@@ -18,7 +18,6 @@
 #include "vk_capabilities_main_window.h"
 #include "vk_helper.h"
 #include "vk_stringify.h"
-#include "vk_windows.h"
 
 namespace kuu
 {
