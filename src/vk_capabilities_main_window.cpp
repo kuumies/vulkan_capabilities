@@ -93,13 +93,11 @@ void updateLayersUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
     QVBoxLayout* layout = new QVBoxLayout();
     widget->setLayout(layout);
 
-    const int SpecMaxWidth = 80;
-    const int ImplMaxWidth = 80;
+    const int SpecMaxWidth = 180;
+    const int ImplMaxWidth = 180;
 
     QLabel* nameHeader  = new QLabel("Supported Layer");
     nameHeader->setProperty("nameHeaderLabel", true);
-    QLabel* descHeader  = new QLabel("Description");
-    descHeader->setProperty("nameHeaderLabel", true);
     QLabel* specVersionHeader = new QLabel("Spec Version");
     specVersionHeader->setProperty("nameHeaderLabel", true);
     specVersionHeader->setMaximumWidth(SpecMaxWidth);
@@ -109,7 +107,6 @@ void updateLayersUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
 
     QHBoxLayout* l = new QHBoxLayout();
     l->addWidget(nameHeader);
-    l->addWidget(descHeader);
     l->addWidget(specVersionHeader);
     l->addWidget(implVersionHeader);
     layout->addLayout(l);
@@ -119,11 +116,6 @@ void updateLayersUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
         QLabel* name  = new QLabel(QString::fromStdString(layer.name));
         name->setProperty("nameValueLabel", true);
         name->setToolTip(QString::fromStdString(layer.desc));
-
-        QLabel* desc = new QLabel(QString::fromStdString(layer.desc));
-        desc->setProperty("nameValueLabel", true);
-        desc->setFrameShape(QFrame::Panel);
-        desc->setFrameShadow(QFrame::Sunken);
 
         QLabel* specVer = new QLabel(QString::fromStdString(layer.specVersion));
         specVer->setProperty("nameValueLabel", true);
@@ -139,13 +131,11 @@ void updateLayersUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
 
         QHBoxLayout* l = new QHBoxLayout();
         l->addWidget(name);
-//        l->addWidget(desc);
         l->addWidget(specVer);
         l->addWidget(implVer);
         layout->addLayout(l);
     }
 }
-
 
 /* -------------------------------------------------------------------------- *
    Update the limits UI from the data.
@@ -182,6 +172,96 @@ void updateLimitsUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
         QHBoxLayout* l = new QHBoxLayout();
         l->addWidget(name);
         l->addWidget(value);
+        layout->addLayout(l);
+    }
+}
+
+/* -------------------------------------------------------------------------- *
+   Update the queues UI from the data.
+ * -------------------------------------------------------------------------- */
+void updateQueuesUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
+{
+    QWidget* widget = ui.queues;
+    delete widget->layout();
+    QVBoxLayout* layout = new QVBoxLayout();
+    widget->setLayout(layout);
+
+    const int FamilyIndexMaxWidth = 80;
+    const int CountMaxWidth       = 80;
+    const int GranularityMaxWidth = 120;
+    const int TimestampMaxWidth   = 100;
+
+    QLabel* familyIndexHeader  = new QLabel("Family Index");
+    familyIndexHeader->setProperty("nameHeaderLabel", true);
+    familyIndexHeader->setMinimumWidth(FamilyIndexMaxWidth);
+    familyIndexHeader->setMaximumWidth(FamilyIndexMaxWidth);
+
+    QLabel* countHeader = new QLabel("Queue Count");
+    countHeader->setProperty("nameHeaderLabel", true);
+    countHeader->setMinimumWidth(CountMaxWidth);
+    countHeader->setMaximumWidth(CountMaxWidth);
+
+    QLabel* capabilitiesHeader = new QLabel("Capabilities");
+    capabilitiesHeader->setProperty("nameHeaderLabel", true);
+
+    QLabel* granularityHeader = new QLabel("Min Image Transfer\nGranularity");
+    granularityHeader->setProperty("nameHeaderLabel", true);
+    granularityHeader->setMinimumWidth(GranularityMaxWidth);
+    granularityHeader->setMaximumWidth(GranularityMaxWidth);
+
+    QLabel* timestampHeader = new QLabel("Timestamp Valid\nBits");
+    timestampHeader->setProperty("nameHeaderLabel", true);
+    timestampHeader->setMinimumWidth(TimestampMaxWidth);
+    timestampHeader->setMaximumWidth(TimestampMaxWidth);
+
+    QHBoxLayout* l = new QHBoxLayout();
+    l->addWidget(familyIndexHeader);
+    l->addWidget(countHeader);
+    l->addWidget(capabilitiesHeader);
+    l->addWidget(granularityHeader);
+    l->addWidget(timestampHeader);
+    layout->addLayout(l);
+
+    Data::PhysicalDeviceData& dev = d.physicalDeviceData[deviceIndex];
+    for (const Data::Queue& queue : dev.queues)
+    {
+        QLabel* familyIndex = new QLabel(QString::fromStdString(queue.familyIndex));
+        familyIndex->setProperty("nameValueLabel", true);
+        familyIndex->setMinimumWidth(FamilyIndexMaxWidth);
+        familyIndex->setMaximumWidth(FamilyIndexMaxWidth);
+
+        QLabel* count = new QLabel(QString::fromStdString(queue.queueCount));
+        count->setProperty("nameValueLabel", true);
+        count->setFrameShape(QFrame::Panel);
+        count->setFrameShadow(QFrame::Sunken);
+        count->setMinimumWidth(CountMaxWidth);
+        count->setMaximumWidth(CountMaxWidth);
+
+        QLabel* capabilities = new QLabel(QString::fromStdString(queue.capabilities));
+        capabilities->setProperty("nameValueLabel", true);
+        capabilities->setFrameShape(QFrame::Panel);
+        capabilities->setFrameShadow(QFrame::Sunken);
+
+        QLabel* granularity = new QLabel(QString::fromStdString(queue.minImageTransferGranularity));
+        granularity->setProperty("nameValueLabel", true);
+        granularity->setFrameShape(QFrame::Panel);
+        granularity->setFrameShadow(QFrame::Sunken);
+        granularity->setMinimumWidth(GranularityMaxWidth);
+        granularity->setMaximumWidth(GranularityMaxWidth);
+
+        QLabel* timestamp = new QLabel(QString::fromStdString(queue.timestampValidBits));
+        timestamp->setProperty("nameValueLabel", true);
+        timestamp->setFrameShape(QFrame::Panel);
+        timestamp->setFrameShadow(QFrame::Sunken);
+        timestamp->setMinimumWidth(TimestampMaxWidth);
+        timestamp->setMaximumWidth(TimestampMaxWidth);
+
+        QHBoxLayout* l = new QHBoxLayout();
+        l->addWidget(familyIndex);
+        l->addWidget(count);
+        l->addWidget(capabilities);
+        l->addWidget(granularity);
+        l->addWidget(timestamp);
         layout->addLayout(l);
     }
 }
@@ -266,6 +346,7 @@ void updateUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
     updateExtensionsUi(ui, d, deviceIndex);
     updateLayersUi(ui, d, deviceIndex);
     updateLimitsUi(ui, d, deviceIndex);
+    updateQueuesUi(ui, d, deviceIndex);
 
     QMenu* deviceMenu = new QMenu();
     deviceMenu->setFont(QFont("Segoe UI", 10));

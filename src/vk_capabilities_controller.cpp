@@ -18,6 +18,7 @@
 #include "vk_capabilities_main_window.h"
 #include "vk_helper.h"
 #include "vk_stringify.h"
+#include "vk_windows.h"
 
 namespace kuu
 {
@@ -32,13 +33,14 @@ std::vector<std::pair<std::string, std::string>> readDescription(const QString& 
 {
     // Transforms a variable name from 'myVeryOwnVariable' to
     // 'My Very Own Variable'.
+    // BUG: issues with array indices
     auto transformVariable = [](const QString& in)
     {
         QString out;
         for (int i = 0; i < in.size(); ++i)
         {
             QChar c = in[i];
-            if (c.isUpper())
+            if (c.isUpper() || c.isDigit())
                 out.append(" ");
             if (i == 0)
                 c = c.toUpper();
@@ -117,6 +119,13 @@ struct VulkanObjects
      * ---------------------------------------------------------------------- */
     struct PhysicalDevice
     {
+        struct Queue
+        {
+            const uint32_t queueFamilyIndex;
+            const VkQueueFamilyProperties properties;
+            const VkBool32 presentationSupport;
+        };
+
         const VkPhysicalDevice physicalDevice;                                      // Handle
         const VkPhysicalDeviceProperties properties;                                // Properties
         const VkPhysicalDeviceFeatures features;                                    // Features
@@ -127,6 +136,7 @@ struct VulkanObjects
         const VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR yuvSamplerFeatures; // YUV sampler
         const VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT blendFeatures;      // Blend features
         const std::vector<VkExtensionProperties> extensions;                        // Extensions
+        const std::vector<Queue> queues;
     };
 
     VulkanObjects()
@@ -311,6 +321,32 @@ struct VulkanObjects
                 &devInstanceCount,     // [out] Count of physical device extensions.
                 devExtensions.data()); // [in]  Physical device extensions
 
+            uint32_t queueFamilyPropertyCount = 0;
+            vkGetPhysicalDeviceQueueFamilyProperties(
+                physicalDevice,            // [in]  physical device handle
+                &queueFamilyPropertyCount, // [out] queue family property count
+                NULL);                     // [in]  properties, NULL to get count
+
+            std::vector<VkQueueFamilyProperties> queueFamilyProperties(
+                queueFamilyPropertyCount);
+            vkGetPhysicalDeviceQueueFamilyProperties(
+                physicalDevice,                // [in]  physical device handle
+                &queueFamilyPropertyCount,     // [in]  queue family property count
+                queueFamilyProperties.data()); // [out] queue family properties
+
+            std::vector<PhysicalDevice::Queue> queues;
+            for (uint32_t queueFamilyIndex = 0; queueFamilyIndex < queueFamilyPropertyCount; ++queueFamilyIndex)
+            {
+                const VkQueueFamilyProperties& property = queueFamilyProperties[queueFamilyIndex];
+
+                queues.push_back(
+                {
+                    queueFamilyIndex,
+                    property,
+                    VK_FALSE
+                });
+            }
+
             this->physicalDevices.push_back( 
                 {  
                     physicalDevice, 
@@ -322,7 +358,8 @@ struct VulkanObjects
                     features16ButStorage,
                     yuvSamplerFeatures,
                     blendFeatures,
-                    devExtensions
+                    devExtensions,
+                    queues
                 });
         }
     }
@@ -595,6 +632,22 @@ std::shared_ptr<Data> createCapabilitiesData(
         d.limits.push_back( { descs[descIndex].first, std::to_string(limits.optimalBufferCopyOffsetAlignment),   descs[descIndex++].second });
         d.limits.push_back( { descs[descIndex].first, std::to_string(limits.optimalBufferCopyRowPitchAlignment), descs[descIndex++].second });
         d.limits.push_back( { descs[descIndex].first, std::to_string(limits.nonCoherentAtomSize),                descs[descIndex++].second });
+
+        for (const VulkanObjects::PhysicalDevice::Queue& q : device.queues)
+        {
+            std::string familyIndex                 = std::to_string(q.queueFamilyIndex);
+            std::string queueCount                  = std::to_string(q.properties.queueCount);
+            std::string timestampValidBits          = std::to_string(q.properties.timestampValidBits);
+            std::string flags                       = toString(q.properties.queueFlags);
+            std::string minImageTransferGranularity = toString(q.properties.minImageTransferGranularity);
+
+            d.queues.push_back(
+            {
+                familyIndex, queueCount,
+                flags, minImageTransferGranularity,
+                timestampValidBits
+            });
+        }
 
         out->physicalDeviceData.push_back(d);
     }

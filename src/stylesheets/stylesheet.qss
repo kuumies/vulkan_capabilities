@@ -23,6 +23,11 @@ QWidget#limitsScrollAreaWidgetContents
     background-color: white;
 }
 
+QWidget#queuesScrollAreaWidgetContents
+{
+    background-color: white;
+}
+
 QFrame#sideFrame
 {
     background-color: rgb(64, 66, 68);

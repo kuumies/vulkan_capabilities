@@ -37,6 +37,15 @@ struct Data
         const std::string value;
         const std::string desc;
     };
+    // Queue data
+    struct Queue
+    {
+        const std::string familyIndex;
+        const std::string queueCount;
+        const std::string capabilities;
+        const std::string minImageTransferGranularity;
+        const std::string timestampValidBits;
+    };
 
     // True if the system has Vulkan implementation.
     bool hasVulkan = false;
@@ -57,6 +66,8 @@ struct Data
         std::vector<std::pair<std::string, std::string>> extensions;
         // Limits
         std::vector<Limit> limits;
+        // Queues
+        std::vector<Queue> queues;
 
         // Returns the name string. If the name does not exits then a
         // empty string is returned.
