@@ -136,7 +136,8 @@ struct VulkanObjects
         const VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR yuvSamplerFeatures; // YUV sampler
         const VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT blendFeatures;      // Blend features
         const std::vector<VkExtensionProperties> extensions;                        // Extensions
-        const std::vector<Queue> queues;
+        const std::vector<Queue> queues;                                            // Queues
+        const VkPhysicalDeviceMemoryProperties memoryProperties;                    // Memory properties
     };
 
     VulkanObjects()
@@ -347,6 +348,11 @@ struct VulkanObjects
                 });
             }
 
+            VkPhysicalDeviceMemoryProperties memoryProperties;
+            vkGetPhysicalDeviceMemoryProperties(
+                physicalDevice,
+                &memoryProperties);
+
             this->physicalDevices.push_back( 
                 {  
                     physicalDevice, 
@@ -359,7 +365,8 @@ struct VulkanObjects
                     yuvSamplerFeatures,
                     blendFeatures,
                     devExtensions,
-                    queues
+                    queues,
+                    memoryProperties
                 });
         }
     }
@@ -409,7 +416,7 @@ std::shared_ptr<Data> createCapabilitiesData(
         out->instanceLayers.push_back(
             { l.layerName,
               l.description,
-              std::to_string(l.specVersion),
+              vk::stringify::versionNumber(l.specVersion),
               std::to_string(l.implementationVersion) });
     }
 
@@ -647,6 +654,66 @@ std::shared_ptr<Data> createCapabilitiesData(
                 flags, minImageTransferGranularity,
                 timestampValidBits
             });
+        }
+
+
+        for (int i = 0; i < int(device.memoryProperties.memoryHeapCount); ++i)
+        {
+            VkMemoryHeap heap = device.memoryProperties.memoryHeaps[i];
+            std::string size = std::to_string(float(heap.size) / float(1024*1024*1024)) + " GB";
+            std::string heapIndex = std::to_string(i);
+            std::string  properties;
+            if (heap.flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
+                properties += "Device Local";
+            if (heap.flags & VK_MEMORY_HEAP_MULTI_INSTANCE_BIT_KHX)
+            {
+                if (properties.size())
+                    properties += " | ";
+                properties += "Multi Instance";
+            }
+            std::string flags;
+
+            for (int k = 0; k < int(device.memoryProperties.memoryTypeCount); ++k)
+            {
+                VkMemoryType type = device.memoryProperties.memoryTypes[k];
+                if (type.heapIndex != i)
+                    continue;
+
+
+                std::string  typeFlags;
+                if (type.propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+                    typeFlags += "Device Local";
+                if (type.propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+                {
+                    if (typeFlags.size())
+                        typeFlags += " | ";
+                    typeFlags += "Host Visible";
+                }
+                if (type.propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+                {
+                    if (typeFlags.size())
+                        typeFlags += " | ";
+                    typeFlags += "Host Coherent";
+                }
+                if (type.propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
+                {
+                    if (typeFlags.size())
+                        typeFlags += " | ";
+                    typeFlags += "Host Cached";
+                }
+                if (type.propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT)
+                {
+                    if (typeFlags.size())
+                        typeFlags += " | ";
+                    typeFlags += "Lazily Allocated";
+                }
+
+                if (flags.size())
+                    flags += "\n";
+                flags += typeFlags;
+            }
+
+            d.memory.heaps.push_back( { heapIndex, size, properties, flags} );
         }
 
         out->physicalDeviceData.push_back(d);

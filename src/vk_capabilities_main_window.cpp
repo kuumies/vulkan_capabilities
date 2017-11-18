@@ -267,6 +267,78 @@ void updateQueuesUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
 }
 
 /* -------------------------------------------------------------------------- *
+   Update the memory UI from the data.
+ * -------------------------------------------------------------------------- */
+void updateMemoryUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
+{
+    const int SizeMaxWidth  = 80;
+    const int IndexMaxWidth = 80;
+    const int FlagsMaxWidth = 200;
+
+    QWidget* widget = ui.memory;
+    delete widget->layout();
+    QVBoxLayout* layout = new QVBoxLayout();
+    widget->setLayout(layout);
+
+    QLabel* heapIndexHeader  = new QLabel("Heap Index");
+    heapIndexHeader->setProperty("nameHeaderLabel", true);
+    heapIndexHeader->setMinimumWidth(SizeMaxWidth);
+    heapIndexHeader->setMaximumWidth(SizeMaxWidth);
+    QLabel* propertiesHeader = new QLabel("Properties");
+    propertiesHeader->setProperty("nameHeaderLabel", true);
+    QLabel* sizeHeader  = new QLabel("Size");
+    sizeHeader->setProperty("nameHeaderLabel", true);
+    sizeHeader->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    sizeHeader->setMinimumWidth(SizeMaxWidth);
+    sizeHeader->setMaximumWidth(SizeMaxWidth);
+    QLabel* flagsHeader = new QLabel("Flags");
+    flagsHeader->setProperty("nameHeaderLabel", true);
+    flagsHeader->setMinimumWidth(FlagsMaxWidth);
+    flagsHeader->setMaximumWidth(FlagsMaxWidth);
+
+    QHBoxLayout* l = new QHBoxLayout();
+    l->addWidget(heapIndexHeader);
+    l->addWidget(sizeHeader);
+    l->addWidget(propertiesHeader);
+    l->addWidget(flagsHeader);
+    layout->addLayout(l);
+
+    Data::PhysicalDeviceData& dev = d.physicalDeviceData[deviceIndex];
+    Data::Memory& m = dev.memory;
+    for (const Data::Memory::Heap& t : m.heaps)
+    {
+        QLabel* heapIndex  = new QLabel(QString::fromStdString(t.index));
+        heapIndex->setProperty("nameValueLabel", true);
+        heapIndex->setMinimumWidth(IndexMaxWidth);
+        heapIndex->setMaximumWidth(IndexMaxWidth);
+
+        QLabel* heapProperties = new QLabel(QString::fromStdString(t.properties));
+        heapProperties->setProperty("nameValueLabel", true);
+        heapProperties->setFrameShape(QFrame::Panel);
+        heapProperties->setFrameShadow(QFrame::Sunken);
+        QLabel* size  = new QLabel(QString::fromStdString(t.size));
+        size->setProperty("nameValueLabel", true);
+        size->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        size->setMinimumWidth(SizeMaxWidth);
+        size->setMaximumWidth(SizeMaxWidth);
+        QLabel* flags = new QLabel(QString::fromStdString(t.flags));
+        flags->setProperty("nameValueLabel", true);
+        flags->setFrameShape(QFrame::Panel);
+        flags->setFrameShadow(QFrame::Sunken);
+        flags->setMinimumWidth(FlagsMaxWidth);
+        flags->setMaximumWidth(FlagsMaxWidth);
+
+        QHBoxLayout* l = new QHBoxLayout();
+        l->addWidget(heapIndex);
+        l->addWidget(size);
+        l->addWidget(heapProperties);
+        l->addWidget(flags);
+        layout->addLayout(l);
+
+    }
+}
+
+/* -------------------------------------------------------------------------- *
    Update the UI from the data.
  * -------------------------------------------------------------------------- */
 void updateUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
@@ -299,7 +371,6 @@ void updateUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
 
     if (deviceIndex == -1)
         deviceIndex = 0;
-
 
     Data::PhysicalDeviceData& dev = d.physicalDeviceData[deviceIndex];
     for (const std::pair<std::string, std::string>& v : dev.mainProperties)
@@ -347,6 +418,7 @@ void updateUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
     updateLayersUi(ui, d, deviceIndex);
     updateLimitsUi(ui, d, deviceIndex);
     updateQueuesUi(ui, d, deviceIndex);
+    updateMemoryUi(ui, d, deviceIndex);
 
     QMenu* deviceMenu = new QMenu();
     deviceMenu->setFont(QFont("Segoe UI", 10));
@@ -368,6 +440,8 @@ struct MainWindow::Impl
     Impl(MainWindow* self)
     {
         ui.setupUi(self);
+        ui.mainStackedWidget->setCurrentIndex(0);
+        ui.capabilitiesStackedWidget->setCurrentIndex(0);
 
         const std::map<QToolButton*, int> buttons =
         {
@@ -385,7 +459,6 @@ struct MainWindow::Impl
             connect(button.first, &QToolButton::clicked, [&, button]()
             { ui.capabilitiesStackedWidget->setCurrentIndex(button.second); });
         }
-
     }
 
     // UI controls

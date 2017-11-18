@@ -37,6 +37,20 @@ struct Data
         const std::string value;
         const std::string desc;
     };
+    // Memory Data
+    struct Memory
+    {
+        struct Heap
+        {
+            const std::string index;
+            const std::string size;
+            const std::string flags;
+            const std::string properties;
+        };
+
+        std::vector<Heap> heaps;
+    };
+
     // Queue data
     struct Queue
     {
@@ -68,6 +82,8 @@ struct Data
         std::vector<Limit> limits;
         // Queues
         std::vector<Queue> queues;
+        // Memory
+        Memory memory;
 
         // Returns the name string. If the name does not exits then a
         // empty string is returned.

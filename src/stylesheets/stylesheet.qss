@@ -28,6 +28,11 @@ QWidget#queuesScrollAreaWidgetContents
     background-color: white;
 }
 
+QWidget#memoryScrollAreaWidgetContents
+{
+    background-color: white;
+}
+
 QFrame#sideFrame
 {
     background-color: rgb(64, 66, 68);
