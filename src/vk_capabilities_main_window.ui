@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>CAPS-V - Vulkan Capabilities</string>
+   <string>Caps-V - Vulkan Capabilities</string>
   </property>
   <property name="styleSheet">
    <string notr="true">QMenuBar
@@ -576,8 +576,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>711</width>
-                    <height>767</height>
+                    <width>92</width>
+                    <height>62</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_12">
@@ -735,8 +735,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>639</width>
-                    <height>767</height>
+                    <width>83</width>
+                    <height>62</height>
                    </rect>
                   </property>
                   <layout class="QGridLayout" name="gridLayout_3">
@@ -904,8 +904,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>711</width>
-                    <height>767</height>
+                    <width>83</width>
+                    <height>62</height>
                    </rect>
                   </property>
                   <layout class="QGridLayout" name="gridLayout_4">
@@ -996,8 +996,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>711</width>
-                    <height>767</height>
+                    <width>83</width>
+                    <height>62</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_13">

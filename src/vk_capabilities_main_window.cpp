@@ -12,6 +12,7 @@
 
 /* -------------------------------------------------------------------------- */
 
+#include "vk_capabilities_about_dialog.h"
 #include "vk_capabilities_data.h"
 
 namespace kuu
@@ -459,6 +460,12 @@ struct MainWindow::Impl
             connect(button.first, &QToolButton::clicked, [&, button]()
             { ui.capabilitiesStackedWidget->setCurrentIndex(button.second); });
         }
+
+        connect(ui.actionAbout, &QAction::triggered, [&]()
+        {
+            AboutDialog dlg;
+            dlg.exec();
+        });
     }
 
     // UI controls
