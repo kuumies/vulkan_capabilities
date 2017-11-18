@@ -28,8 +28,50 @@ namespace
 
 /* ---------------------------------------------------------------- */
 
-QStringList readDescription(const QString& filepath)
+std::vector<std::pair<std::string, std::string>> readDescription(const QString& filepath)
 {
+    // Transforms a variable name from 'myVeryOwnVariable' to
+    // 'My Very Own Variable'.
+    auto transformVariable = [](const QString& in)
+    {
+        QString out;
+        for (int i = 0; i < in.size(); ++i)
+        {
+            QChar c = in[i];
+            if (c.isUpper())
+                out.append(" ");
+            if (i == 0)
+                c = c.toUpper();
+            out.append(c);
+        }
+        return out;
+    };
+
+    // Splits a long description text into smaller lines.
+    auto splitToLines = [](const QString& in, const int wordMax = 10)
+    {
+        QStringList inWords = in.split(" ");
+        QStringList outWords;
+        QString out;
+        int wordCount = 0;
+        for (int i = 0; i < inWords.size(); ++i)
+        {
+            if (wordCount < wordMax)
+            {
+                outWords << inWords[i];
+                wordCount++;
+            }
+            else
+            {
+                wordCount = 0;
+                out += outWords.join(" ") += "\n";
+                outWords.clear();
+            }
+        }
+        out += outWords.join(" ");
+        return out;
+    };
+
     QFile qssFile(filepath);
     if (!qssFile.open(QIODevice::ReadOnly))
     {
@@ -37,10 +79,10 @@ QStringList readDescription(const QString& filepath)
                   << "Failed to read desciptions from "
                   << filepath.toStdString()
                   << std::endl;
-        return QStringList();
+        return std::vector<std::pair<std::string, std::string>>();
     }
 
-    QStringList out;
+    std::vector<std::pair<std::string, std::string>> out;
     QTextStream ts(&qssFile);
     while(!ts.atEnd())
     {
@@ -50,7 +92,15 @@ QStringList readDescription(const QString& filepath)
         if (line.isEmpty())
             continue;
 
-        out.push_back(line);
+        QString variable = line.section(" ", 0, 0);
+        variable = transformVariable(variable);
+
+        QString desc = variable + " " + line.section(" ", 1);
+        desc = splitToLines(desc);
+
+        out.push_back(std::make_pair(
+            variable.toStdString(),
+            desc.toStdString()));
     }
 
     return out;
@@ -400,222 +450,151 @@ std::shared_ptr<Data> createCapabilitiesData(
                                std::to_string(ex.specVersion)));
         }
 
-        const QStringList descs = readDescription("://descriptions/limits.txt");
+        const VkPhysicalDeviceLimits& limits = device.properties.limits;
+        const std::vector<std::pair<std::string, std::string>> descs =
+            readDescription("://descriptions/limits.txt");
         int descIndex = 0;
-        d.limits.push_back(
-            { "Max Image Dimension 1D",
-              std::to_string(device.properties.limits.maxImageDimension1D),
-              descs[descIndex++].toStdString() });
 
-        d.limits.push_back(
-            { "Max Image Dimension 2D",
-              std::to_string(device.properties.limits.maxImageDimension2D),
-              descs[descIndex++].toStdString() } );
-        d.limits.push_back(
-            { "Max Image Dimension 3D",
-              std::to_string(device.properties.limits.maxImageDimension3D),
-              descs[descIndex++].toStdString() } );
-        d.limits.push_back(
-            { "Max Image Dimension Cube",
-              std::to_string(device.properties.limits.maxImageDimensionCube),
-              descs[descIndex++].toStdString() } );
-        d.limits.push_back(
-            { "Max Image Array Layers",
-              std::to_string(device.properties.limits.maxImageArrayLayers),
-              descs[descIndex++].toStdString() } );
-        d.limits.push_back(
-            { "Max Texel Buffer Elements",
-              std::to_string(device.properties.limits.maxTexelBufferElements),
-              descs[descIndex++].toStdString() } );
-        d.limits.push_back(
-            { "Max Uniform BufferRange",
-              std::to_string(device.properties.limits.maxUniformBufferRange),
-              descs[descIndex++].toStdString() } );
-        d.limits.push_back(
-            { "Max Storage Buffer Range",
-              std::to_string(device.properties.limits.maxStorageBufferRange),
-              descs[descIndex++].toStdString() } );
-        d.limits.push_back(
-            { "Max Push Constants Size",
-              std::to_string(device.properties.limits.maxPushConstantsSize),
-              descs[descIndex++].toStdString() } );
-        d.limits.push_back(
-            { "Max Memory AllocationCount",
-              std::to_string(device.properties.limits.maxMemoryAllocationCount),
-              descs[descIndex++].toStdString() } );
-        d.limits.push_back(
-            { "Max Sampler Allocation Count",
-              std::to_string(device.properties.limits.maxSamplerAllocationCount),
-              descs[descIndex++].toStdString() } );
-
-        d.limits.push_back( { "bufferImageGranularity", std::to_string(device.properties.limits.bufferImageGranularity), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "sparseAddressSpaceSize", std::to_string(device.properties.limits.sparseAddressSpaceSize), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxBoundDescriptorSets", std::to_string(device.properties.limits.maxBoundDescriptorSets), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxPerStageDescriptorSamplers", std::to_string(device.properties.limits.maxPerStageDescriptorSamplers), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxPerStageDescriptorUniformBuffers", std::to_string(device.properties.limits.maxPerStageDescriptorUniformBuffers), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxPerStageDescriptorStorageBuffers", std::to_string(device.properties.limits.maxPerStageDescriptorStorageBuffers), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxPerStageDescriptorSampledImages", std::to_string(device.properties.limits.maxPerStageDescriptorSampledImages), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxPerStageDescriptorStorageImages", std::to_string(device.properties.limits.maxPerStageDescriptorStorageImages), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxPerStageDescriptorInputAttachments", std::to_string(device.properties.limits.maxPerStageDescriptorInputAttachments), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxPerStageResources", std::to_string(device.properties.limits.maxPerStageResources), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxDescriptorSetSamplers", std::to_string(device.properties.limits.maxDescriptorSetSamplers), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxDescriptorSetUniformBuffers", std::to_string(device.properties.limits.maxDescriptorSetUniformBuffers), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxDescriptorSetUniformBuffersDynamic", std::to_string(device.properties.limits.maxDescriptorSetUniformBuffersDynamic), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxDescriptorSetStorageBuffers", std::to_string(device.properties.limits.maxDescriptorSetStorageBuffers), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxDescriptorSetStorageBuffersDynamic", std::to_string(device.properties.limits.maxDescriptorSetStorageBuffersDynamic), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxDescriptorSetSampledImages", std::to_string(device.properties.limits.maxDescriptorSetSampledImages), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxDescriptorSetStorageImages", std::to_string(device.properties.limits.maxDescriptorSetStorageImages), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxDescriptorSetInputAttachments", std::to_string(device.properties.limits.maxDescriptorSetInputAttachments), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxVertexInputAttributes", std::to_string(device.properties.limits.maxVertexInputAttributes), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxVertexInputBindings", std::to_string(device.properties.limits.maxVertexInputBindings), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxVertexInputAttributeOffset", std::to_string(device.properties.limits.maxVertexInputAttributeOffset), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxVertexInputBindingStride", std::to_string(device.properties.limits.maxVertexInputBindingStride), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxVertexOutputComponents", std::to_string(device.properties.limits.maxVertexOutputComponents), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxTessellationGenerationLevel", std::to_string(device.properties.limits.maxTessellationGenerationLevel), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxTessellationPatchSize", std::to_string(device.properties.limits.maxTessellationPatchSize), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxTessellationControlPerVertexInputComponents", std::to_string(device.properties.limits.maxTessellationControlPerVertexInputComponents), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxTessellationControlPerVertexOutputComponents", std::to_string(device.properties.limits.maxTessellationControlPerVertexOutputComponents), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxTessellationControlPerPatchOutputComponents", std::to_string(device.properties.limits.maxTessellationControlPerPatchOutputComponents), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxTessellationControlTotalOutputComponents", std::to_string(device.properties.limits.maxTessellationControlTotalOutputComponents), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxTessellationEvaluationInputComponents", std::to_string(device.properties.limits.maxTessellationEvaluationInputComponents), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxTessellationEvaluationOutputComponents", std::to_string(device.properties.limits.maxTessellationEvaluationOutputComponents), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxGeometryShaderInvocations", std::to_string(device.properties.limits.maxGeometryShaderInvocations), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxGeometryInputComponents", std::to_string(device.properties.limits.maxGeometryInputComponents), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxGeometryOutputComponents", std::to_string(device.properties.limits.maxGeometryOutputComponents), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxGeometryOutputVertices", std::to_string(device.properties.limits.maxGeometryOutputVertices), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxGeometryTotalOutputComponents", std::to_string(device.properties.limits.maxGeometryTotalOutputComponents), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxFragmentInputComponents", std::to_string(device.properties.limits.maxFragmentInputComponents), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxFragmentOutputAttachments", std::to_string(device.properties.limits.maxFragmentOutputAttachments), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxFragmentDualSrcAttachments", std::to_string(device.properties.limits.maxFragmentDualSrcAttachments), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxFragmentCombinedOutputResources", std::to_string(device.properties.limits.maxFragmentCombinedOutputResources), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxComputeSharedMemorySize", std::to_string(device.properties.limits.maxComputeSharedMemorySize), descs[descIndex++].toStdString() } );
-
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxImageDimension1D), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxImageDimension2D), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxImageDimension3D), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxImageDimensionCube), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxImageArrayLayers), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTexelBufferElements), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxUniformBufferRange), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxStorageBufferRange), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxPushConstantsSize), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxMemoryAllocationCount), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxSamplerAllocationCount), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.bufferImageGranularity), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.sparseAddressSpaceSize), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxBoundDescriptorSets), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorSamplers), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorUniformBuffers), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorStorageBuffers), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorSampledImages), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorStorageImages), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorInputAttachments), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxPerStageResources), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDescriptorSetSamplers), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDescriptorSetUniformBuffers), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDescriptorSetUniformBuffersDynamic), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDescriptorSetStorageBuffers), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDescriptorSetStorageBuffersDynamic), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDescriptorSetSampledImages), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDescriptorSetStorageImages), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDescriptorSetInputAttachments), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxVertexInputAttributes), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxVertexInputBindings), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxVertexInputAttributeOffset), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxVertexInputBindingStride), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxVertexOutputComponents), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTessellationGenerationLevel), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTessellationPatchSize), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTessellationControlPerVertexInputComponents), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTessellationControlPerVertexOutputComponents), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTessellationControlPerPatchOutputComponents), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTessellationControlTotalOutputComponents), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTessellationEvaluationInputComponents), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTessellationEvaluationOutputComponents), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxGeometryShaderInvocations), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxGeometryInputComponents), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxGeometryOutputComponents), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxGeometryOutputVertices), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxGeometryTotalOutputComponents), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxFragmentInputComponents), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxFragmentOutputAttachments), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxFragmentDualSrcAttachments), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxFragmentCombinedOutputResources), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxComputeSharedMemorySize), descs[descIndex++].second });
 
         std::stringstream ss;
-        ss << "x: " << std::to_string(device.properties.limits.maxComputeWorkGroupCount[0]) << ", ";
-        ss << "y: " << std::to_string(device.properties.limits.maxComputeWorkGroupCount[1]) << ", ";
-        ss << "z: " << std::to_string(device.properties.limits.maxComputeWorkGroupCount[2]);
+        ss << "x: " << std::to_string(limits.maxComputeWorkGroupCount[0]) << ", ";
+        ss << "y: " << std::to_string(limits.maxComputeWorkGroupCount[1]) << ", ";
+        ss << "z: " << std::to_string(limits.maxComputeWorkGroupCount[2]);
 
-        d.limits.push_back( { "maxComputeWorkGroupCount", ss.str(), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxComputeWorkGroupInvocations", std::to_string(device.properties.limits.maxComputeWorkGroupInvocations), descs[descIndex++].toStdString() } );
+        d.limits.push_back( { descs[descIndex].first, ss.str(), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxComputeWorkGroupInvocations), descs[descIndex++].second });
 
         std::stringstream maxComputeWorkGroupSizeStr;
-        maxComputeWorkGroupSizeStr << "x: " << std::to_string(device.properties.limits.maxComputeWorkGroupSize[0]) << ", ";
-        maxComputeWorkGroupSizeStr << "y: " << std::to_string(device.properties.limits.maxComputeWorkGroupSize[1]) << ", ";
-        maxComputeWorkGroupSizeStr << "z: " << std::to_string(device.properties.limits.maxComputeWorkGroupSize[2]);
+        maxComputeWorkGroupSizeStr << "x: " << std::to_string(limits.maxComputeWorkGroupSize[0]) << ", ";
+        maxComputeWorkGroupSizeStr << "y: " << std::to_string(limits.maxComputeWorkGroupSize[1]) << ", ";
+        maxComputeWorkGroupSizeStr << "z: " << std::to_string(limits.maxComputeWorkGroupSize[2]);
 
-        d.limits.push_back( { "Max Compute Work Group Size",
-                              maxComputeWorkGroupSizeStr.str(),
-                              descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "Sub Pixel Precision Bits",
-                              std::to_string(device.properties.limits.subPixelPrecisionBits),
-                              descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "Sub Texel Precision Bits",
-                              std::to_string(device.properties.limits.subTexelPrecisionBits),
-                              descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "Mipmap Precision Bits",
-                              std::to_string(device.properties.limits.mipmapPrecisionBits),
-                              descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "Max Draw Indexed Index Value",
-                              std::to_string(device.properties.limits.maxDrawIndexedIndexValue),
-                              descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "Max Draw Indirect Count",
-                              std::to_string(device.properties.limits.maxDrawIndirectCount),
-                              descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "Max Sampler LodBias",
-                              std::to_string(device.properties.limits.maxSamplerLodBias),
-                              descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "Max Sampler Anisotropy",
-                              std::to_string(device.properties.limits.maxSamplerAnisotropy),
-                              descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "Max Viewports",
-                              std::to_string(device.properties.limits.maxViewports),
-                              descs[descIndex++].toStdString() } );
+        d.limits.push_back( { descs[descIndex].first, maxComputeWorkGroupSizeStr.str(), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.subPixelPrecisionBits), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.subTexelPrecisionBits), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.mipmapPrecisionBits), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDrawIndexedIndexValue), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDrawIndirectCount), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxSamplerLodBias), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxSamplerAnisotropy), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxViewports), descs[descIndex++].second });
 
         std::stringstream maxViewportStr;
-        maxViewportStr << "x: " << device.properties.limits.maxViewportDimensions[0] << ", "
-                       << "y: " << device.properties.limits.maxViewportDimensions[1];
+        maxViewportStr << "x: " << limits.maxViewportDimensions[0] << ", "
+                       << "y: " << limits.maxViewportDimensions[1];
         d.limits.push_back(
-            { "Max Viewport Dimensions",
+            { descs[descIndex].first,
               maxViewportStr.str(),
-              descs[descIndex++].toStdString() } );
+              descs[descIndex++].second });
 
         std::stringstream viewportBoundsRange;
-        viewportBoundsRange << "[ " << device.properties.limits.viewportBoundsRange[0] << ", "
-                                    << device.properties.limits.viewportBoundsRange[1] << "]";
+        viewportBoundsRange << "[ " << limits.viewportBoundsRange[0] << ", "
+                                    << limits.viewportBoundsRange[1] << "]";
 
-        d.limits.push_back( { "Viewport Bounds Range",
-                              viewportBoundsRange.str(),
-                              descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "viewportSubPixelBits", std::to_string(device.properties.limits.viewportSubPixelBits), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "minMemoryMapAlignment", std::to_string(device.properties.limits.minMemoryMapAlignment), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "minTexelBufferOffsetAlignment", std::to_string(device.properties.limits.minTexelBufferOffsetAlignment), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "minUniformBufferOffsetAlignment", std::to_string(device.properties.limits.minUniformBufferOffsetAlignment), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "minStorageBufferOffsetAlignment", std::to_string(device.properties.limits.minStorageBufferOffsetAlignment), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "minTexelOffset", std::to_string(device.properties.limits.minTexelOffset), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxTexelOffset", std::to_string(device.properties.limits.maxTexelOffset), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "minTexelGatherOffset", std::to_string(device.properties.limits.minTexelGatherOffset), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxTexelGatherOffset", std::to_string(device.properties.limits.maxTexelGatherOffset), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "minInterpolationOffset", std::to_string(device.properties.limits.minInterpolationOffset), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxInterpolationOffset", std::to_string(device.properties.limits.maxInterpolationOffset), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "subPixelInterpolationOffsetBits", std::to_string(device.properties.limits.subPixelInterpolationOffsetBits), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxFramebufferWidth", std::to_string(device.properties.limits.maxFramebufferWidth), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxFramebufferHeight", std::to_string(device.properties.limits.maxFramebufferHeight), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxFramebufferLayers", std::to_string(device.properties.limits.maxFramebufferLayers), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "framebufferColorSampleCounts", std::to_string(device.properties.limits.framebufferColorSampleCounts), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "framebufferDepthSampleCounts", std::to_string(device.properties.limits.framebufferDepthSampleCounts), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "framebufferStencilSampleCounts", std::to_string(device.properties.limits.framebufferStencilSampleCounts), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "framebufferNoAttachmentsSampleCounts", std::to_string(device.properties.limits.framebufferNoAttachmentsSampleCounts), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxColorAttachments", std::to_string(device.properties.limits.maxColorAttachments), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "sampledImageColorSampleCounts", std::to_string(device.properties.limits.sampledImageColorSampleCounts), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "sampledImageIntegerSampleCounts", std::to_string(device.properties.limits.sampledImageIntegerSampleCounts), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "sampledImageDepthSampleCounts", std::to_string(device.properties.limits.sampledImageDepthSampleCounts), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "sampledImageStencilSampleCounts", std::to_string(device.properties.limits.sampledImageStencilSampleCounts), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "storageImageSampleCounts", std::to_string(device.properties.limits.storageImageSampleCounts), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxSampleMaskWords", std::to_string(device.properties.limits.maxSampleMaskWords), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "timestampComputeAndGraphics", std::to_string(device.properties.limits.timestampComputeAndGraphics), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "timestampPeriod", std::to_string(device.properties.limits.timestampPeriod), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxClipDistances", std::to_string(device.properties.limits.maxClipDistances), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxCullDistances", std::to_string(device.properties.limits.maxCullDistances), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "maxCombinedClipAndCullDistances", std::to_string(device.properties.limits.maxCombinedClipAndCullDistances), descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "discreteQueuePriorities", std::to_string(device.properties.limits.discreteQueuePriorities), descs[descIndex++].toStdString() } );
+        d.limits.push_back( { descs[descIndex].first, viewportBoundsRange.str(), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.viewportSubPixelBits), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.minMemoryMapAlignment), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.minTexelBufferOffsetAlignment), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.minUniformBufferOffsetAlignment), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.minStorageBufferOffsetAlignment), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.minTexelOffset), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTexelOffset), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.minTexelGatherOffset), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTexelGatherOffset), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.minInterpolationOffset), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxInterpolationOffset), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.subPixelInterpolationOffsetBits), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxFramebufferWidth), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxFramebufferHeight), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxFramebufferLayers), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.framebufferColorSampleCounts), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.framebufferDepthSampleCounts), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.framebufferStencilSampleCounts), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.framebufferNoAttachmentsSampleCounts), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxColorAttachments), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.sampledImageColorSampleCounts), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.sampledImageIntegerSampleCounts), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.sampledImageDepthSampleCounts), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.sampledImageStencilSampleCounts), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.storageImageSampleCounts), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxSampleMaskWords), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.timestampComputeAndGraphics), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.timestampPeriod), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxClipDistances), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxCullDistances), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxCombinedClipAndCullDistances), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.discreteQueuePriorities), descs[descIndex++].second });
 
         std::stringstream pointSizeRangeStr;
-        pointSizeRangeStr << "x: " << device.properties.limits.pointSizeRange[0] << ", "
-                          << "y: " << device.properties.limits.pointSizeRange[1];
+        pointSizeRangeStr << "x: " << limits.pointSizeRange[0] << ", "
+                          << "y: " << limits.pointSizeRange[1];
 
-        d.limits.push_back( { "Point Size Range",
-                              pointSizeRangeStr.str(),
-                              descs[descIndex++].toStdString() } );
+        d.limits.push_back( { descs[descIndex].first, pointSizeRangeStr.str(), descs[descIndex++].second });
 
         std::stringstream lineWidthRangeStr;
-        lineWidthRangeStr << "x: " << device.properties.limits.lineWidthRange[0] << ", "
-                          << "y: " << device.properties.limits.lineWidthRange[1];
+        lineWidthRangeStr << "x: " << limits.lineWidthRange[0] << ", "
+                          << "y: " << limits.lineWidthRange[1];
 
-        d.limits.push_back( { "Line Width Range",
-                              lineWidthRangeStr.str(),
-                              descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "Point Size Granularity",
-                              std::to_string(device.properties.limits.pointSizeGranularity),
-                              descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "Line Width Granularity",
-                              std::to_string(device.properties.limits.lineWidthGranularity),
-                              descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "Strict Lines",
-                              std::to_string(device.properties.limits.strictLines),
-                              descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "Standard Sample Locations",
-                              std::to_string(device.properties.limits.standardSampleLocations),
-                              descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "Optimal Buffer Copy Offset Alignment",
-                              std::to_string(device.properties.limits.optimalBufferCopyOffsetAlignment),
-                              descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "Optimal Buffer Copy Row Pitch Alignment",
-                              std::to_string(device.properties.limits.optimalBufferCopyRowPitchAlignment),
-                              descs[descIndex++].toStdString() } );
-        d.limits.push_back( { "Non-Coherent Atom Size",
-                              std::to_string(device.properties.limits.nonCoherentAtomSize),
-                              descs[descIndex++].toStdString() } );
+        d.limits.push_back( { descs[descIndex].first, lineWidthRangeStr.str(),                                   descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.pointSizeGranularity),               descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.lineWidthGranularity),               descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.strictLines),                        descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.standardSampleLocations),            descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.optimalBufferCopyOffsetAlignment),   descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.optimalBufferCopyRowPitchAlignment), descs[descIndex++].second });
+        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.nonCoherentAtomSize),                descs[descIndex++].second });
 
         out->physicalDeviceData.push_back(d);
     }
