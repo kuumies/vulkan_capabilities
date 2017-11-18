@@ -22,11 +22,29 @@ namespace vk_capabilities
  * -------------------------------------------------------------------------- */
 struct Data
 {
+    // Layer data.
+    struct Layer
+    {
+        const std::string name;
+        const std::string desc;
+        const std::string specVersion;
+        const std::string implVersion;
+    };
+    // Limits data.
+    struct Limit
+    {
+        const std::string name;
+        const std::string value;
+        const std::string desc;
+    };
+
     // True if the system has Vulkan implementation.
     bool hasVulkan = false;
 
     // Instance extensions
     std::vector<std::pair<std::string, std::string>> instanceExtensions;
+    // Instance layers
+    std::vector<Layer> instanceLayers;
 
     // Physical device data.
     struct PhysicalDeviceData
@@ -37,6 +55,8 @@ struct Data
         std::vector<std::pair<std::string, bool>> mainFeatures;
         // Extensions, [key -> label name, value -> label value]
         std::vector<std::pair<std::string, std::string>> extensions;
+        // Limits
+        std::vector<Limit> limits;
 
         // Returns the name string. If the name does not exits then a
         // empty string is returned.

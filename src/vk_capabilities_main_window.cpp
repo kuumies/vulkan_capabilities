@@ -84,6 +84,109 @@ void updateExtensionsUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
 }
 
 /* -------------------------------------------------------------------------- *
+   Update the layers UI from the data.
+ * -------------------------------------------------------------------------- */
+void updateLayersUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
+{
+    QWidget* widget = ui.layers;
+    delete widget->layout();
+    QVBoxLayout* layout = new QVBoxLayout();
+    widget->setLayout(layout);
+
+    const int SpecMaxWidth = 80;
+    const int ImplMaxWidth = 80;
+
+    QLabel* nameHeader  = new QLabel("Supported Layer");
+    nameHeader->setProperty("nameHeaderLabel", true);
+    QLabel* descHeader  = new QLabel("Description");
+    descHeader->setProperty("nameHeaderLabel", true);
+    QLabel* specVersionHeader = new QLabel("Spec Version");
+    specVersionHeader->setProperty("nameHeaderLabel", true);
+    specVersionHeader->setMaximumWidth(SpecMaxWidth);
+    QLabel* implVersionHeader = new QLabel("Impl Version");
+    implVersionHeader->setProperty("nameHeaderLabel", true);
+    implVersionHeader->setMaximumWidth(ImplMaxWidth);
+
+    QHBoxLayout* l = new QHBoxLayout();
+    l->addWidget(nameHeader);
+    l->addWidget(descHeader);
+    l->addWidget(specVersionHeader);
+    l->addWidget(implVersionHeader);
+    layout->addLayout(l);
+
+    for (const Data::Layer& layer : d.instanceLayers)
+    {
+        QLabel* name  = new QLabel(QString::fromStdString(layer.name));
+        name->setProperty("nameValueLabel", true);
+        name->setToolTip(QString::fromStdString(layer.desc));
+
+        QLabel* desc = new QLabel(QString::fromStdString(layer.desc));
+        desc->setProperty("nameValueLabel", true);
+        desc->setFrameShape(QFrame::Panel);
+        desc->setFrameShadow(QFrame::Sunken);
+
+        QLabel* specVer = new QLabel(QString::fromStdString(layer.specVersion));
+        specVer->setProperty("nameValueLabel", true);
+        specVer->setFrameShape(QFrame::Panel);
+        specVer->setFrameShadow(QFrame::Sunken);
+        specVer->setMaximumWidth(SpecMaxWidth);
+
+        QLabel* implVer = new QLabel(QString::fromStdString(layer.implVersion));
+        implVer->setProperty("nameValueLabel", true);
+        implVer->setFrameShape(QFrame::Panel);
+        implVer->setFrameShadow(QFrame::Sunken);
+        implVer->setMaximumWidth(ImplMaxWidth);
+
+        QHBoxLayout* l = new QHBoxLayout();
+        l->addWidget(name);
+//        l->addWidget(desc);
+        l->addWidget(specVer);
+        l->addWidget(implVer);
+        layout->addLayout(l);
+    }
+}
+
+
+/* -------------------------------------------------------------------------- *
+   Update the limits UI from the data.
+ * -------------------------------------------------------------------------- */
+void updateLimitsUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
+{
+    QWidget* widget = ui.limits;
+    delete widget->layout();
+    QVBoxLayout* layout = new QVBoxLayout();
+    widget->setLayout(layout);
+
+    QLabel* nameHeader  = new QLabel("Limit");
+    nameHeader->setProperty("nameHeaderLabel", true);
+    QLabel* valueHeader = new QLabel("Value");
+    valueHeader->setProperty("nameHeaderLabel", true);
+
+    QHBoxLayout* l = new QHBoxLayout();
+    l->addWidget(nameHeader);
+    l->addWidget(valueHeader);
+    layout->addLayout(l);
+
+    Data::PhysicalDeviceData& dev = d.physicalDeviceData[deviceIndex];
+    for (const Data::Limit& limit : dev.limits)
+    {
+        QLabel* name  = new QLabel(QString::fromStdString(limit.name));
+        name->setProperty("nameValueLabel", true);
+        name->setToolTip(QString::fromStdString(limit.desc));
+
+        QLabel* value = new QLabel(QString::fromStdString(limit.value));
+        value->setProperty("nameValueLabel", true);
+        value->setFrameShape(QFrame::Panel);
+        value->setFrameShadow(QFrame::Sunken);
+
+        QHBoxLayout* l = new QHBoxLayout();
+        l->addWidget(name);
+        l->addWidget(value);
+        layout->addLayout(l);
+    }
+}
+
+/* -------------------------------------------------------------------------- *
    Update the UI from the data.
  * -------------------------------------------------------------------------- */
 void updateUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
@@ -127,6 +230,7 @@ void updateUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
         value->setProperty("nameValueLabel", true);
         value->setFrameShape(QFrame::Panel);
         value->setFrameShadow(QFrame::Sunken);
+        value->setToolTip("version of Vulkan supported by the device");
 
         QHBoxLayout* l = new QHBoxLayout();
         l->addWidget(name);
@@ -160,6 +264,8 @@ void updateUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
     }
 
     updateExtensionsUi(ui, d, deviceIndex);
+    updateLayersUi(ui, d, deviceIndex);
+    updateLimitsUi(ui, d, deviceIndex);
 
     QMenu* deviceMenu = new QMenu();
     deviceMenu->setFont(QFont("Segoe UI", 10));

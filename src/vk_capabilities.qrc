@@ -11,5 +11,6 @@
         <file>icons/text_list_bullets.png</file>
         <file>stylesheets/stylesheet.qss</file>
         <file>icons/kuu.png</file>
+        <file>descriptions/limits.txt</file>
     </qresource>
 </RCC>
