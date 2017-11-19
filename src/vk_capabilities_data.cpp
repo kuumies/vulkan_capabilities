@@ -12,9 +12,9 @@ namespace vk_capabilities
 
 std::string Data::PhysicalDeviceData::name() const
 {
-    for (const std::pair<std::string, std::string>& v : mainProperties)
-        if (v.first == "Name")
-            return v.second;
+    for (const Property& v : mainProperties)
+        if (v.name == "Name")
+            return v.value;
     return std::string();
 }
 

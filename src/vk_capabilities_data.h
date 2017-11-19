@@ -22,6 +22,13 @@ namespace vk_capabilities
  * -------------------------------------------------------------------------- */
 struct Data
 {
+    // Extensions data.
+    struct Extension
+    {
+        const std::string name;
+        const std::string version;
+    };
+
     // Layer data.
     struct Layer
     {
@@ -30,6 +37,7 @@ struct Data
         const std::string specVersion;
         const std::string implVersion;
     };
+
     // Limits data.
     struct Limit
     {
@@ -37,6 +45,7 @@ struct Data
         const std::string value;
         const std::string desc;
     };
+
     // Memory Data
     struct Memory
     {
@@ -71,11 +80,25 @@ struct Data
         const std::string bufferFeatures;
     };
 
+    // Property data
+    struct Property
+    {
+        std::string name;
+        std::string value;
+    };
+
+    // Feature data
+    struct Feature
+    {
+        std::string name;
+        bool supported;
+    };
+
     // True if the system has Vulkan implementation.
     bool hasVulkan = false;
 
     // Instance extensions
-    std::vector<std::pair<std::string, std::string>> instanceExtensions;
+    std::vector<Extension> instanceExtensions;
     // Instance layers
     std::vector<Layer> instanceLayers;
 
@@ -83,11 +106,11 @@ struct Data
     struct PhysicalDeviceData
     {
         // Main properties, [key -> label name, value -> label value]
-        std::vector<std::pair<std::string, std::string>> mainProperties;
+        std::vector<Property> mainProperties;
         // Features, [key -> label name, value -> label value, supported/unsupported]
-        std::vector<std::pair<std::string, bool>> mainFeatures;
+        std::vector<Feature> mainFeatures;
         // Extensions, [key -> label name, value -> label value]
-        std::vector<std::pair<std::string, std::string>> extensions;
+        std::vector<Extension> extensions;
         // Limits
         std::vector<Limit> limits;
         // Queues

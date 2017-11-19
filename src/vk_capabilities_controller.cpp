@@ -501,8 +501,8 @@ std::shared_ptr<Data> createCapabilitiesData(
     for (const VkExtensionProperties& ex : vulkanObjects->instanceExtensions)
     {
         out->instanceExtensions.push_back(
-            std::make_pair(ex.extensionName,
-                           std::to_string(ex.specVersion)));
+            { ex.extensionName,
+              std::to_string(ex.specVersion) });
     }
 
     for (const VkLayerProperties& l : vulkanObjects->instanceLayers)
@@ -584,8 +584,8 @@ std::shared_ptr<Data> createCapabilitiesData(
         for (const VkExtensionProperties& ex : device.extensions)
         {
             d.extensions.push_back(
-                std::make_pair(ex.extensionName,
-                               std::to_string(ex.specVersion)));
+                { ex.extensionName,
+                  std::to_string(ex.specVersion) } );
         }
 
         const VkPhysicalDeviceLimits& limits = device.properties.limits;
