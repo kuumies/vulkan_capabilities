@@ -29,37 +29,6 @@ struct Data
         const std::string desc;
     };
 
-    struct Memory
-    {
-        struct Heap
-        {
-            const std::string index;
-            const std::string size;
-            const std::string flags;
-            const std::string properties;
-        };
-
-        std::vector<Heap> heaps;
-    };
-
-    struct Queue
-    {
-        const std::string familyIndex;
-        const std::string queueCount;
-        const std::string capabilities;
-        const std::string minImageTransferGranularity;
-        const std::string timestampValidBits;
-    };
-
-    struct Format
-    {
-        const std::string format;
-        const std::string desc;
-        const std::string linearTilingFeatures;
-        const std::string optimalTilingFeatures;
-        const std::string bufferFeatures;
-    };
-
     struct Cell
     {
         enum class Style
@@ -95,21 +64,17 @@ struct Data
     // Physical device data.
     struct PhysicalDeviceData
     {
+        std::string name;
+
         std::vector<Entry> properties;
         std::vector<Entry> extensions;
         std::vector<Entry> layers;
         std::vector<Entry> features;
+        std::vector<Entry> formats;
+        std::vector<Entry> queues;
+        std::vector<Entry> memories;
 
         std::vector<Limit> limits;
-        std::vector<Queue> queues;
-        std::vector<Format> formats;
-        Memory memory;
-
-
-        // Returns the name string. If the name does not exits then a
-        // empty string is returned.
-        std::string name() const;
-
     };
     std::vector<PhysicalDeviceData> physicalDeviceData;
 };

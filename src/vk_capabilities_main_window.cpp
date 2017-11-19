@@ -107,6 +107,8 @@ void updateEntryUi(QWidget* w, const std::vector<Data::Entry>& entries)
                     cellLabel->setMinimumWidth(c.size);
                     cellLabel->setMaximumWidth(c.size);
                 }
+                if (c.desc.size())
+                    cellLabel->setToolTip(QString::fromStdString(c.desc));
 
                 switch(c.style)
                 {
@@ -165,108 +167,6 @@ void updateLimitsUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
 }
 
 /* -------------------------------------------------------------------------- *
-   Update the queues UI from the data.
- * -------------------------------------------------------------------------- */
-void updateQueuesUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
-{
-    QWidget* widget = ui.queues;
-    delete widget->layout();
-    QVBoxLayout* layout = new QVBoxLayout();
-    widget->setLayout(layout);
-
-    const int FamilyIndexMaxWidth  =  80;
-    const int CountMaxWidth        =  80;
-    const int CapabilitiesMaxWidth = 270;
-    const int GranularityMaxWidth  = -1;
-    const int TimestampMaxWidth    = -1;
-
-    QHBoxLayout* l = new QHBoxLayout();
-    l->addWidget(headerLabel("Family Index",                    FamilyIndexMaxWidth));
-    l->addWidget(headerLabel("Queue count",                     CountMaxWidth));
-    l->addWidget(headerLabel("Capabilities",                    CapabilitiesMaxWidth));
-    l->addWidget(headerLabel("Min Image Transfer\nGranularity", GranularityMaxWidth));
-    l->addWidget(headerLabel("Timestamp Valid\nBits"),          TimestampMaxWidth);
-    layout->addLayout(l);
-
-    Data::PhysicalDeviceData& dev = d.physicalDeviceData[deviceIndex];
-    for (const Data::Queue& queue : dev.queues)
-    {
-        QHBoxLayout* l = new QHBoxLayout();
-        l->addWidget(valueValueLabel(queue.familyIndex,                 "", FamilyIndexMaxWidth));
-        l->addWidget(valueValueLabel(queue.queueCount,                  "", CountMaxWidth));
-        l->addWidget(valueValueLabel(queue.capabilities,                "", CapabilitiesMaxWidth));
-        l->addWidget(valueValueLabel(queue.minImageTransferGranularity, "", GranularityMaxWidth));
-        l->addWidget(valueValueLabel(queue.timestampValidBits,          "", TimestampMaxWidth));
-        layout->addLayout(l);
-    }
-}
-
-/* -------------------------------------------------------------------------- *
-   Update the memory UI from the data.
- * -------------------------------------------------------------------------- */
-void updateMemoryUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
-{
-    const int IndexMaxWidth = 80;
-    const int SizeMaxWidth  = 80;
-    const int FlagsMaxWidth = 200;
-
-    QWidget* widget = ui.memory;
-    delete widget->layout();
-    QVBoxLayout* layout = new QVBoxLayout();
-    widget->setLayout(layout);
-
-    QHBoxLayout* l = new QHBoxLayout();
-    l->addWidget(headerLabel("Heap Index", IndexMaxWidth));
-    l->addWidget(headerLabel("Size", SizeMaxWidth));
-    l->addWidget(headerLabel("Properties"));
-    l->addWidget(headerLabel("Flags", FlagsMaxWidth));
-    layout->addLayout(l);
-
-    Data::PhysicalDeviceData& dev = d.physicalDeviceData[deviceIndex];
-    Data::Memory& m = dev.memory;
-    for (const Data::Memory::Heap& t : m.heaps)
-    {
-        QHBoxLayout* l = new QHBoxLayout();
-        l->addWidget(valueValueLabel(t.index, "", IndexMaxWidth));
-        l->addWidget(valueValueLabel(t.size,  "", SizeMaxWidth));
-        l->addWidget(valueValueLabel(t.properties));
-        l->addWidget(valueValueLabel(t.flags, "", FlagsMaxWidth));
-        layout->addLayout(l);
-    }
-}
-
-/* -------------------------------------------------------------------------- *
-   Update the formats UI from the data.
- * -------------------------------------------------------------------------- */
-void updateFormatsUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
-{
-    const int FormatMaxWidth  = 270;
-
-    QWidget* widget = ui.formats;
-    delete widget->layout();
-    QVBoxLayout* layout = new QVBoxLayout();
-    widget->setLayout(layout);
-
-    QHBoxLayout* l = new QHBoxLayout();
-    l->addWidget(headerLabel("Format", FormatMaxWidth));
-    l->addWidget(headerLabel("Linear Tiling"));
-    l->addWidget(headerLabel("Optimal Tiling"));
-    l->addWidget(headerLabel("Buffer Features"));
-    layout->addLayout(l);
-
-    Data::PhysicalDeviceData& dev = d.physicalDeviceData[deviceIndex];
-    for (const Data::Format& t : dev.formats)
-    {
-        QHBoxLayout* l = new QHBoxLayout();
-        l->addWidget(valueNameLabel(t.format, t.desc, FormatMaxWidth));
-        l->addWidget(valueValueLabel(t.linearTilingFeatures));
-        l->addWidget(valueValueLabel(t.optimalTilingFeatures));
-        l->addWidget(valueValueLabel(t.bufferFeatures));
-        layout->addLayout(l);
-    }
-}
-
-/* -------------------------------------------------------------------------- *
    Update the UI from the data.
  * -------------------------------------------------------------------------- */
 void updateUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
@@ -296,25 +196,21 @@ void updateUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
     updateEntryUi(ui.properties, dev.properties);
     updateEntryUi(ui.extensions, dev.extensions);
     updateEntryUi(ui.layers,     dev.layers);
-    //updatePropertiesUi(ui, d, deviceIndex);
-//    updateExtensionsUi(ui, d, deviceIndex);
-//    updateLayersUi(ui, d);
-    //updateFeaturesUi(ui, d, deviceIndex);
-    updateEntryUi(ui.features, dev.features);
-    updateLimitsUi(ui, d, deviceIndex);
-    updateQueuesUi(ui, d, deviceIndex);
-    updateMemoryUi(ui, d, deviceIndex);
-    updateFormatsUi(ui, d, deviceIndex);
+    updateEntryUi(ui.features,   dev.features);
+    updateEntryUi(ui.queues,     dev.queues);
+    updateEntryUi(ui.memory,    dev.memories);
+    updateEntryUi(ui.formats, dev.formats);
 
+    updateLimitsUi(ui, d, deviceIndex);
 
     QMenu* deviceMenu = new QMenu();
     deviceMenu->setFont(QFont("Segoe UI", 10));
     for (const Data::PhysicalDeviceData& dev : d.physicalDeviceData)
-        deviceMenu->addAction(QString::fromStdString(dev.name()));
+        deviceMenu->addAction(QString::fromStdString(dev.name));
 
     ui.deviceButton->blockSignals(true);
     ui.deviceButton->setMenu(deviceMenu);
-    ui.deviceButton->setText(QString::fromStdString(dev.name()));
+    ui.deviceButton->setText(QString::fromStdString(dev.name));
     ui.deviceButton->blockSignals(false);
 }
 

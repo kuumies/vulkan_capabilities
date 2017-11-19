@@ -501,6 +501,7 @@ std::shared_ptr<Data> createCapabilitiesData(
     for (const VulkanObjects::PhysicalDevice& device : vulkanObjects->physicalDevices)
     {
         Data::PhysicalDeviceData d;
+        d.name = device.properties.deviceName;
 
         auto addRow = [&](
                 std::vector<Data::Row>& rows,
@@ -802,23 +803,59 @@ std::shared_ptr<Data> createCapabilitiesData(
         d.limits.push_back( { descs[descIndex].first, std::to_string(limits.optimalBufferCopyRowPitchAlignment), descs[descIndex++].second });
         d.limits.push_back( { descs[descIndex].first, std::to_string(limits.nonCoherentAtomSize),                descs[descIndex++].second });
 
-        for (const VulkanObjects::PhysicalDevice::Queue& q : device.queues)
+        auto addQueueRow = [&](
+                std::vector<Data::Row>& rows,
+                const std::string& familyIndex,
+                const std::string& queueCount,
+                const std::string& timestampValidBits,
+                const std::string& flags,
+                const std::string& minImageTransferGranularity)
         {
-            std::string familyIndex                 = std::to_string(q.queueFamilyIndex);
-            std::string queueCount                  = std::to_string(q.properties.queueCount);
-            std::string timestampValidBits          = std::to_string(q.properties.timestampValidBits);
-            std::string flags                       = toString(q.properties.queueFlags);
-            std::string minImageTransferGranularity = toString(q.properties.minImageTransferGranularity);
+            rows.push_back(
+            {{
+                { Data::Cell::Style::NameLabel,  familyIndex,                 "", -1 },
+                { Data::Cell::Style::ValueLabel, queueCount,                  "", -1 },
+                { Data::Cell::Style::ValueLabel, timestampValidBits,          "", -1 },
+                { Data::Cell::Style::ValueLabel, flags,                       "", -1 },
+                { Data::Cell::Style::ValueLabel, minImageTransferGranularity, "", -1 },
+            }});
+        };
 
-            d.queues.push_back(
-            {
-                familyIndex, queueCount,
-                flags, minImageTransferGranularity,
-                timestampValidBits
-            });
-        }
+        std::vector<Data::Row> queueRows;
+        for (const VulkanObjects::PhysicalDevice::Queue& q : device.queues)
+            addQueueRow(queueRows,
+                        std::to_string(q.queueFamilyIndex),
+                        std::to_string(q.properties.queueCount),
+                        std::to_string(q.properties.timestampValidBits),
+                        toString(q.properties.queueFlags),
+                        toString(q.properties.minImageTransferGranularity));
+
+        d.queues.resize(1);
+        d.queues[0].valueRows = queueRows;
+        d.queues[0].header.cells.push_back( { Data::Cell::Style::Header, "Family Index",                    "", -1  } );
+        d.queues[0].header.cells.push_back( { Data::Cell::Style::Header, "Queue Count",                     "", -1  } );
+        d.queues[0].header.cells.push_back( { Data::Cell::Style::Header, "Capabilities",                    "", -1  } );
+        d.queues[0].header.cells.push_back( { Data::Cell::Style::Header, "Min Image Transfer\nGranularity", "", -1  } );
+        d.queues[0].header.cells.push_back( { Data::Cell::Style::Header, "Timestamp Valid\nBits",           "", -1  } );
 
 
+        auto addMemoryRow = [&](
+                std::vector<Data::Row>& rows,
+                const std::string& heapIndex,
+                const std::string& size,
+                const std::string& properties,
+                const std::string& flags)
+        {
+            rows.push_back(
+            {{
+                { Data::Cell::Style::NameLabel,  heapIndex,  "", -1 },
+                { Data::Cell::Style::ValueLabel, size,       "", -1 },
+                { Data::Cell::Style::ValueLabel, properties, "", -1 },
+                { Data::Cell::Style::ValueLabel, flags,      "", -1 },
+            }});
+        };
+
+        std::vector<Data::Row> memoryRows;
         for (int i = 0; i < int(device.memoryProperties.memoryHeapCount); ++i)
         {
             VkMemoryHeap heap = device.memoryProperties.memoryHeaps[i];
@@ -875,25 +912,55 @@ std::shared_ptr<Data> createCapabilitiesData(
                 flags += typeFlags;
             }
 
-            d.memory.heaps.push_back( { heapIndex, size, properties, flags} );
+            addMemoryRow(memoryRows, heapIndex, size, properties, flags);
         }
+
+
+        d.memories.resize(1);
+        d.memories[0].valueRows = memoryRows;
+        d.memories[0].header.cells.push_back( { Data::Cell::Style::Header, "Heap Index",  "", -1  } );
+        d.memories[0].header.cells.push_back( { Data::Cell::Style::Header, "Size",        "", -1  } );
+        d.memories[0].header.cells.push_back( { Data::Cell::Style::Header, "Properties",  "", -1  } );
+        d.memories[0].header.cells.push_back( { Data::Cell::Style::Header, "Flags",       "", -1  } );
 
         const std::vector<std::pair<std::string, std::string>> formatStrings =
             readFormat("://descriptions/formats.txt");
 
+        auto addFormatRow = [&](
+                std::vector<Data::Row>& rows,
+                const std::string& name,
+                const std::string& desc,
+                const std::string& linearTilingFeatures,
+                const std::string& optimalTilingFeatures,
+                const std::string& bufferFeatures)
+        {
+            rows.push_back(
+            {{
+                { Data::Cell::Style::NameLabel,  name,                  desc, -1 },
+                { Data::Cell::Style::ValueLabel, linearTilingFeatures,  "",   -1 },
+                { Data::Cell::Style::ValueLabel, optimalTilingFeatures, "",   -1 },
+                { Data::Cell::Style::ValueLabel, bufferFeatures,        "",   -1 },
+            }});
+        };
 
+        std::vector<Data::Row> formatRows;
         for (int i = 0; i < device.formats.size(); ++i)
         {
             const VulkanObjects::Format& f = device.formats[i];
-            d.formats.push_back(
-            {
+            addFormatRow(formatRows,
                 formatStrings[i].first,
                 formatStrings[i].second,
                 formatFeature(f.properties.linearTilingFeatures),
                 formatFeature(f.properties.optimalTilingFeatures),
-                formatFeature(f.properties.bufferFeatures),
-            });
+                formatFeature(f.properties.bufferFeatures));
         }
+
+        d.formats.resize(1);
+        d.formats[0].valueRows = formatRows;
+        d.formats[0].header.cells.push_back( { Data::Cell::Style::Header, "Name",            "", -1  } );
+        d.formats[0].header.cells.push_back( { Data::Cell::Style::Header, "Linear Tiling",   "", -1  } );
+        d.formats[0].header.cells.push_back( { Data::Cell::Style::Header, "Optimal Tiling",  "", -1  } );
+        d.formats[0].header.cells.push_back( { Data::Cell::Style::Header, "Buffer features", "", -1  } );
 
         out->physicalDeviceData.push_back(d);
     }
