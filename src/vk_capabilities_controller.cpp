@@ -498,95 +498,163 @@ std::shared_ptr<Data> createCapabilitiesData(
         return out; // No Vulkan implementation
     out->hasVulkan = true;
 
-    for (const VkExtensionProperties& ex : vulkanObjects->instanceExtensions)
-    {
-        out->instanceExtensions.push_back(
-            { ex.extensionName,
-              std::to_string(ex.specVersion) });
-    }
-
-    for (const VkLayerProperties& l : vulkanObjects->instanceLayers)
-    {
-        out->instanceLayers.push_back(
-            { l.layerName,
-              l.description,
-              vk::stringify::versionNumber(l.specVersion),
-              std::to_string(l.implementationVersion) });
-    }
-
     for (const VulkanObjects::PhysicalDevice& device : vulkanObjects->physicalDevices)
     {
         Data::PhysicalDeviceData d;
-        d.mainProperties.push_back( { "Name",                device.properties.deviceName                   });
-        d.mainProperties.push_back( { "Type",                toString(device.properties.deviceType)         });
-        d.mainProperties.push_back( { "API Version",         versionNumber(device.properties.apiVersion)    });
-        d.mainProperties.push_back( { "Driver Version",      versionNumber(device.properties.driverVersion) });
-        d.mainProperties.push_back( { "Vendor ID",           hexValueToString(device.properties.vendorID)   });
-        d.mainProperties.push_back( { "Device ID",           hexValueToString(device.properties.deviceID)   });
-        d.mainProperties.push_back( { "Pipeline Cache UUID", toString(device.properties.pipelineCacheUUID)  });
 
-        d.mainFeatures.push_back( { "Robust Buffer Access",   bool(device.features.robustBufferAccess) } );
-        d.mainFeatures.push_back( { "Full Draw Index Uint32", bool(device.features.fullDrawIndexUint32) } );
-        d.mainFeatures.push_back( { "Image Cube Array",       bool(device.features.imageCubeArray) } );
-        d.mainFeatures.push_back( { "Independent Blend",      bool(device.features.independentBlend) } );
-        d.mainFeatures.push_back( { "Geometry Shader",        bool(device.features.geometryShader) } );
-        d.mainFeatures.push_back( { "Tesselation Shader",     bool(device.features.tessellationShader) } );
-        d.mainFeatures.push_back( { "Sample Rate Shading", bool(device.features.sampleRateShading) } );
-        d.mainFeatures.push_back( { "Dual SRC Blend", bool(device.features.dualSrcBlend) } );
-        d.mainFeatures.push_back( { "Logic OP", bool(device.features.logicOp) } );
-        d.mainFeatures.push_back( { "Multi Draw Indirect", bool(device.features.multiDrawIndirect) } );
-        d.mainFeatures.push_back( { "Draw Inderect First Instance", bool(device.features.drawIndirectFirstInstance) } );
-        d.mainFeatures.push_back( { "Depth CLamp", bool(device.features.depthClamp) } );
-        d.mainFeatures.push_back( { "Depth Bias Clamp", bool(device.features.depthBiasClamp) } );
-        d.mainFeatures.push_back( { "Fill Mode Non Solid", bool(device.features.fillModeNonSolid) } );
-        d.mainFeatures.push_back( { "Depth Bounds", bool(device.features.depthBounds) } );
-        d.mainFeatures.push_back( { "Wide Lines", bool(device.features.wideLines) } );
-        d.mainFeatures.push_back( { "Large Points", bool(device.features.largePoints) } );
-        d.mainFeatures.push_back( { "Alpha To One", bool(device.features.alphaToOne) } );
-        d.mainFeatures.push_back( { "Multi Viewport", bool(device.features.multiViewport) } );
-        d.mainFeatures.push_back( { "Sampler Anisotropy", bool(device.features.samplerAnisotropy) } );
-        d.mainFeatures.push_back( { "Texture Compression ETC2", bool(device.features.textureCompressionETC2) } );
-        d.mainFeatures.push_back( { "Texture Compression ASTC_LDR", bool(device.features.textureCompressionASTC_LDR) } );
-        d.mainFeatures.push_back( { "Texture Compression BC", bool(device.features.textureCompressionBC) } );
-        d.mainFeatures.push_back( { "Occlusion Query Precise", bool(device.features.occlusionQueryPrecise) } );
-        d.mainFeatures.push_back( { "Pipeline Staticstics Query", bool(device.features.pipelineStatisticsQuery) } );
-        d.mainFeatures.push_back( { "Vertex Pipeline Stores and Atomics", bool(device.features.vertexPipelineStoresAndAtomics) } );
-        d.mainFeatures.push_back( { "Fragment Stores and Atomics", bool(device.features.fragmentStoresAndAtomics) } );
-        d.mainFeatures.push_back( { "Shader Tesselation And Geometry Point Size", bool(device.features.shaderTessellationAndGeometryPointSize) } );
-        d.mainFeatures.push_back( { "Shader Image Gather Extended", bool(device.features.shaderImageGatherExtended) } );
-        d.mainFeatures.push_back( { "Shader Storage Image Extended Formats", bool(device.features.shaderStorageImageExtendedFormats) } );
-        d.mainFeatures.push_back( { "Shader Storage Image Multisample", bool(device.features.shaderStorageImageMultisample) } );
-        d.mainFeatures.push_back( { "Shader Storage Image Read Without Format", bool(device.features.shaderStorageImageReadWithoutFormat) } );
-        d.mainFeatures.push_back( { "Shader Storage image Write Without Format", bool(device.features.shaderStorageImageWriteWithoutFormat) } );
-        d.mainFeatures.push_back( { "Shader Uniform Buffer Array Dynamic Indexing", bool(device.features.shaderUniformBufferArrayDynamicIndexing) } );
-        d.mainFeatures.push_back( { "Shader Sampled Array Dynamic Indexing", bool(device.features.shaderSampledImageArrayDynamicIndexing) } );
-        d.mainFeatures.push_back( { "Shader Storage Buffer Array Dynamic Indexing", bool(device.features.shaderStorageBufferArrayDynamicIndexing) } );
-        d.mainFeatures.push_back( { "Shader Storage Image Array Dynamic Indexing", bool(device.features.shaderStorageImageArrayDynamicIndexing) } );
-        d.mainFeatures.push_back( { "Shader Clip Distance", bool(device.features.shaderClipDistance) } );
-        d.mainFeatures.push_back( { "Shader Cull Distance", bool(device.features.shaderCullDistance) } );
-        d.mainFeatures.push_back( { "Shader Float64", bool(device.features.shaderFloat64) } );
-        d.mainFeatures.push_back( { "Shader Int64", bool(device.features.shaderInt64) } );
-        d.mainFeatures.push_back( { "Shader Int16", bool(device.features.shaderInt16) } );
-        d.mainFeatures.push_back( { "Shader Resource Residency", bool(device.features.shaderResourceResidency) } );
-        d.mainFeatures.push_back( { "Shader Resource Min LOD", bool(device.features.shaderResourceMinLod) } );
-        d.mainFeatures.push_back( { "Sparse Binding", bool(device.features.sparseBinding) } );
-        d.mainFeatures.push_back( { "Sparse Residency Buffer", bool(device.features.sparseResidencyBuffer) } );
-        d.mainFeatures.push_back( { "Sparse Residency Image 2D", bool(device.features.sparseResidencyImage2D) } );
-        d.mainFeatures.push_back( { "Sparse Residency Image 3D", bool(device.features.sparseResidencyImage3D) } );
-        d.mainFeatures.push_back( { "Sparse Residency 2 Samples", bool(device.features.sparseResidency2Samples) } );
-        d.mainFeatures.push_back( { "Sparse Residency 4 Samples", bool(device.features.sparseResidency4Samples) } );
-        d.mainFeatures.push_back( { "Sparse Residency 8 Samples", bool(device.features.sparseResidency8Samples) } );
-        d.mainFeatures.push_back( { "Sparse Residency 16 Samples", bool(device.features.sparseResidency16Samples) } );
-        d.mainFeatures.push_back( { "Sparse Residency Aliased", bool(device.features.sparseResidencyAliased) } );
-        d.mainFeatures.push_back( { "Variable Multisample Rate", bool(device.features.variableMultisampleRate) } );
-        d.mainFeatures.push_back( { "Inherited Queries", bool(device.features.inheritedQueries) } );
-
-        for (const VkExtensionProperties& ex : device.extensions)
+        auto addRow = [&](
+                std::vector<Data::Row>& rows,
+                const std::string& name,
+                const std::string& value)
         {
-            d.extensions.push_back(
-                { ex.extensionName,
-                  std::to_string(ex.specVersion) } );
-        }
+            rows.push_back(
+            {{
+                { Data::Cell::Style::NameLabel,  name,  "", -1 },
+                { Data::Cell::Style::ValueLabel, value, "", -1 },
+            }});
+        };
+
+        std::vector<Data::Row> propertiesRows;
+        addRow(propertiesRows, "Name",                device.properties.deviceName);
+        addRow(propertiesRows, "Type",                toString(device.properties.deviceType));
+        addRow(propertiesRows, "API Version",         versionNumber(device.properties.apiVersion));
+        addRow(propertiesRows, "Driver Version",      versionNumber(device.properties.driverVersion));
+        addRow(propertiesRows, "Vendor ID",           hexValueToString(device.properties.vendorID));
+        addRow(propertiesRows, "Device ID",           hexValueToString(device.properties.deviceID));
+        addRow(propertiesRows, "Pipeline Cache UUID", toString(device.properties.pipelineCacheUUID));
+
+        d.properties.resize(1);
+        d.properties[0].valueRows = propertiesRows;
+        d.properties[0].header.cells.push_back( { Data::Cell::Style::Header, "Property",  "", -1  } );
+        d.properties[0].header.cells.push_back( { Data::Cell::Style::Header, "Value",     "", -1  } );
+
+        std::vector<Data::Row> instanceExtensionsRows;
+        for (const VkExtensionProperties& ex : vulkanObjects->instanceExtensions)
+            addRow(instanceExtensionsRows,
+                   ex.extensionName,
+                   std::to_string(ex.specVersion));
+
+        std::vector<Data::Row> deviceExtensionsRows;
+        for (const VkExtensionProperties& ex : device.extensions)
+            addRow(deviceExtensionsRows, ex.extensionName, std::to_string(ex.specVersion));
+
+        d.extensions.resize(2);
+        d.extensions[0].valueRows = instanceExtensionsRows;
+        d.extensions[0].header.cells.push_back( { Data::Cell::Style::Header, "Supported Instance Extension", "", -1  } );
+        d.extensions[0].header.cells.push_back( { Data::Cell::Style::Header, "Version",                      "", -1  } );
+        d.extensions[1].valueRows = deviceExtensionsRows;
+        d.extensions[1].header.cells.push_back( { Data::Cell::Style::Header, "Supported Device Extension", "", -1  } );
+        d.extensions[1].header.cells.push_back( { Data::Cell::Style::Header, "Version",                    "", -1  } );
+
+
+        auto addLayerRow = [&](
+                std::vector<Data::Row>& rows,
+                const std::string& name,
+                const std::string& desc,
+                const std::string& specVersion,
+                const std::string& implVersion)
+        {
+            rows.push_back(
+            {{
+                { Data::Cell::Style::NameLabel,  name,        desc, -1 },
+                { Data::Cell::Style::ValueLabel, specVersion, "",   -1 },
+                { Data::Cell::Style::ValueLabel, implVersion, "",   -1 },
+            }});
+        };
+
+        std::vector<Data::Row> instanceLayerRows;
+        for (const VkLayerProperties& l : vulkanObjects->instanceLayers)
+            addLayerRow(instanceLayerRows,
+                        l.layerName,
+                        l.description,
+                        vk::stringify::versionNumber(l.specVersion),
+                        std::to_string(l.implementationVersion));
+
+        d.layers.resize(1);
+        d.layers[0].valueRows = instanceLayerRows;
+        d.layers[0].header.cells.push_back( { Data::Cell::Style::Header, "Name",          "", -1  } );
+        d.layers[0].header.cells.push_back( { Data::Cell::Style::Header, "Spec. Version", "", -1  } );
+        d.layers[0].header.cells.push_back( { Data::Cell::Style::Header, "Impl. Version", "", -1  } );
+
+        auto vkboolToStr = [](const VkBool32& b)
+        { return  b == VK_TRUE ? "Supported" : "Unsupported"; };
+        auto vkboolToStyle = [](const VkBool32& b)
+        { return  b == VK_TRUE ? Data::Cell::Style::ValueLabelValid
+                               : Data::Cell::Style::ValueLabelInvalid; };
+
+        std::vector<Data::Row> featureRows;
+        auto addFeatureRow = [&](
+                const std::string& name,
+                const VkBool32& b)
+        {
+            featureRows.push_back(
+            {{
+                { Data::Cell::Style::NameLabel, name,           "", -1 },
+                { vkboolToStyle(b),             vkboolToStr(b), "", -1 },
+            }});
+        };
+
+        const VkPhysicalDeviceFeatures f = device.features;
+        addFeatureRow("Robust Buffer Access",   f.robustBufferAccess);
+        addFeatureRow("Full Draw Index Uint32", f.fullDrawIndexUint32);
+        addFeatureRow("Image Cube Array",       f.imageCubeArray);
+        addFeatureRow("Independent Blend",      f.independentBlend);
+        addFeatureRow("Geometry Shader",        f.geometryShader);
+        addFeatureRow("Tesselation Shader",     f.tessellationShader);
+        addFeatureRow("Sample Rate Shading",    f.sampleRateShading);
+        addFeatureRow("Dual SRC Blend",         f.dualSrcBlend);
+        addFeatureRow("Logic OP",               f.logicOp);
+        addFeatureRow("Multi Draw Indirect",    f.multiDrawIndirect);
+        addFeatureRow("Draw Inderect First Instance", f.drawIndirectFirstInstance);
+        addFeatureRow("Depth CLamp",            f.depthClamp);
+        addFeatureRow("Depth Bias Clamp",       f.depthBiasClamp);
+        addFeatureRow("Fill Mode Non Solid",    f.fillModeNonSolid);
+        addFeatureRow("Depth Bounds",           f.depthBounds);
+        addFeatureRow("Wide Lines",             f.wideLines);
+        addFeatureRow("Large Points",           f.largePoints);
+        addFeatureRow("Alpha To One",           f.alphaToOne);
+        addFeatureRow("Multi Viewport",         f.multiViewport);
+        addFeatureRow("Sampler Anisotropy",     f.samplerAnisotropy);
+        addFeatureRow("Texture Compression ETC2",                     f.textureCompressionETC2);
+        addFeatureRow("Texture Compression ASTC_LDR",                 f.textureCompressionASTC_LDR);
+        addFeatureRow("Texture Compression BC",                       f.textureCompressionBC);
+        addFeatureRow("Occlusion Query Precise",                      f.occlusionQueryPrecise);
+        addFeatureRow("Pipeline Staticstics Query",                   f.pipelineStatisticsQuery);
+        addFeatureRow("Vertex Pipeline Stores and Atomics",           f.vertexPipelineStoresAndAtomics);
+        addFeatureRow("Fragment Stores and Atomics",                  f.fragmentStoresAndAtomics);
+        addFeatureRow("Shader Tesselation And Geometry Point Size",   f.shaderTessellationAndGeometryPointSize);
+        addFeatureRow("Shader Image Gather Extended",                 f.shaderImageGatherExtended);
+        addFeatureRow("Shader Storage Image Extended Formats",        f.shaderStorageImageExtendedFormats);
+        addFeatureRow("Shader Storage Image Multisample",             f.shaderStorageImageMultisample);
+        addFeatureRow("Shader Storage Image Read Without Format",     f.shaderStorageImageReadWithoutFormat);
+        addFeatureRow("Shader Storage image Write Without Format",    f.shaderStorageImageWriteWithoutFormat);
+        addFeatureRow("Shader Uniform Buffer Array Dynamic Indexing", f.shaderUniformBufferArrayDynamicIndexing);
+        addFeatureRow("Shader Sampled Array Dynamic Indexing",        f.shaderSampledImageArrayDynamicIndexing);
+        addFeatureRow("Shader Storage Buffer Array Dynamic Indexing", f.shaderStorageBufferArrayDynamicIndexing);
+        addFeatureRow("Shader Storage Image Array Dynamic Indexing",  f.shaderStorageImageArrayDynamicIndexing);
+        addFeatureRow("Shader Clip Distance",        f.shaderClipDistance);
+        addFeatureRow("Shader Cull Distance",        f.shaderCullDistance);
+        addFeatureRow("Shader Float64",              f.shaderFloat64);
+        addFeatureRow("Shader Int64",                f.shaderInt64);
+        addFeatureRow("Shader Int16",                f.shaderInt16);
+        addFeatureRow("Shader Resource Residency",   f.shaderResourceResidency);
+        addFeatureRow("Shader Resource Min LOD",     f.shaderResourceMinLod);
+        addFeatureRow("Sparse Binding",              f.sparseBinding);
+        addFeatureRow("Sparse Residency Buffer",     f.sparseResidencyBuffer);
+        addFeatureRow("Sparse Residency Image 2D",   f.sparseResidencyImage2D);
+        addFeatureRow("Sparse Residency Image 3D",   f.sparseResidencyImage3D);
+        addFeatureRow("Sparse Residency 2 Samples",  f.sparseResidency2Samples);
+        addFeatureRow("Sparse Residency 4 Samples",  f.sparseResidency4Samples);
+        addFeatureRow("Sparse Residency 8 Samples",  f.sparseResidency8Samples);
+        addFeatureRow("Sparse Residency 16 Samples", f.sparseResidency16Samples);
+        addFeatureRow("Sparse Residency Aliased",    f.sparseResidencyAliased);
+        addFeatureRow("Variable Multisample Rate",   f.variableMultisampleRate);
+        addFeatureRow("Inherited Queries",           f.inheritedQueries);
+
+        d.features.resize(1);
+        d.features[0].valueRows = featureRows;
+        d.features[0].header.cells.push_back( { Data::Cell::Style::Header, "Name",           "", -1  } );
+        d.features[0].header.cells.push_back( { Data::Cell::Style::Header, "Support Status", "", -1  } );
 
         const VkPhysicalDeviceLimits& limits = device.properties.limits;
         const std::vector<std::pair<std::string, std::string>> descs =

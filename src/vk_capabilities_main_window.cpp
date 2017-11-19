@@ -81,127 +81,61 @@ QLabel* valueValueLabel(const std::string& text,
     return value;
 }
 
-/* -------------------------------------------------------------------------- *
-   Update the properties UI from the data.
- * -------------------------------------------------------------------------- */
-void updatePropertiesUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
+void updateEntryUi(QWidget* w, const std::vector<Data::Entry>& entries)
 {
-    QVBoxLayout* propertiesLayout = new QVBoxLayout();
-    QWidget* properties = ui.properties;
-    delete properties->layout();
-    properties->setLayout(propertiesLayout);
+    QVBoxLayout* wLayout = new QVBoxLayout();
+    delete w->layout();
+    w->setLayout(wLayout);
 
-    Data::PhysicalDeviceData& dev = d.physicalDeviceData[deviceIndex];
-    for (const Data::Property& v : dev.mainProperties)
+    for (const Data::Entry& e : entries)
     {
-        QHBoxLayout* l = new QHBoxLayout();
-        l->addWidget(valueNameLabel(v.name));
-        l->addWidget(valueValueLabel(v.value));
-        propertiesLayout->addLayout(l);
-    }
-}
+        QHBoxLayout* hLayout = new QHBoxLayout();
+        for (const Data::Cell& c : e.header.cells)
+            hLayout->addWidget(headerLabel(QString::fromStdString(c.value)));
+        wLayout->addLayout(hLayout);
 
-/* -------------------------------------------------------------------------- *
-   Update the extensions UI from the data.
- * -------------------------------------------------------------------------- */
-void updateExtensionsUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
-{
-    QWidget* widget = ui.extensions;
-    delete widget->layout();
-    QVBoxLayout* layout = new QVBoxLayout();
-    widget->setLayout(layout);
-
-    QHBoxLayout* l = new QHBoxLayout();
-    l->addWidget(headerLabel("Supported Instance Extension"));
-    l->addWidget(headerLabel("Version"));
-    layout->addLayout(l);
-
-    for (const Data::Extension& e : d.instanceExtensions)
-    {
-        QHBoxLayout* l = new QHBoxLayout();
-        l->addWidget(valueNameLabel(e.name));
-        l->addWidget(valueValueLabel(e.version));
-        layout->addLayout(l);
-    }
-
-    QHBoxLayout* l2 = new QHBoxLayout();
-    l->addWidget(headerLabel("Supported Device Extension"));
-    l->addWidget(headerLabel("Version"));
-    layout->addLayout(l2);
-
-    Data::PhysicalDeviceData& dev = d.physicalDeviceData[deviceIndex];
-    for (const Data::Extension& e : dev.extensions)
-    {
-        QHBoxLayout* l = new QHBoxLayout();
-        l->addWidget(valueNameLabel(e.name));
-        l->addWidget(valueValueLabel(e.version));
-        layout->addLayout(l);
-    }
-}
-
-/* -------------------------------------------------------------------------- *
-   Update the layers UI from the data.
- * -------------------------------------------------------------------------- */
-void updateLayersUi(Ui::MainWindow& ui, Data& d)
-{
-    QWidget* widget = ui.layers;
-    delete widget->layout();
-    QVBoxLayout* layout = new QVBoxLayout();
-    widget->setLayout(layout);
-
-    const int nameMaxWidth = 300;
-
-    QHBoxLayout* l = new QHBoxLayout();
-    l->addWidget(headerLabel("Supported Layer", nameMaxWidth));
-    l->addWidget(headerLabel("Spec Version"));
-    l->addWidget(headerLabel("Impl Version"));
-    layout->addLayout(l);
-
-    for (const Data::Layer& layer : d.instanceLayers)
-    {
-        QHBoxLayout* l = new QHBoxLayout();
-        l->addWidget(valueNameLabel(layer.name, "", nameMaxWidth));
-        l->addWidget(valueValueLabel(layer.specVersion));
-        l->addWidget(valueValueLabel(layer.implVersion));
-        layout->addLayout(l);
-    }
-}
-
-/* -------------------------------------------------------------------------- *
-   Update the features UI from the data.
- * -------------------------------------------------------------------------- */
-void updateFeaturesUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
-{
-    QVBoxLayout* featuresLayout = new QVBoxLayout();
-    QWidget* features = ui.features;
-    delete features->layout();
-    features->setLayout(featuresLayout);
-
-    Data::PhysicalDeviceData& dev = d.physicalDeviceData[deviceIndex];
-    for (const Data::Feature& v : dev.mainFeatures)
-    {
-        QLabel* name  = new QLabel(QString::fromStdString(v.name));
-        name->setProperty("nameValueLabel", true);
-
-        QLabel* value = new QLabel();
-        value->setFrameShape(QFrame::Panel);
-        value->setFrameShadow(QFrame::Sunken);
-        if (v.supported)
+        for (const Data::Row& r : e.valueRows)
         {
-            value->setText("Supported");
-            value->setProperty("nameValueValidLabel", true);
-        }
-        else
-        {
-            value->setText("Unsupported");
-            value->setProperty("nameValueInvalidLabel", true);
-        }
+            QHBoxLayout* rLayout = new QHBoxLayout();
+            for (const Data::Cell& c : r.cells)
+            {
+                QLabel* cellLabel = new QLabel(QString::fromStdString(c.value));
+                cellLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+                cellLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+                if (c.size > 0)
+                {
+                    cellLabel->setMinimumWidth(c.size);
+                    cellLabel->setMaximumWidth(c.size);
+                }
 
+                switch(c.style)
+                {
+                    case Data::Cell::Style::Header:
+                        break;
+                    case Data::Cell::Style::NameLabel:
+                        cellLabel->setProperty("nameValueLabel", true);
+                        break;
+                    case Data::Cell::Style::ValueLabel:
+                        cellLabel->setProperty("nameValueLabel", true);
+                        cellLabel->setFrameShape(QFrame::Panel);
+                        cellLabel->setFrameShadow(QFrame::Sunken);
+                        break;
+                    case Data::Cell::Style::ValueLabelValid:
+                        cellLabel->setProperty("nameValueValidLabel", true);
+                        cellLabel->setFrameShape(QFrame::Panel);
+                        cellLabel->setFrameShadow(QFrame::Sunken);
+                        break;
+                    case Data::Cell::Style::ValueLabelInvalid:
+                        cellLabel->setProperty("nameValueInvalidLabel", true);
+                        cellLabel->setFrameShape(QFrame::Panel);
+                        cellLabel->setFrameShadow(QFrame::Sunken);
+                        break;
+                }
 
-        QHBoxLayout* l = new QHBoxLayout();
-        l->addWidget(name);
-        l->addWidget(value);
-        featuresLayout->addLayout(l);
+                rLayout->addWidget(cellLabel);
+            }
+            wLayout->addLayout(rLayout);
+        }
     }
 }
 
@@ -357,16 +291,21 @@ void updateUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
         deviceIndex = 0;
 
 
-    updatePropertiesUi(ui, d, deviceIndex);
-    updateExtensionsUi(ui, d, deviceIndex);
-    updateLayersUi(ui, d);
-    updateFeaturesUi(ui, d, deviceIndex);
+    Data::PhysicalDeviceData& dev = d.physicalDeviceData[deviceIndex];
+
+    updateEntryUi(ui.properties, dev.properties);
+    updateEntryUi(ui.extensions, dev.extensions);
+    updateEntryUi(ui.layers,     dev.layers);
+    //updatePropertiesUi(ui, d, deviceIndex);
+//    updateExtensionsUi(ui, d, deviceIndex);
+//    updateLayersUi(ui, d);
+    //updateFeaturesUi(ui, d, deviceIndex);
+    updateEntryUi(ui.features, dev.features);
     updateLimitsUi(ui, d, deviceIndex);
     updateQueuesUi(ui, d, deviceIndex);
     updateMemoryUi(ui, d, deviceIndex);
     updateFormatsUi(ui, d, deviceIndex);
 
-    Data::PhysicalDeviceData& dev = d.physicalDeviceData[deviceIndex];
 
     QMenu* deviceMenu = new QMenu();
     deviceMenu->setFont(QFont("Segoe UI", 10));

@@ -12,10 +12,15 @@ namespace vk_capabilities
 
 std::string Data::PhysicalDeviceData::name() const
 {
-    for (const Property& v : mainProperties)
-        if (v.name == "Name")
-            return v.value;
+    if (properties.size() == 0)
+        return std::string();
+
+    for (const Row& r : properties[0].valueRows)
+        for (const Cell& c : r.cells)
+            if (c.value == "Name" && r.cells.size() > 1)
+                return r.cells[1].value;
     return std::string();
+
 }
 
 } // namespace vk_capabilities

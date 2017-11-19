@@ -22,20 +22,6 @@ namespace vk_capabilities
  * -------------------------------------------------------------------------- */
 struct Data
 {
-    struct Extension
-    {
-        const std::string name;
-        const std::string version;
-    };
-
-    struct Layer
-    {
-        const std::string name;
-        const std::string desc;
-        const std::string specVersion;
-        const std::string implVersion;
-    };
-
     struct Limit
     {
         const std::string name;
@@ -74,39 +60,56 @@ struct Data
         const std::string bufferFeatures;
     };
 
-    struct Property
+    struct Cell
     {
-        const std::string name;
-        const std::string value;
+        enum class Style
+        {
+            Header,
+            NameLabel,
+            ValueLabel,
+            ValueLabelValid,
+            ValueLabelInvalid,
+        };
+
+        Style style;
+        std::string value;
+        std::string desc;
+        int size; // -1, no size
     };
 
-    struct Feature
+    struct Row
     {
-        const std::string name;
-        const bool supported;
+        std::vector<Cell> cells;
     };
+
+    struct Entry
+    {
+        Row header;
+        std::vector<Row> valueRows;
+    };
+
 
     // True if the system has Vulkan implementation.
     bool hasVulkan = false;
 
-    // Instance data
-    std::vector<Extension> instanceExtensions;
-    std::vector<Layer> instanceLayers;
-
     // Physical device data.
     struct PhysicalDeviceData
     {
-        std::vector<Property> mainProperties;
-        std::vector<Feature> mainFeatures;
-        std::vector<Extension> extensions;
+        std::vector<Entry> properties;
+        std::vector<Entry> extensions;
+        std::vector<Entry> layers;
+        std::vector<Entry> features;
+
         std::vector<Limit> limits;
         std::vector<Queue> queues;
         std::vector<Format> formats;
         Memory memory;
 
+
         // Returns the name string. If the name does not exits then a
         // empty string is returned.
         std::string name() const;
+
     };
     std::vector<PhysicalDeviceData> physicalDeviceData;
 };
