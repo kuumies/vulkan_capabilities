@@ -22,13 +22,6 @@ namespace vk_capabilities
  * -------------------------------------------------------------------------- */
 struct Data
 {
-    struct Limit
-    {
-        const std::string name;
-        const std::string value;
-        const std::string desc;
-    };
-
     struct Cell
     {
         enum class Style
@@ -73,8 +66,7 @@ struct Data
         std::vector<Entry> formats;
         std::vector<Entry> queues;
         std::vector<Entry> memories;
-
-        std::vector<Limit> limits;
+        std::vector<Entry> limits;
     };
     std::vector<PhysicalDeviceData> physicalDeviceData;
 };

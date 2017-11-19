@@ -23,64 +23,56 @@ namespace
 {
 
 /* -------------------------------------------------------------------------- *
-   Creates a header label
+   Returns a layout with cell label.
  * -------------------------------------------------------------------------- */
-QLabel* headerLabel(const QString& name, const int size = -1)
+QLayout* cellLabelsLayout(const std::vector<Data::Cell>& cells)
 {
-    QLabel* header  = new QLabel(name);
-    header->setProperty("nameHeaderLabel", true); // stylesheet ID
-    if (size > 0)
+    QHBoxLayout* rLayout = new QHBoxLayout();
+    for (const Data::Cell& c : cells)
     {
-        header->setMinimumWidth(size);
-        header->setMaximumWidth(size);
+        QLabel* cellLabel = new QLabel(QString::fromStdString(c.value));
+        cellLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        cellLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+        if (c.size > 0)
+        {
+            cellLabel->setMinimumWidth(c.size);
+            cellLabel->setMaximumWidth(c.size);
+        }
+        if (c.desc.size())
+            cellLabel->setToolTip(QString::fromStdString(c.desc));
+
+        switch(c.style)
+        {
+            case Data::Cell::Style::Header:
+                cellLabel->setProperty("nameHeaderLabel", true);
+                break;
+            case Data::Cell::Style::NameLabel:
+                cellLabel->setProperty("nameValueLabel", true);
+                break;
+            case Data::Cell::Style::ValueLabel:
+                cellLabel->setProperty("nameValueLabel", true);
+                cellLabel->setFrameShape(QFrame::Panel);
+                cellLabel->setFrameShadow(QFrame::Sunken);
+                break;
+            case Data::Cell::Style::ValueLabelValid:
+                cellLabel->setProperty("nameValueValidLabel", true);
+                cellLabel->setFrameShape(QFrame::Panel);
+                cellLabel->setFrameShadow(QFrame::Sunken);
+                break;
+            case Data::Cell::Style::ValueLabelInvalid:
+                cellLabel->setProperty("nameValueInvalidLabel", true);
+                cellLabel->setFrameShape(QFrame::Panel);
+                cellLabel->setFrameShadow(QFrame::Sunken);
+                break;
+        }
+        rLayout->addWidget(cellLabel);
     }
-    return header;
+    return rLayout;
 }
 
 /* -------------------------------------------------------------------------- *
-   Creates a value name label
+   Updates the entry UI
  * -------------------------------------------------------------------------- */
-QLabel* valueNameLabel(const std::string& text,
-                       const std::string& desc = std::string(),
-                       const int size = -1)
-{
-    QLabel* name  = new QLabel(QString::fromStdString(text));
-    name->setProperty("nameValueLabel", true);
-    name->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    name->setAlignment(Qt::AlignTop | Qt::AlignLeft);
-    if (desc.size() > 0)
-        name->setToolTip(QString::fromStdString(desc));
-    if (size > 0)
-    {
-        name->setMinimumWidth(size);
-        name->setMaximumWidth(size);
-    }
-    return name;
-}
-
-/* -------------------------------------------------------------------------- *
-   Creates a value value label
- * -------------------------------------------------------------------------- */
-QLabel* valueValueLabel(const std::string& text,
-                        const std::string& desc = std::string(),
-                        const int size = -1)
-{
-    QLabel* value = new QLabel(QString::fromStdString(text));
-    value->setProperty("nameValueLabel", true);
-    value->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    value->setAlignment(Qt::AlignTop | Qt::AlignLeft);
-    value->setFrameShape(QFrame::Panel);
-    value->setFrameShadow(QFrame::Sunken);
-    if (desc.size() > 0)
-        value->setToolTip(QString::fromStdString(desc));
-    if (size > 0)
-    {
-        value->setMinimumWidth(size);
-        value->setMaximumWidth(size);
-    }
-    return value;
-}
-
 void updateEntryUi(QWidget* w, const std::vector<Data::Entry>& entries)
 {
     QVBoxLayout* wLayout = new QVBoxLayout();
@@ -89,80 +81,14 @@ void updateEntryUi(QWidget* w, const std::vector<Data::Entry>& entries)
 
     for (const Data::Entry& e : entries)
     {
-        QHBoxLayout* hLayout = new QHBoxLayout();
-        for (const Data::Cell& c : e.header.cells)
-            hLayout->addWidget(headerLabel(QString::fromStdString(c.value)));
+        QLayout* hLayout = cellLabelsLayout(e.header.cells);
         wLayout->addLayout(hLayout);
 
         for (const Data::Row& r : e.valueRows)
         {
-            QHBoxLayout* rLayout = new QHBoxLayout();
-            for (const Data::Cell& c : r.cells)
-            {
-                QLabel* cellLabel = new QLabel(QString::fromStdString(c.value));
-                cellLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
-                cellLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
-                if (c.size > 0)
-                {
-                    cellLabel->setMinimumWidth(c.size);
-                    cellLabel->setMaximumWidth(c.size);
-                }
-                if (c.desc.size())
-                    cellLabel->setToolTip(QString::fromStdString(c.desc));
-
-                switch(c.style)
-                {
-                    case Data::Cell::Style::Header:
-                        break;
-                    case Data::Cell::Style::NameLabel:
-                        cellLabel->setProperty("nameValueLabel", true);
-                        break;
-                    case Data::Cell::Style::ValueLabel:
-                        cellLabel->setProperty("nameValueLabel", true);
-                        cellLabel->setFrameShape(QFrame::Panel);
-                        cellLabel->setFrameShadow(QFrame::Sunken);
-                        break;
-                    case Data::Cell::Style::ValueLabelValid:
-                        cellLabel->setProperty("nameValueValidLabel", true);
-                        cellLabel->setFrameShape(QFrame::Panel);
-                        cellLabel->setFrameShadow(QFrame::Sunken);
-                        break;
-                    case Data::Cell::Style::ValueLabelInvalid:
-                        cellLabel->setProperty("nameValueInvalidLabel", true);
-                        cellLabel->setFrameShape(QFrame::Panel);
-                        cellLabel->setFrameShadow(QFrame::Sunken);
-                        break;
-                }
-
-                rLayout->addWidget(cellLabel);
-            }
+            QLayout* rLayout = cellLabelsLayout(r.cells);
             wLayout->addLayout(rLayout);
         }
-    }
-}
-
-/* -------------------------------------------------------------------------- *
-   Update the limits UI from the data.
- * -------------------------------------------------------------------------- */
-void updateLimitsUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
-{
-    QWidget* widget = ui.limits;
-    delete widget->layout();
-    QVBoxLayout* layout = new QVBoxLayout();
-    widget->setLayout(layout);
-
-    QHBoxLayout* l = new QHBoxLayout();
-    l->addWidget(headerLabel("Limit"));
-    l->addWidget(headerLabel("Value"));
-    layout->addLayout(l);
-
-    Data::PhysicalDeviceData& dev = d.physicalDeviceData[deviceIndex];
-    for (const Data::Limit& limit : dev.limits)
-    {
-        QHBoxLayout* l = new QHBoxLayout();
-        l->addWidget(valueNameLabel(limit.name, limit.desc));
-        l->addWidget(valueValueLabel(limit.value));
-        layout->addLayout(l);
     }
 }
 
@@ -198,10 +124,9 @@ void updateUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
     updateEntryUi(ui.layers,     dev.layers);
     updateEntryUi(ui.features,   dev.features);
     updateEntryUi(ui.queues,     dev.queues);
-    updateEntryUi(ui.memory,    dev.memories);
-    updateEntryUi(ui.formats, dev.formats);
-
-    updateLimitsUi(ui, d, deviceIndex);
+    updateEntryUi(ui.memory,     dev.memories);
+    updateEntryUi(ui.formats,    dev.formats);
+    updateEntryUi(ui.limits,     dev.limits);
 
     QMenu* deviceMenu = new QMenu();
     deviceMenu->setFont(QFont("Segoe UI", 10));

@@ -662,146 +662,163 @@ std::shared_ptr<Data> createCapabilitiesData(
             readDescription("://descriptions/limits.txt");
         int descIndex = 0;
 
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxImageDimension1D), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxImageDimension2D), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxImageDimension3D), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxImageDimensionCube), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxImageArrayLayers), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTexelBufferElements), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxUniformBufferRange), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxStorageBufferRange), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxPushConstantsSize), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxMemoryAllocationCount), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxSamplerAllocationCount), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.bufferImageGranularity), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.sparseAddressSpaceSize), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxBoundDescriptorSets), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorSamplers), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorUniformBuffers), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorStorageBuffers), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorSampledImages), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorStorageImages), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorInputAttachments), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxPerStageResources), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDescriptorSetSamplers), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDescriptorSetUniformBuffers), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDescriptorSetUniformBuffersDynamic), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDescriptorSetStorageBuffers), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDescriptorSetStorageBuffersDynamic), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDescriptorSetSampledImages), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDescriptorSetStorageImages), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDescriptorSetInputAttachments), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxVertexInputAttributes), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxVertexInputBindings), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxVertexInputAttributeOffset), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxVertexInputBindingStride), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxVertexOutputComponents), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTessellationGenerationLevel), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTessellationPatchSize), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTessellationControlPerVertexInputComponents), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTessellationControlPerVertexOutputComponents), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTessellationControlPerPatchOutputComponents), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTessellationControlTotalOutputComponents), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTessellationEvaluationInputComponents), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTessellationEvaluationOutputComponents), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxGeometryShaderInvocations), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxGeometryInputComponents), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxGeometryOutputComponents), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxGeometryOutputVertices), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxGeometryTotalOutputComponents), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxFragmentInputComponents), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxFragmentOutputAttachments), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxFragmentDualSrcAttachments), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxFragmentCombinedOutputResources), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxComputeSharedMemorySize), descs[descIndex++].second });
+        std::vector<Data::Row> limitRows;
+        auto addLimitRow = [&](
+                const std::string& name,
+                const std::string& limit,
+                const std::string& desc
+                )
+        {
+            limitRows.push_back(
+            {{
+                { Data::Cell::Style::NameLabel, name,  desc, -1 },
+                { Data::Cell::Style::ValueLabel,limit, "",   -1 },
+            }});
+            descIndex++;
+        };
+
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxImageDimension1D), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxImageDimension2D), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxImageDimension3D), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxImageDimensionCube), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxImageArrayLayers), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTexelBufferElements), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxUniformBufferRange), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxStorageBufferRange), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxPushConstantsSize), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxMemoryAllocationCount), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxSamplerAllocationCount), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.bufferImageGranularity), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.sparseAddressSpaceSize), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxBoundDescriptorSets), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorSamplers), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorUniformBuffers), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorStorageBuffers), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorSampledImages), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorStorageImages), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorInputAttachments), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxPerStageResources), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDescriptorSetSamplers), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDescriptorSetUniformBuffers), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDescriptorSetUniformBuffersDynamic), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDescriptorSetStorageBuffers), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDescriptorSetStorageBuffersDynamic), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDescriptorSetSampledImages), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDescriptorSetStorageImages), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDescriptorSetInputAttachments), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxVertexInputAttributes), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxVertexInputBindings), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxVertexInputAttributeOffset), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxVertexInputBindingStride), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxVertexOutputComponents), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTessellationGenerationLevel), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTessellationPatchSize), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTessellationControlPerVertexInputComponents), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTessellationControlPerVertexOutputComponents), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTessellationControlPerPatchOutputComponents), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTessellationControlTotalOutputComponents), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTessellationEvaluationInputComponents), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTessellationEvaluationOutputComponents), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxGeometryShaderInvocations), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxGeometryInputComponents), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxGeometryOutputComponents), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxGeometryOutputVertices), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxGeometryTotalOutputComponents), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxFragmentInputComponents), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxFragmentOutputAttachments), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxFragmentDualSrcAttachments), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxFragmentCombinedOutputResources), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxComputeSharedMemorySize), descs[descIndex].second);
 
         std::stringstream ss;
         ss << "x: " << std::to_string(limits.maxComputeWorkGroupCount[0]) << ", ";
         ss << "y: " << std::to_string(limits.maxComputeWorkGroupCount[1]) << ", ";
         ss << "z: " << std::to_string(limits.maxComputeWorkGroupCount[2]);
 
-        d.limits.push_back( { descs[descIndex].first, ss.str(), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxComputeWorkGroupInvocations), descs[descIndex++].second });
+        addLimitRow(descs[descIndex].first, ss.str(), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxComputeWorkGroupInvocations), descs[descIndex].second);
 
         std::stringstream maxComputeWorkGroupSizeStr;
         maxComputeWorkGroupSizeStr << "x: " << std::to_string(limits.maxComputeWorkGroupSize[0]) << ", ";
         maxComputeWorkGroupSizeStr << "y: " << std::to_string(limits.maxComputeWorkGroupSize[1]) << ", ";
         maxComputeWorkGroupSizeStr << "z: " << std::to_string(limits.maxComputeWorkGroupSize[2]);
 
-        d.limits.push_back( { descs[descIndex].first, maxComputeWorkGroupSizeStr.str(), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.subPixelPrecisionBits), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.subTexelPrecisionBits), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.mipmapPrecisionBits), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDrawIndexedIndexValue), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxDrawIndirectCount), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxSamplerLodBias), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxSamplerAnisotropy), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxViewports), descs[descIndex++].second });
+        addLimitRow(descs[descIndex].first, maxComputeWorkGroupSizeStr.str(), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.subPixelPrecisionBits), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.subTexelPrecisionBits), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.mipmapPrecisionBits), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDrawIndexedIndexValue), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDrawIndirectCount), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxSamplerLodBias), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxSamplerAnisotropy), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxViewports), descs[descIndex].second);
 
         std::stringstream maxViewportStr;
         maxViewportStr << "x: " << limits.maxViewportDimensions[0] << ", "
                        << "y: " << limits.maxViewportDimensions[1];
-        d.limits.push_back(
-            { descs[descIndex].first,
-              maxViewportStr.str(),
-              descs[descIndex++].second });
+        addLimitRow(descs[descIndex].first, maxViewportStr.str(), descs[descIndex].second);
 
         std::stringstream viewportBoundsRange;
         viewportBoundsRange << "[ " << limits.viewportBoundsRange[0] << ", "
                                     << limits.viewportBoundsRange[1] << "]";
 
-        d.limits.push_back( { descs[descIndex].first, viewportBoundsRange.str(), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.viewportSubPixelBits), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.minMemoryMapAlignment), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.minTexelBufferOffsetAlignment), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.minUniformBufferOffsetAlignment), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.minStorageBufferOffsetAlignment), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.minTexelOffset), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTexelOffset), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.minTexelGatherOffset), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxTexelGatherOffset), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.minInterpolationOffset), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxInterpolationOffset), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.subPixelInterpolationOffsetBits), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxFramebufferWidth), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxFramebufferHeight), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxFramebufferLayers), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.framebufferColorSampleCounts), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.framebufferDepthSampleCounts), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.framebufferStencilSampleCounts), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.framebufferNoAttachmentsSampleCounts), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxColorAttachments), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.sampledImageColorSampleCounts), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.sampledImageIntegerSampleCounts), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.sampledImageDepthSampleCounts), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.sampledImageStencilSampleCounts), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.storageImageSampleCounts), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxSampleMaskWords), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.timestampComputeAndGraphics), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.timestampPeriod), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxClipDistances), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxCullDistances), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.maxCombinedClipAndCullDistances), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.discreteQueuePriorities), descs[descIndex++].second });
+        addLimitRow(descs[descIndex].first, viewportBoundsRange.str(), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.viewportSubPixelBits), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.minMemoryMapAlignment), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.minTexelBufferOffsetAlignment), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.minUniformBufferOffsetAlignment), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.minStorageBufferOffsetAlignment), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.minTexelOffset), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTexelOffset), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.minTexelGatherOffset), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTexelGatherOffset), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.minInterpolationOffset), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxInterpolationOffset), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.subPixelInterpolationOffsetBits), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxFramebufferWidth), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxFramebufferHeight), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxFramebufferLayers), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.framebufferColorSampleCounts), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.framebufferDepthSampleCounts), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.framebufferStencilSampleCounts), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.framebufferNoAttachmentsSampleCounts), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxColorAttachments), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.sampledImageColorSampleCounts), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.sampledImageIntegerSampleCounts), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.sampledImageDepthSampleCounts), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.sampledImageStencilSampleCounts), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.storageImageSampleCounts), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxSampleMaskWords), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.timestampComputeAndGraphics), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.timestampPeriod), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxClipDistances), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxCullDistances), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.maxCombinedClipAndCullDistances), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.discreteQueuePriorities), descs[descIndex].second);
 
         std::stringstream pointSizeRangeStr;
         pointSizeRangeStr << "x: " << limits.pointSizeRange[0] << ", "
                           << "y: " << limits.pointSizeRange[1];
 
-        d.limits.push_back( { descs[descIndex].first, pointSizeRangeStr.str(), descs[descIndex++].second });
+        addLimitRow(descs[descIndex].first, pointSizeRangeStr.str(), descs[descIndex].second);
 
         std::stringstream lineWidthRangeStr;
         lineWidthRangeStr << "x: " << limits.lineWidthRange[0] << ", "
                           << "y: " << limits.lineWidthRange[1];
 
-        d.limits.push_back( { descs[descIndex].first, lineWidthRangeStr.str(),                                   descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.pointSizeGranularity),               descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.lineWidthGranularity),               descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.strictLines),                        descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.standardSampleLocations),            descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.optimalBufferCopyOffsetAlignment),   descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.optimalBufferCopyRowPitchAlignment), descs[descIndex++].second });
-        d.limits.push_back( { descs[descIndex].first, std::to_string(limits.nonCoherentAtomSize),                descs[descIndex++].second });
+        addLimitRow(descs[descIndex].first, lineWidthRangeStr.str(),                                   descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.pointSizeGranularity),               descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.lineWidthGranularity),               descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.strictLines),                        descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.standardSampleLocations),            descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.optimalBufferCopyOffsetAlignment),   descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.optimalBufferCopyRowPitchAlignment), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, std::to_string(limits.nonCoherentAtomSize),                descs[descIndex].second);
+
+        d.limits.resize(1);
+        d.limits[0].valueRows = limitRows;
+        d.limits[0].header.cells.push_back( { Data::Cell::Style::Header, "Name",  "", -1  } );
+        d.limits[0].header.cells.push_back( { Data::Cell::Style::Header, "Value", "", -1  } );
 
         auto addQueueRow = [&](
                 std::vector<Data::Row>& rows,
