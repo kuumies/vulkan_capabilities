@@ -22,14 +22,12 @@ namespace vk_capabilities
  * -------------------------------------------------------------------------- */
 struct Data
 {
-    // Extensions data.
     struct Extension
     {
         const std::string name;
         const std::string version;
     };
 
-    // Layer data.
     struct Layer
     {
         const std::string name;
@@ -38,7 +36,6 @@ struct Data
         const std::string implVersion;
     };
 
-    // Limits data.
     struct Limit
     {
         const std::string name;
@@ -46,7 +43,6 @@ struct Data
         const std::string desc;
     };
 
-    // Memory Data
     struct Memory
     {
         struct Heap
@@ -60,7 +56,6 @@ struct Data
         std::vector<Heap> heaps;
     };
 
-    // Queue data
     struct Queue
     {
         const std::string familyIndex;
@@ -70,7 +65,6 @@ struct Data
         const std::string timestampValidBits;
     };
 
-    // Format data
     struct Format
     {
         const std::string format;
@@ -80,45 +74,35 @@ struct Data
         const std::string bufferFeatures;
     };
 
-    // Property data
     struct Property
     {
-        std::string name;
-        std::string value;
+        const std::string name;
+        const std::string value;
     };
 
-    // Feature data
     struct Feature
     {
-        std::string name;
-        bool supported;
+        const std::string name;
+        const bool supported;
     };
 
     // True if the system has Vulkan implementation.
     bool hasVulkan = false;
 
-    // Instance extensions
+    // Instance data
     std::vector<Extension> instanceExtensions;
-    // Instance layers
     std::vector<Layer> instanceLayers;
 
     // Physical device data.
     struct PhysicalDeviceData
     {
-        // Main properties, [key -> label name, value -> label value]
         std::vector<Property> mainProperties;
-        // Features, [key -> label name, value -> label value, supported/unsupported]
         std::vector<Feature> mainFeatures;
-        // Extensions, [key -> label name, value -> label value]
         std::vector<Extension> extensions;
-        // Limits
         std::vector<Limit> limits;
-        // Queues
         std::vector<Queue> queues;
-        // Memory
-        Memory memory;
-        // Formats
         std::vector<Format> formats;
+        Memory memory;
 
         // Returns the name string. If the name does not exits then a
         // empty string is returned.
