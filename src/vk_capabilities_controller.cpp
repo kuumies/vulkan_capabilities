@@ -657,6 +657,50 @@ std::shared_ptr<Data> createCapabilitiesData(
         d.features[0].header.cells.push_back( { Data::Cell::Style::Header, "Name",           "", -1  } );
         d.features[0].header.cells.push_back( { Data::Cell::Style::Header, "Support Status", "", -1  } );
 
+        auto pointToStr = [](const uint32_t* p, int count)
+        {
+            std::stringstream ss;
+            if (count > 1)
+            {
+                ss << "x: " << std::to_string(p[0]) << ", ";
+                ss << "y: " << std::to_string(p[1]) << ", ";
+            }
+            if (count > 2)
+            {
+                ss << "z: " << std::to_string(p[2]);
+            }
+            return ss.str();
+        };
+
+        auto pointfToStr = [](const float* p, int count)
+        {
+            std::stringstream ss;
+            if (count > 1)
+            {
+                ss << "x: " << std::to_string(p[0]) << ", ";
+                ss << "y: " << std::to_string(p[1]) << ", ";
+            }
+            if (count > 2)
+            {
+                ss << "z: " << std::to_string(p[2]);
+            }
+            return ss.str();
+        };
+
+        auto rangeToStr = [](const float* p, int count)
+        {
+            std::stringstream ss;
+            ss << "[";
+
+            if (count > 0)
+                ss << p[0];
+            if (count > 1)
+                ss << ", " << p[1];
+
+            ss << "]";
+            return ss.str();
+        };
+
         const VkPhysicalDeviceLimits& limits = device.properties.limits;
         const std::vector<std::pair<std::string, std::string>> descs =
             readDescription("://descriptions/limits.txt");
@@ -729,21 +773,9 @@ std::shared_ptr<Data> createCapabilitiesData(
         addLimitRow(descs[descIndex].first, std::to_string(limits.maxFragmentDualSrcAttachments), descs[descIndex].second);
         addLimitRow(descs[descIndex].first, std::to_string(limits.maxFragmentCombinedOutputResources), descs[descIndex].second);
         addLimitRow(descs[descIndex].first, std::to_string(limits.maxComputeSharedMemorySize), descs[descIndex].second);
-
-        std::stringstream ss;
-        ss << "x: " << std::to_string(limits.maxComputeWorkGroupCount[0]) << ", ";
-        ss << "y: " << std::to_string(limits.maxComputeWorkGroupCount[1]) << ", ";
-        ss << "z: " << std::to_string(limits.maxComputeWorkGroupCount[2]);
-
-        addLimitRow(descs[descIndex].first, ss.str(), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, pointToStr(limits.maxComputeWorkGroupCount, 3), descs[descIndex].second);
         addLimitRow(descs[descIndex].first, std::to_string(limits.maxComputeWorkGroupInvocations), descs[descIndex].second);
-
-        std::stringstream maxComputeWorkGroupSizeStr;
-        maxComputeWorkGroupSizeStr << "x: " << std::to_string(limits.maxComputeWorkGroupSize[0]) << ", ";
-        maxComputeWorkGroupSizeStr << "y: " << std::to_string(limits.maxComputeWorkGroupSize[1]) << ", ";
-        maxComputeWorkGroupSizeStr << "z: " << std::to_string(limits.maxComputeWorkGroupSize[2]);
-
-        addLimitRow(descs[descIndex].first, maxComputeWorkGroupSizeStr.str(), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, pointToStr(limits.maxComputeWorkGroupSize, 3), descs[descIndex].second);
         addLimitRow(descs[descIndex].first, std::to_string(limits.subPixelPrecisionBits), descs[descIndex].second);
         addLimitRow(descs[descIndex].first, std::to_string(limits.subTexelPrecisionBits), descs[descIndex].second);
         addLimitRow(descs[descIndex].first, std::to_string(limits.mipmapPrecisionBits), descs[descIndex].second);
@@ -752,17 +784,8 @@ std::shared_ptr<Data> createCapabilitiesData(
         addLimitRow(descs[descIndex].first, std::to_string(limits.maxSamplerLodBias), descs[descIndex].second);
         addLimitRow(descs[descIndex].first, std::to_string(limits.maxSamplerAnisotropy), descs[descIndex].second);
         addLimitRow(descs[descIndex].first, std::to_string(limits.maxViewports), descs[descIndex].second);
-
-        std::stringstream maxViewportStr;
-        maxViewportStr << "x: " << limits.maxViewportDimensions[0] << ", "
-                       << "y: " << limits.maxViewportDimensions[1];
-        addLimitRow(descs[descIndex].first, maxViewportStr.str(), descs[descIndex].second);
-
-        std::stringstream viewportBoundsRange;
-        viewportBoundsRange << "[ " << limits.viewportBoundsRange[0] << ", "
-                                    << limits.viewportBoundsRange[1] << "]";
-
-        addLimitRow(descs[descIndex].first, viewportBoundsRange.str(), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, pointToStr(limits.maxViewportDimensions, 2), descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, rangeToStr(limits.viewportBoundsRange, 2), descs[descIndex].second);
         addLimitRow(descs[descIndex].first, std::to_string(limits.viewportSubPixelBits), descs[descIndex].second);
         addLimitRow(descs[descIndex].first, std::to_string(limits.minMemoryMapAlignment), descs[descIndex].second);
         addLimitRow(descs[descIndex].first, std::to_string(limits.minTexelBufferOffsetAlignment), descs[descIndex].second);
@@ -795,18 +818,8 @@ std::shared_ptr<Data> createCapabilitiesData(
         addLimitRow(descs[descIndex].first, std::to_string(limits.maxCullDistances), descs[descIndex].second);
         addLimitRow(descs[descIndex].first, std::to_string(limits.maxCombinedClipAndCullDistances), descs[descIndex].second);
         addLimitRow(descs[descIndex].first, std::to_string(limits.discreteQueuePriorities), descs[descIndex].second);
-
-        std::stringstream pointSizeRangeStr;
-        pointSizeRangeStr << "x: " << limits.pointSizeRange[0] << ", "
-                          << "y: " << limits.pointSizeRange[1];
-
-        addLimitRow(descs[descIndex].first, pointSizeRangeStr.str(), descs[descIndex].second);
-
-        std::stringstream lineWidthRangeStr;
-        lineWidthRangeStr << "x: " << limits.lineWidthRange[0] << ", "
-                          << "y: " << limits.lineWidthRange[1];
-
-        addLimitRow(descs[descIndex].first, lineWidthRangeStr.str(),                                   descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, pointfToStr(limits.pointSizeRange, 2),                     descs[descIndex].second);
+        addLimitRow(descs[descIndex].first, pointfToStr(limits.lineWidthRange, 2),                     descs[descIndex].second);
         addLimitRow(descs[descIndex].first, std::to_string(limits.pointSizeGranularity),               descs[descIndex].second);
         addLimitRow(descs[descIndex].first, std::to_string(limits.lineWidthGranularity),               descs[descIndex].second);
         addLimitRow(descs[descIndex].first, std::to_string(limits.strictLines),                        descs[descIndex].second);
