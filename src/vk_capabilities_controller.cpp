@@ -29,23 +29,71 @@ namespace
 {
 
 /* -------------------------------------------------------------------------- *
-   Creates the capabilities data from the Vulkan objects.
+   Creates the UI data from the Vulkan instance.
  * -------------------------------------------------------------------------- */
-std::shared_ptr<Data> createCapabilitiesData(
-    std::shared_ptr<vk::Instance> instance)
+struct UiDataCreator
 {
-    using namespace vk::stringify;
-
-    std::shared_ptr<Data> out = std::make_shared<Data>();
-    if (instance->instance == VK_NULL_HANDLE)
-        return out; // No Vulkan implementation
-    out->hasVulkan = true;
-
-    for (const vk::PhysicalDevice& device : instance->physicalDevices)
+    // Constructor will fill the data structure.
+    UiDataCreator(std::shared_ptr<vk::Instance> instance)
+        : data(std::make_shared<Data>())
     {
-        Data::PhysicalDeviceData d;
-        d.name = device.properties.deviceName;
+        if (instance->instance == VK_NULL_HANDLE)
+            return; // No Vulkan implementation
+        data->hasVulkan = true;
 
+        for (const vk::PhysicalDevice& device : instance->physicalDevices)
+        {
+            Data::PhysicalDeviceData d;
+            d.name = device.properties.deviceName;
+
+            fillProperties(d, device);
+            fillExtensions(d, *instance, device);
+            fillLayers(d, *instance, device);
+            fillFeatures(d, device);
+            fillLimits(d, device);
+            fillMemory(d, device);
+            fillQueues(d, device);
+            fillFormats(d, device);
+
+            data->physicalDeviceData.push_back(d);
+        }
+    }
+
+    void fillProperties(Data::PhysicalDeviceData& data,
+                        const vk::PhysicalDevice& device) const
+    {
+        using namespace vk::stringify;
+
+        std::vector<Data::Row> rows;
+        auto addRow = [&](
+                const std::string& name,
+                const std::string& value)
+        {
+            rows.push_back(
+            {{
+                { Data::Cell::Style::NameLabel,  name,  "", -1 },
+                { Data::Cell::Style::ValueLabel, value, "", -1 },
+            }});
+        };
+
+        addRow("Name",                device.properties.deviceName);
+        addRow("Type",                toString(device.properties.deviceType));
+        addRow( "API Version",        versionNumber(device.properties.apiVersion));
+        addRow( "Driver Version",     versionNumber(device.properties.driverVersion));
+        addRow("Vendor ID",           hexValueToString(device.properties.vendorID));
+        addRow("Device ID",           hexValueToString(device.properties.deviceID));
+        addRow("Pipeline Cache UUID", toString(device.properties.pipelineCacheUUID));
+
+        data.properties.resize(1);
+        data.properties[0].valueRows = rows;
+        data.properties[0].header.cells.push_back( { Data::Cell::Style::Header, "Property",  "", -1  } );
+        data.properties[0].header.cells.push_back( { Data::Cell::Style::Header, "Value",     "", -1  } );
+    }
+
+    void fillExtensions(Data::PhysicalDeviceData& data,
+                        const vk::Instance& instance,
+                        const vk::PhysicalDevice& device)
+    {
         auto addRow = [&](
                 std::vector<Data::Row>& rows,
                 const std::string& name,
@@ -58,23 +106,9 @@ std::shared_ptr<Data> createCapabilitiesData(
             }});
         };
 
-        std::vector<Data::Row> propertiesRows;
-        addRow(propertiesRows, "Name",                device.properties.deviceName);
-        addRow(propertiesRows, "Type",                toString(device.properties.deviceType));
-        addRow(propertiesRows, "API Version",         versionNumber(device.properties.apiVersion));
-        addRow(propertiesRows, "Driver Version",      versionNumber(device.properties.driverVersion));
-        addRow(propertiesRows, "Vendor ID",           hexValueToString(device.properties.vendorID));
-        addRow(propertiesRows, "Device ID",           hexValueToString(device.properties.deviceID));
-        addRow(propertiesRows, "Pipeline Cache UUID", toString(device.properties.pipelineCacheUUID));
-
-        d.properties.resize(1);
-        d.properties[0].valueRows = propertiesRows;
-        d.properties[0].header.cells.push_back( { Data::Cell::Style::Header, "Property",  "", -1  } );
-        d.properties[0].header.cells.push_back( { Data::Cell::Style::Header, "Value",     "", -1  } );
-
-        std::vector<Data::Row> instanceExtensionsRows;
-        for (const VkExtensionProperties& ex : instance->availableExtensions)
-            addRow(instanceExtensionsRows,
+        std::vector<Data::Row> instanceExtensionRows;
+        for (const VkExtensionProperties& ex : instance.availableExtensions)
+            addRow(instanceExtensionRows,
                    ex.extensionName,
                    std::to_string(ex.specVersion));
 
@@ -82,15 +116,19 @@ std::shared_ptr<Data> createCapabilitiesData(
         for (const VkExtensionProperties& ex : device.extensions)
             addRow(deviceExtensionsRows, ex.extensionName, std::to_string(ex.specVersion));
 
-        d.extensions.resize(2);
-        d.extensions[0].valueRows = instanceExtensionsRows;
-        d.extensions[0].header.cells.push_back( { Data::Cell::Style::Header, "Supported Instance Extension", "", -1  } );
-        d.extensions[0].header.cells.push_back( { Data::Cell::Style::Header, "Version",                      "", -1  } );
-        d.extensions[1].valueRows = deviceExtensionsRows;
-        d.extensions[1].header.cells.push_back( { Data::Cell::Style::Header, "Supported Device Extension", "", -1  } );
-        d.extensions[1].header.cells.push_back( { Data::Cell::Style::Header, "Version",                    "", -1  } );
+        data.extensions.resize(2);
+        data.extensions[0].valueRows = instanceExtensionRows;
+        data.extensions[0].header.cells.push_back( { Data::Cell::Style::Header, "Supported Instance Extension", "", -1  } );
+        data.extensions[0].header.cells.push_back( { Data::Cell::Style::Header, "Version",                      "", -1  } );
+        data.extensions[1].valueRows = deviceExtensionsRows;
+        data.extensions[1].header.cells.push_back( { Data::Cell::Style::Header, "Supported Device Extension", "", -1  } );
+        data.extensions[1].header.cells.push_back( { Data::Cell::Style::Header, "Version",                    "", -1  } );
+    }
 
-
+    void fillLayers(Data::PhysicalDeviceData& d,
+                    const vk::Instance& instance,
+                    const vk::PhysicalDevice& device)
+    {
         auto addLayerRow = [&](
                 std::vector<Data::Row>& rows,
                 const std::string& name,
@@ -107,7 +145,7 @@ std::shared_ptr<Data> createCapabilitiesData(
         };
 
         std::vector<Data::Row> instanceLayerRows;
-        for (const VkLayerProperties& l : instance->availableLayers)
+        for (const VkLayerProperties& l : instance.availableLayers)
             addLayerRow(instanceLayerRows,
                         l.layerName,
                         l.description,
@@ -119,6 +157,12 @@ std::shared_ptr<Data> createCapabilitiesData(
         d.layers[0].header.cells.push_back( { Data::Cell::Style::Header, "Name",          "", -1  } );
         d.layers[0].header.cells.push_back( { Data::Cell::Style::Header, "Spec. Version", "", -1  } );
         d.layers[0].header.cells.push_back( { Data::Cell::Style::Header, "Impl. Version", "", -1  } );
+
+    }
+
+    void fillFeatures(Data::PhysicalDeviceData& d,
+                      const vk::PhysicalDevice& device)
+    {
 
         auto vkboolToStr = [](const VkBool32& b)
         { return  b == VK_TRUE ? "Supported" : "Unsupported"; };
@@ -199,6 +243,11 @@ std::shared_ptr<Data> createCapabilitiesData(
         d.features[0].valueRows = featureRows;
         d.features[0].header.cells.push_back( { Data::Cell::Style::Header, "Name",           "", -1  } );
         d.features[0].header.cells.push_back( { Data::Cell::Style::Header, "Support Status", "", -1  } );
+    }
+
+    void fillLimits(Data::PhysicalDeviceData& d,
+                    const vk::PhysicalDevice& device)
+    {
 
         auto pointToStr = [](const uint32_t* p, int count)
         {
@@ -396,7 +445,11 @@ std::shared_ptr<Data> createCapabilitiesData(
         d.limits[0].valueRows = limitRows;
         d.limits[0].header.cells.push_back( { Data::Cell::Style::Header, "Name",  "", -1  } );
         d.limits[0].header.cells.push_back( { Data::Cell::Style::Header, "Value", "", -1  } );
+    }
 
+    void fillQueues(Data::PhysicalDeviceData& d,
+                    const vk::PhysicalDevice& device)
+    {
         auto addQueueRow = [&](
                 std::vector<Data::Row>& rows,
                 const std::string& familyIndex,
@@ -423,8 +476,8 @@ std::shared_ptr<Data> createCapabilitiesData(
                         std::to_string(familyIndex),
                         std::to_string(q.queueCount),
                         std::to_string(q.timestampValidBits),
-                        toString(q.queueFlags),
-                        toString(q.minImageTransferGranularity));
+                        vk::stringify::toString(q.queueFlags),
+                        vk::stringify::toString(q.minImageTransferGranularity));
         }
 
         d.queues.resize(1);
@@ -435,7 +488,11 @@ std::shared_ptr<Data> createCapabilitiesData(
         d.queues[0].header.cells.push_back( { Data::Cell::Style::Header, "Min Image Transfer\nGranularity", "", -1  } );
         d.queues[0].header.cells.push_back( { Data::Cell::Style::Header, "Timestamp Valid\nBits",           "", -1  } );
 
+    }
 
+    void fillMemory(Data::PhysicalDeviceData& d,
+                    const vk::PhysicalDevice& device)
+    {
         auto addMemoryRow = [&](
                 std::vector<Data::Row>& rows,
                 const std::string& heapIndex,
@@ -519,7 +576,11 @@ std::shared_ptr<Data> createCapabilitiesData(
         d.memories[0].header.cells.push_back( { Data::Cell::Style::Header, "Size",        "", -1  } );
         d.memories[0].header.cells.push_back( { Data::Cell::Style::Header, "Properties",  "", -1  } );
         d.memories[0].header.cells.push_back( { Data::Cell::Style::Header, "Flags",       "", -1  } );
+    }
 
+    void fillFormats(Data::PhysicalDeviceData& d,
+                     const vk::PhysicalDevice& device)
+    {
         VariableDescriptions formatVariableDesc("://descriptions/formats.txt");
         std::vector<VariableDescriptions::VariableDescription> formatStrings =
             formatVariableDesc.variableDescriptions();
@@ -548,9 +609,9 @@ std::shared_ptr<Data> createCapabilitiesData(
             addFormatRow(formatRows,
                 formatStrings[i].name,
                 formatStrings[i].description,
-                formatFeature(f.second.linearTilingFeatures),
-                formatFeature(f.second.optimalTilingFeatures),
-                formatFeature(f.second.bufferFeatures));
+                vk::stringify::formatFeature(f.second.linearTilingFeatures),
+                vk::stringify::formatFeature(f.second.optimalTilingFeatures),
+                vk::stringify::formatFeature(f.second.bufferFeatures));
         }
 
         d.formats.resize(1);
@@ -560,11 +621,11 @@ std::shared_ptr<Data> createCapabilitiesData(
         d.formats[0].header.cells.push_back( { Data::Cell::Style::Header, "Optimal Tiling",  "", -1  } );
         d.formats[0].header.cells.push_back( { Data::Cell::Style::Header, "Buffer features", "", -1  } );
 
-        out->physicalDeviceData.push_back(d);
     }
 
-    return out;
-}
+    // Result data.
+    std::shared_ptr<Data> data;
+};
 
 } // anonymous namespace
 
@@ -593,7 +654,7 @@ Controller::Controller()
     }
 
     impl->instance = std::make_shared<vk::Instance>(extensions);
-    impl->capabilitiesData = createCapabilitiesData(impl->instance);
+    impl->capabilitiesData = UiDataCreator(impl->instance).data;
 }
 
 /* -------------------------------------------------------------------------- */
