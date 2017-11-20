@@ -19,6 +19,7 @@
 #include "vk_capabilities_variable_description.h"
 #include "vk_helper.h"
 #include "vk_stringify.h"
+#include "vk_instance.h"
 
 namespace kuu
 {
@@ -28,325 +29,19 @@ namespace
 {
 
 /* -------------------------------------------------------------------------- *
-   Maintains (creates, destroys) the Vulkan objects.
- * -------------------------------------------------------------------------- */
-struct VulkanObjects
-{
-    /* ---------------------------------------------------------------------- *
-       Defines a format struct.
-     * ---------------------------------------------------------------------- */
-    struct Format
-    {
-        VkFormat format;
-        VkFormatProperties properties;
-    };
-
-    /* ---------------------------------------------------------------------- *
-       Defines a physical device data struct.
-     * ---------------------------------------------------------------------- */
-    struct PhysicalDevice
-    {
-        struct Queue
-        {
-            const uint32_t queueFamilyIndex;
-            const VkQueueFamilyProperties properties;
-            const VkBool32 presentationSupport;
-        };
-
-        const VkPhysicalDevice physicalDevice;                                      // Handle
-        const VkPhysicalDeviceProperties properties;                                // Properties
-        const VkPhysicalDeviceFeatures features;                                    // Features
-        const VkPhysicalDeviceFeatures2KHR features2;                               // Features2
-        const VkPhysicalDeviceVariablePointerFeaturesKHR featuresVariablePointer;   // Variable pointer
-        const VkPhysicalDeviceMultiviewFeaturesKHX multiviewFeatures;               // Multiview
-        const VkPhysicalDevice16BitStorageFeaturesKHR features16ButStorage;         // 16 bit storage
-        const VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR yuvSamplerFeatures; // YUV sampler
-        const VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT blendFeatures;      // Blend features
-        const std::vector<VkExtensionProperties> extensions;                        // Extensions
-        const std::vector<Queue> queues;                                            // Queues
-        const VkPhysicalDeviceMemoryProperties memoryProperties;                    // Memory properties
-        const std::vector<Format> formats;                                          // Formats
-    };
-
-    VulkanObjects()
-    {
-        /* ------------------------------------------------------------------ *
-           Create instance
-         * ------------------------------------------------------------------ */
-
-        physicalDeviceProperties2 =
-            vk::helper::isInstanceExtensionSupported(
-                "VK_KHR_get_physical_device_properties2");
-
-        std::vector<const char*> extensionNames;
-        if (physicalDeviceProperties2)
-            extensionNames.push_back("VK_KHR_get_physical_device_properties2");
-        const uint32_t extensionCount =
-            static_cast<uint32_t>(extensionNames.size());
-
-        VkStructureType appInfoType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-        VkApplicationInfo appInfo;
-        appInfo.sType              = appInfoType;              // Must be this definition
-        appInfo.pNext              = NULL;                     // No extension specific structures
-        appInfo.pApplicationName   = "Vulkan Capabilities";    // Name of the application
-        appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0); // Version of the application
-        appInfo.pEngineName        = "CapabilitiesEngine";     // Name of the "engine"
-        appInfo.engineVersion      = VK_MAKE_VERSION(1, 0, 0); // Version of the "engine"
-        appInfo.apiVersion         = VK_API_VERSION_1_0;       // Version of the Vulkan API
-
-        VkStructureType infoType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        VkInstanceCreateInfo info;
-        info.sType                   = infoType;              // Must be this definition
-        info.pNext                   = NULL;                  // No extension specific structures
-        info.flags                   = 0;                     // Must be 0, reserved for future use
-        info.pApplicationInfo        = &appInfo;              // Application information
-        info.enabledLayerCount       = 0;                     // Count of requested layers
-        info.ppEnabledLayerNames     = NULL;                  // Requested layer names
-        info.enabledExtensionCount   = extensionCount;        // Count of requested extensions
-        info.ppEnabledExtensionNames = extensionNames.data(); // Requested extension names
-
-        VkResult result = vkCreateInstance(
-            &info,      // [in]  Instance create info
-            NULL,       // [in]  No allocation callback
-            &instance); // [out] Instance handle
-
-        if (result != VK_SUCCESS)
-        {
-            std::cerr << __FUNCTION__
-                      << ": instance creation failed as "
-                      << vk::stringify::toString(result)
-                    << std::endl;
-            return;
-        }
-
-        /* ------------------------------------------------------------------ *
-           Get the instance extensions.
-         * ------------------------------------------------------------------ */
-
-        uint32_t instanceExtensionCount = 0;
-        vkEnumerateInstanceExtensionProperties(
-            NULL,                    // [in]  NULL -> Vulkan implementation extensions
-            &instanceExtensionCount, // [out] Extensions count
-            NULL);                   // [out] NULL -> Get only count
-        if (instanceExtensionCount)
-        {
-            instanceExtensions.resize(instanceExtensionCount);
-            vkEnumerateInstanceExtensionProperties(
-                nullptr,                    // [in]  NULL -> Vulkan implementation extensions
-                &instanceExtensionCount,    // [in, out] Extensions count
-                instanceExtensions.data()); // [out] Extensions
-        }
-
-        /* ------------------------------------------------------------------ *
-           Get the instance layers.
-         * ------------------------------------------------------------------ */
-
-        uint32_t instanceLayerCount;
-        vkEnumerateInstanceLayerProperties(&instanceLayerCount, nullptr);
-        if (instanceLayerCount > 0)
-        {
-            instanceLayers.resize(instanceLayerCount);
-            vkEnumerateInstanceLayerProperties(&instanceLayerCount,
-                                               instanceLayers.data());
-        }
-
-        /* ------------------------------------------------------------------ *
-           Enumerate physical devices
-         * ------------------------------------------------------------------ */
-
-        uint32_t physicalDeviceCount = 0;
-        vkEnumeratePhysicalDevices(
-            instance,             // [in]  Instance handle
-            &physicalDeviceCount, // [out] Physical device count
-            NULL);                // [in]  Pointer to vector of physical devices, NULL
-                                  // so the physical device count is returned.
-
-        std::vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
-        result = vkEnumeratePhysicalDevices(
-            instance,                // [in]      Instance handle
-            &physicalDeviceCount,    // [in, out] Physical device count
-            physicalDevices.data()); // [out]     Pointer to vector of physical devices
-
-        if (result != VK_SUCCESS)
-        {
-            std::cerr << __FUNCTION__
-                      << ": physical device enumeration failed as "
-                      << vk::stringify::toDescription(result)
-                      << std::endl;
-            return;
-        }
-
-        /* ------------------------------------------------------------------ *
-           Retrieve per-physical device data.
-         * ------------------------------------------------------------------ */
-
-        for (const VkPhysicalDevice& physicalDevice : physicalDevices)
-        {
-            VkPhysicalDeviceProperties properties;
-            vkGetPhysicalDeviceProperties(
-                physicalDevice, // [in]  physical device handle
-                &properties);   // [out] physical device properties
-
-            VkPhysicalDeviceFeatures features;
-            vkGetPhysicalDeviceFeatures(
-                physicalDevice,
-                &features);
-
-            VkPhysicalDeviceVariablePointerFeaturesKHR featuresVariablePointer;
-            VkPhysicalDeviceMultiviewFeaturesKHX multiviewFeatures;
-            VkPhysicalDevice16BitStorageFeaturesKHR features16ButStorage;
-            VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR yuvSamplerFeatures;
-            VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT blendFeatures;
-            VkPhysicalDeviceFeatures2KHR features2;
-
-            if (physicalDeviceProperties2)
-            {
-                auto fun = (PFN_vkGetPhysicalDeviceFeatures2KHR)
-                    vkGetInstanceProcAddr(
-                        instance,
-                        "vkGetPhysicalDeviceFeatures2KHR");
-
-                if (fun)
-                {
-                    // Query SPIR-V VariablePointers and VariablePointersStorageBuffer capabilities.
-                    featuresVariablePointer.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VARIABLE_POINTER_FEATURES_KHR;
-                    featuresVariablePointer.pNext = NULL; // end of the chain, must be NULL!
-
-                    // Query render pass mutltiview capablities
-                    multiviewFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHX;
-                    multiviewFeatures.pNext = &featuresVariablePointer;
-
-                    // Query storage 16 bit capabilities
-                    features16ButStorage.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES_KHR;
-                    features16ButStorage.pNext = &multiviewFeatures;
-
-                    // Query samper Yuv conversion capability
-                    yuvSamplerFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES_KHR;
-                    yuvSamplerFeatures.pNext = &features16ButStorage;
-
-                    // Query advanced blending operation capability
-                    blendFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BLEND_OPERATION_ADVANCED_FEATURES_EXT;
-                    blendFeatures.pNext = &yuvSamplerFeatures;
-
-                    // Get the features of Vulkan 1.0 and beyond API
-                    features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
-                    features2.pNext = &blendFeatures;
-                    fun(physicalDevice, &features2);
-                }
-            }
-
-            uint32_t devInstanceCount = 0;
-            vkEnumerateDeviceExtensionProperties(
-                physicalDevice,     // [in]  physical device handle
-                NULL,               // [in]  NULL -> implementation extensions
-                &devInstanceCount,  // [out] Count of physical device extensions.
-                NULL);              // [in]  NULL -> get only count.
-
-            std::vector<VkExtensionProperties> devExtensions;
-            devExtensions.resize(devInstanceCount);
-            vkEnumerateDeviceExtensionProperties(
-                physicalDevice,        // [in]  physical device handle
-                NULL,                  // [in]  NULL -> implementation extensions
-                &devInstanceCount,     // [out] Count of physical device extensions.
-                devExtensions.data()); // [in]  Physical device extensions
-
-            uint32_t queueFamilyPropertyCount = 0;
-            vkGetPhysicalDeviceQueueFamilyProperties(
-                physicalDevice,            // [in]  physical device handle
-                &queueFamilyPropertyCount, // [out] queue family property count
-                NULL);                     // [in]  properties, NULL to get count
-
-            std::vector<VkQueueFamilyProperties> queueFamilyProperties(
-                queueFamilyPropertyCount);
-            vkGetPhysicalDeviceQueueFamilyProperties(
-                physicalDevice,                // [in]  physical device handle
-                &queueFamilyPropertyCount,     // [in]  queue family property count
-                queueFamilyProperties.data()); // [out] queue family properties
-
-            std::vector<PhysicalDevice::Queue> queues;
-            for (uint32_t queueFamilyIndex = 0; queueFamilyIndex < queueFamilyPropertyCount; ++queueFamilyIndex)
-            {
-                const VkQueueFamilyProperties& property = queueFamilyProperties[queueFamilyIndex];
-
-                queues.push_back(
-                {
-                    queueFamilyIndex,
-                    property,
-                    VK_FALSE
-                });
-            }
-
-            VkPhysicalDeviceMemoryProperties memoryProperties;
-            vkGetPhysicalDeviceMemoryProperties(
-                physicalDevice,
-                &memoryProperties);
-
-
-            std::vector<Format> formats;
-            for (int f = VK_FORMAT_R4G4_UNORM_PACK8; f <= VK_FORMAT_ASTC_12x12_SRGB_BLOCK; ++f)
-            {
-                VkFormat fmt = VkFormat(f);
-                VkFormatProperties props;
-                vkGetPhysicalDeviceFormatProperties(
-                    physicalDevice,
-                    fmt,
-                    &props);
-                formats.push_back( { fmt, props} );
-            }
-
-            this->physicalDevices.push_back( 
-                {  
-                    physicalDevice, 
-                    properties,
-                    features,
-                    features2,
-                    featuresVariablePointer,
-                    multiviewFeatures,
-                    features16ButStorage,
-                    yuvSamplerFeatures,
-                    blendFeatures,
-                    devExtensions,
-                    queues,
-                    memoryProperties,
-                    formats
-                });
-        }
-    }
-
-    ~VulkanObjects()
-    {
-        vkDestroyInstance(
-            instance, // [in] Handle to instance, can be a VK_NULL_HANDLE
-            NULL);    // [in] No allocation callback
-    }
-
-    // Vulkan instance handle. This a null handle if the system does not
-    // contain a Vulkan implementation.
-    VkInstance instance = VK_NULL_HANDLE;
-    // Instance extensions
-    std::vector<VkExtensionProperties> instanceExtensions;
-    // Instance layers
-    std::vector<VkLayerProperties> instanceLayers;
-    // Vulkan physical device handles
-    std::vector<PhysicalDevice> physicalDevices;
-    // True if the VK_KHR_get_physical_device_properties2 extension is supported.
-    bool physicalDeviceProperties2 = false;
-};
-
-/* -------------------------------------------------------------------------- *
    Creates the capabilities data from the Vulkan objects.
  * -------------------------------------------------------------------------- */
 std::shared_ptr<Data> createCapabilitiesData(
-    std::shared_ptr<VulkanObjects> vulkanObjects)
+    std::shared_ptr<vk::Instance> instance)
 {
     using namespace vk::stringify;
 
     std::shared_ptr<Data> out = std::make_shared<Data>();
-    if (vulkanObjects->instance == VK_NULL_HANDLE)
+    if (instance->instance == VK_NULL_HANDLE)
         return out; // No Vulkan implementation
     out->hasVulkan = true;
 
-    for (const VulkanObjects::PhysicalDevice& device : vulkanObjects->physicalDevices)
+    for (const vk::PhysicalDevice& device : instance->physicalDevices)
     {
         Data::PhysicalDeviceData d;
         d.name = device.properties.deviceName;
@@ -378,7 +73,7 @@ std::shared_ptr<Data> createCapabilitiesData(
         d.properties[0].header.cells.push_back( { Data::Cell::Style::Header, "Value",     "", -1  } );
 
         std::vector<Data::Row> instanceExtensionsRows;
-        for (const VkExtensionProperties& ex : vulkanObjects->instanceExtensions)
+        for (const VkExtensionProperties& ex : instance->availableExtensions)
             addRow(instanceExtensionsRows,
                    ex.extensionName,
                    std::to_string(ex.specVersion));
@@ -412,7 +107,7 @@ std::shared_ptr<Data> createCapabilitiesData(
         };
 
         std::vector<Data::Row> instanceLayerRows;
-        for (const VkLayerProperties& l : vulkanObjects->instanceLayers)
+        for (const VkLayerProperties& l : instance->availableLayers)
             addLayerRow(instanceLayerRows,
                         l.layerName,
                         l.description,
@@ -721,13 +416,16 @@ std::shared_ptr<Data> createCapabilitiesData(
         };
 
         std::vector<Data::Row> queueRows;
-        for (const VulkanObjects::PhysicalDevice::Queue& q : device.queues)
+        for (int familyIndex = 0; familyIndex < device.queueFamilies.size(); ++familyIndex)
+        {
+            const VkQueueFamilyProperties& q = device.queueFamilies[familyIndex];
             addQueueRow(queueRows,
-                        std::to_string(q.queueFamilyIndex),
-                        std::to_string(q.properties.queueCount),
-                        std::to_string(q.properties.timestampValidBits),
-                        toString(q.properties.queueFlags),
-                        toString(q.properties.minImageTransferGranularity));
+                        std::to_string(familyIndex),
+                        std::to_string(q.queueCount),
+                        std::to_string(q.timestampValidBits),
+                        toString(q.queueFlags),
+                        toString(q.minImageTransferGranularity));
+        }
 
         d.queues.resize(1);
         d.queues[0].valueRows = queueRows;
@@ -846,13 +544,13 @@ std::shared_ptr<Data> createCapabilitiesData(
         std::vector<Data::Row> formatRows;
         for (int i = 0; i < device.formats.size(); ++i)
         {
-            const VulkanObjects::Format& f = device.formats[i];
+            const std::pair<VkFormat, VkFormatProperties>& f = device.formats[i];
             addFormatRow(formatRows,
                 formatStrings[i].name,
                 formatStrings[i].description,
-                formatFeature(f.properties.linearTilingFeatures),
-                formatFeature(f.properties.optimalTilingFeatures),
-                formatFeature(f.properties.bufferFeatures));
+                formatFeature(f.second.linearTilingFeatures),
+                formatFeature(f.second.optimalTilingFeatures),
+                formatFeature(f.second.bufferFeatures));
         }
 
         d.formats.resize(1);
@@ -877,7 +575,7 @@ struct Controller::Impl
     // Main window
     std::unique_ptr<MainWindow> mainWindow;
     // Vulkan objects
-    std::shared_ptr<VulkanObjects> vulkanObjects;
+    std::shared_ptr<vk::Instance> instance;
     // Capabilities data created from vulkan objects.
     std::shared_ptr<Data> capabilitiesData;
 };
@@ -887,8 +585,15 @@ struct Controller::Impl
 Controller::Controller()
     : impl(std::make_shared<Impl>())
 {
-    impl->vulkanObjects = std::make_shared<VulkanObjects>();
-    impl->capabilitiesData = createCapabilitiesData(impl->vulkanObjects);
+    std::vector<std::string> extensions;
+    if (vk::helper::isInstanceExtensionSupported(
+            "VK_KHR_get_physical_device_properties2"))
+    {
+        extensions.push_back("VK_KHR_get_physical_device_properties2");
+    }
+
+    impl->instance = std::make_shared<vk::Instance>(extensions);
+    impl->capabilitiesData = createCapabilitiesData(impl->instance);
 }
 
 /* -------------------------------------------------------------------------- */
