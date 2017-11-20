@@ -7,15 +7,16 @@
 
 /* -------------------------------------------------------------------------- */
 
+#include <functional>
 #include <iostream>
 #include <sstream>
-#include <QtCore/QFile>
-#include <QtCore/QTextStream>
+#include <QtCore/QString>
 
 /* -------------------------------------------------------------------------- */
 
 #include "vk_capabilities_data.h"
 #include "vk_capabilities_main_window.h"
+#include "vk_capabilities_variable_description.h"
 #include "vk_helper.h"
 #include "vk_stringify.h"
 
@@ -25,159 +26,6 @@ namespace vk_capabilities
 {
 namespace
 {
-
-/* ---------------------------------------------------------------- */
-
-std::vector<std::pair<std::string, std::string>> readFormat(const QString& filepath)
-{
-    // Transforms a variable name from 'VK_FORMAT_B5G5R5A1_UNORM_PACK16' to
-    // 'B5G5R5A1 UNORM PACK16'.
-    auto transformVariable = [](QString in)
-    {
-//        in = in.remove("VK_FORMAT_");
-//        in = in.replace("_", " ");
-        return in;
-    };
-
-    // Splits a long description text into smaller lines.
-    auto splitToLines = [](const QString& in, const int wordMax = 10)
-    {
-        QStringList inWords = in.split(" ");
-        QStringList outWords;
-        QString out;
-        int wordCount = 0;
-        for (int i = 0; i < inWords.size(); ++i)
-        {
-            if (wordCount < wordMax)
-            {
-                outWords << inWords[i];
-                wordCount++;
-            }
-            else
-            {
-                wordCount = 0;
-                out += outWords.join(" ") += "\n";
-                outWords.clear();
-            }
-        }
-        out += outWords.join(" ");
-        return out;
-    };
-
-    QFile qssFile(filepath);
-    if (!qssFile.open(QIODevice::ReadOnly))
-    {
-        std::cerr << __FUNCTION__
-                  << "Failed to read formats from "
-                  << filepath.toStdString()
-                  << std::endl;
-        return std::vector<std::pair<std::string, std::string>>();
-    }
-
-    std::vector<std::pair<std::string, std::string>> out;
-    QTextStream ts(&qssFile);
-    while(!ts.atEnd())
-    {
-        QString line = ts.readLine().trimmed();
-        if (line.startsWith(";"))
-            continue;
-        if (line.isEmpty())
-            continue;
-
-        QString variable = line.section(" ", 0, 0);
-        variable = transformVariable(variable);
-
-        QString desc = variable + " " + line.section(" ", 1);
-        desc = splitToLines(desc);
-
-        out.push_back(std::make_pair(
-            variable.toStdString(),
-            desc.toStdString()));
-    }
-
-    return out;
-}
-
-/* ---------------------------------------------------------------- */
-
-std::vector<std::pair<std::string, std::string>> readDescription(const QString& filepath)
-{
-    // Transforms a variable name from 'myVeryOwnVariable' to
-    // 'My Very Own Variable'.
-    // BUG: issues with array indices
-    auto transformVariable = [](const QString& in)
-    {
-        QString out;
-        for (int i = 0; i < in.size(); ++i)
-        {
-            QChar c = in[i];
-            if (c.isUpper() || c.isDigit())
-                out.append(" ");
-            if (i == 0)
-                c = c.toUpper();
-            out.append(c);
-        }
-        return out;
-    };
-
-    // Splits a long description text into smaller lines.
-    auto splitToLines = [](const QString& in, const int wordMax = 10)
-    {
-        QStringList inWords = in.split(" ");
-        QStringList outWords;
-        QString out;
-        int wordCount = 0;
-        for (int i = 0; i < inWords.size(); ++i)
-        {
-            if (wordCount < wordMax)
-            {
-                outWords << inWords[i];
-                wordCount++;
-            }
-            else
-            {
-                wordCount = 0;
-                out += outWords.join(" ") += "\n";
-                outWords.clear();
-            }
-        }
-        out += outWords.join(" ");
-        return out;
-    };
-
-    QFile qssFile(filepath);
-    if (!qssFile.open(QIODevice::ReadOnly))
-    {
-        std::cerr << __FUNCTION__
-                  << "Failed to read desciptions from "
-                  << filepath.toStdString()
-                  << std::endl;
-        return std::vector<std::pair<std::string, std::string>>();
-    }
-
-    std::vector<std::pair<std::string, std::string>> out;
-    QTextStream ts(&qssFile);
-    while(!ts.atEnd())
-    {
-        QString line = ts.readLine().trimmed();
-        if (line.startsWith(";"))
-            continue;
-        if (line.isEmpty())
-            continue;
-
-        QString variable = line.section(" ", 0, 0);
-        variable = transformVariable(variable);
-
-        QString desc = variable + " " + line.section(" ", 1);
-        desc = splitToLines(desc);
-
-        out.push_back(std::make_pair(
-            variable.toStdString(),
-            desc.toStdString()));
-    }
-
-    return out;
-}
 
 /* -------------------------------------------------------------------------- *
    Maintains (creates, destroys) the Vulkan objects.
@@ -701,9 +549,30 @@ std::shared_ptr<Data> createCapabilitiesData(
             return ss.str();
         };
 
+        // Transforms a variable name from 'myVeryOwnVariable' to
+        // 'My Very Own Variable'.
+        // BUG: issues with array indices
+        auto transformLimitVariable = [](const std::string& inStd)
+        {
+            QString in = QString::fromStdString(inStd);
+            QString out;
+            for (int i = 0; i < in.size(); ++i)
+            {
+                QChar c = in[i];
+                if (c.isUpper() || c.isDigit())
+                    out.append(" ");
+                if (i == 0)
+                    c = c.toUpper();
+                out.append(c);
+            }
+            return out.toStdString();
+        };
+
+        VariableDescriptions limitVariableDesc("://descriptions/limits.txt", transformLimitVariable);
+        std::vector<VariableDescriptions::VariableDescription> descs =
+            limitVariableDesc.variableDescriptions();
+
         const VkPhysicalDeviceLimits& limits = device.properties.limits;
-        const std::vector<std::pair<std::string, std::string>> descs =
-            readDescription("://descriptions/limits.txt");
         int descIndex = 0;
 
         std::vector<Data::Row> limitRows;
@@ -721,112 +590,112 @@ std::shared_ptr<Data> createCapabilitiesData(
             descIndex++;
         };
 
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxImageDimension1D), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxImageDimension2D), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxImageDimension3D), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxImageDimensionCube), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxImageArrayLayers), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTexelBufferElements), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxUniformBufferRange), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxStorageBufferRange), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxPushConstantsSize), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxMemoryAllocationCount), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxSamplerAllocationCount), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.bufferImageGranularity), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.sparseAddressSpaceSize), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxBoundDescriptorSets), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorSamplers), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorUniformBuffers), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorStorageBuffers), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorSampledImages), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorStorageImages), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxPerStageDescriptorInputAttachments), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxPerStageResources), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDescriptorSetSamplers), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDescriptorSetUniformBuffers), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDescriptorSetUniformBuffersDynamic), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDescriptorSetStorageBuffers), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDescriptorSetStorageBuffersDynamic), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDescriptorSetSampledImages), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDescriptorSetStorageImages), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDescriptorSetInputAttachments), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxVertexInputAttributes), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxVertexInputBindings), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxVertexInputAttributeOffset), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxVertexInputBindingStride), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxVertexOutputComponents), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTessellationGenerationLevel), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTessellationPatchSize), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTessellationControlPerVertexInputComponents), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTessellationControlPerVertexOutputComponents), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTessellationControlPerPatchOutputComponents), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTessellationControlTotalOutputComponents), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTessellationEvaluationInputComponents), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTessellationEvaluationOutputComponents), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxGeometryShaderInvocations), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxGeometryInputComponents), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxGeometryOutputComponents), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxGeometryOutputVertices), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxGeometryTotalOutputComponents), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxFragmentInputComponents), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxFragmentOutputAttachments), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxFragmentDualSrcAttachments), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxFragmentCombinedOutputResources), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxComputeSharedMemorySize), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, pointToStr(limits.maxComputeWorkGroupCount, 3), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxComputeWorkGroupInvocations), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, pointToStr(limits.maxComputeWorkGroupSize, 3), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.subPixelPrecisionBits), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.subTexelPrecisionBits), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.mipmapPrecisionBits), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDrawIndexedIndexValue), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxDrawIndirectCount), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxSamplerLodBias), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxSamplerAnisotropy), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxViewports), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, pointToStr(limits.maxViewportDimensions, 2), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, rangeToStr(limits.viewportBoundsRange, 2), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.viewportSubPixelBits), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.minMemoryMapAlignment), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.minTexelBufferOffsetAlignment), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.minUniformBufferOffsetAlignment), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.minStorageBufferOffsetAlignment), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.minTexelOffset), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTexelOffset), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.minTexelGatherOffset), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxTexelGatherOffset), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.minInterpolationOffset), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxInterpolationOffset), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.subPixelInterpolationOffsetBits), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxFramebufferWidth), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxFramebufferHeight), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxFramebufferLayers), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.framebufferColorSampleCounts), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.framebufferDepthSampleCounts), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.framebufferStencilSampleCounts), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.framebufferNoAttachmentsSampleCounts), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxColorAttachments), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.sampledImageColorSampleCounts), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.sampledImageIntegerSampleCounts), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.sampledImageDepthSampleCounts), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.sampledImageStencilSampleCounts), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.storageImageSampleCounts), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxSampleMaskWords), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.timestampComputeAndGraphics), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.timestampPeriod), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxClipDistances), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxCullDistances), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.maxCombinedClipAndCullDistances), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.discreteQueuePriorities), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, pointfToStr(limits.pointSizeRange, 2),                     descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, pointfToStr(limits.lineWidthRange, 2),                     descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.pointSizeGranularity),               descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.lineWidthGranularity),               descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.strictLines),                        descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.standardSampleLocations),            descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.optimalBufferCopyOffsetAlignment),   descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.optimalBufferCopyRowPitchAlignment), descs[descIndex].second);
-        addLimitRow(descs[descIndex].first, std::to_string(limits.nonCoherentAtomSize),                descs[descIndex].second);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxImageDimension1D), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxImageDimension2D), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxImageDimension3D), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxImageDimensionCube), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxImageArrayLayers), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxTexelBufferElements), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxUniformBufferRange), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxStorageBufferRange), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxPushConstantsSize), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxMemoryAllocationCount), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxSamplerAllocationCount), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.bufferImageGranularity), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.sparseAddressSpaceSize), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxBoundDescriptorSets), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxPerStageDescriptorSamplers), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxPerStageDescriptorUniformBuffers), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxPerStageDescriptorStorageBuffers), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxPerStageDescriptorSampledImages), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxPerStageDescriptorStorageImages), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxPerStageDescriptorInputAttachments), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxPerStageResources), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxDescriptorSetSamplers), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxDescriptorSetUniformBuffers), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxDescriptorSetUniformBuffersDynamic), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxDescriptorSetStorageBuffers), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxDescriptorSetStorageBuffersDynamic), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxDescriptorSetSampledImages), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxDescriptorSetStorageImages), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxDescriptorSetInputAttachments), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxVertexInputAttributes), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxVertexInputBindings), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxVertexInputAttributeOffset), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxVertexInputBindingStride), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxVertexOutputComponents), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxTessellationGenerationLevel), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxTessellationPatchSize), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxTessellationControlPerVertexInputComponents), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxTessellationControlPerVertexOutputComponents), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxTessellationControlPerPatchOutputComponents), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxTessellationControlTotalOutputComponents), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxTessellationEvaluationInputComponents), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxTessellationEvaluationOutputComponents), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxGeometryShaderInvocations), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxGeometryInputComponents), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxGeometryOutputComponents), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxGeometryOutputVertices), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxGeometryTotalOutputComponents), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxFragmentInputComponents), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxFragmentOutputAttachments), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxFragmentDualSrcAttachments), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxFragmentCombinedOutputResources), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxComputeSharedMemorySize), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, pointToStr(limits.maxComputeWorkGroupCount, 3), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxComputeWorkGroupInvocations), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, pointToStr(limits.maxComputeWorkGroupSize, 3), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.subPixelPrecisionBits), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.subTexelPrecisionBits), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.mipmapPrecisionBits), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxDrawIndexedIndexValue), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxDrawIndirectCount), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxSamplerLodBias), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxSamplerAnisotropy), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxViewports), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, pointToStr(limits.maxViewportDimensions, 2), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, rangeToStr(limits.viewportBoundsRange, 2), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.viewportSubPixelBits), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.minMemoryMapAlignment), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.minTexelBufferOffsetAlignment), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.minUniformBufferOffsetAlignment), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.minStorageBufferOffsetAlignment), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.minTexelOffset), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxTexelOffset), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.minTexelGatherOffset), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxTexelGatherOffset), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.minInterpolationOffset), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxInterpolationOffset), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.subPixelInterpolationOffsetBits), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxFramebufferWidth), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxFramebufferHeight), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxFramebufferLayers), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.framebufferColorSampleCounts), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.framebufferDepthSampleCounts), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.framebufferStencilSampleCounts), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.framebufferNoAttachmentsSampleCounts), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxColorAttachments), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.sampledImageColorSampleCounts), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.sampledImageIntegerSampleCounts), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.sampledImageDepthSampleCounts), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.sampledImageStencilSampleCounts), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.storageImageSampleCounts), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxSampleMaskWords), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.timestampComputeAndGraphics), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.timestampPeriod), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxClipDistances), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxCullDistances), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.maxCombinedClipAndCullDistances), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.discreteQueuePriorities), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, pointfToStr(limits.pointSizeRange, 2),                     descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, pointfToStr(limits.lineWidthRange, 2),                     descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.pointSizeGranularity),               descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.lineWidthGranularity),               descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.strictLines),                        descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.standardSampleLocations),            descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.optimalBufferCopyOffsetAlignment),   descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.optimalBufferCopyRowPitchAlignment), descs[descIndex].description);
+        addLimitRow(descs[descIndex].name, std::to_string(limits.nonCoherentAtomSize),                descs[descIndex].description);
 
         d.limits.resize(1);
         d.limits[0].valueRows = limitRows;
@@ -953,8 +822,9 @@ std::shared_ptr<Data> createCapabilitiesData(
         d.memories[0].header.cells.push_back( { Data::Cell::Style::Header, "Properties",  "", -1  } );
         d.memories[0].header.cells.push_back( { Data::Cell::Style::Header, "Flags",       "", -1  } );
 
-        const std::vector<std::pair<std::string, std::string>> formatStrings =
-            readFormat("://descriptions/formats.txt");
+        VariableDescriptions formatVariableDesc("://descriptions/formats.txt");
+        std::vector<VariableDescriptions::VariableDescription> formatStrings =
+            formatVariableDesc.variableDescriptions();
 
         auto addFormatRow = [&](
                 std::vector<Data::Row>& rows,
@@ -978,8 +848,8 @@ std::shared_ptr<Data> createCapabilitiesData(
         {
             const VulkanObjects::Format& f = device.formats[i];
             addFormatRow(formatRows,
-                formatStrings[i].first,
-                formatStrings[i].second,
+                formatStrings[i].name,
+                formatStrings[i].description,
                 formatFeature(f.properties.linearTilingFeatures),
                 formatFeature(f.properties.optimalTilingFeatures),
                 formatFeature(f.properties.bufferFeatures));
