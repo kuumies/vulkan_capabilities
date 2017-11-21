@@ -31,19 +31,58 @@ void addRow(std::vector<Data::Row>& rows,
 
 /* -------------------------------------------------------------------------- */
 
+void addRow(std::vector<Data::Row>& rows,
+            const std::string& name,
+            const std::string& value,
+            const std::string& desc)
+{
+    rows.push_back(
+    {{
+        { Data::Cell::Style::NameLabel,  name,  desc, -1 },
+        { Data::Cell::Style::ValueLabel, value, desc, -1 },
+    }});
+}
+
+/* -------------------------------------------------------------------------- */
+
+// Transforms a variable name from 'myVeryOwnVariable' to
+// 'My Very Own Variable'.
+// BUG: issues with array indices
+std::string transformVariable(const std::string& inStd)
+{
+    QString in = QString::fromStdString(inStd);
+    QString out;
+    for (int i = 0; i < in.size(); ++i)
+    {
+        QChar c = in[i];
+        if (c.isUpper() || c.isDigit())
+            out.append(" ");
+        if (i == 0)
+            c = c.toUpper();
+        out.append(c);
+    }
+    return out.toStdString();
+};
+
+/* -------------------------------------------------------------------------- */
+
 std::vector<Data::Entry> getDeviceProperties(
     const vk::PhysicalDevice& device)
 {
     using namespace vk::stringify;
 
+    VariableDescriptions limitVariableDesc("://descriptions/properties.txt", transformVariable);
+    std::vector<VariableDescriptions::VariableDescription> descs =
+        limitVariableDesc.variableDescriptions();
+
     std::vector<Data::Row> rows;
-    addRow(rows, "Name",                device.properties.deviceName);
-    addRow(rows, "Type",                toString(device.properties.deviceType));
-    addRow(rows, "API Version",         versionNumber(device.properties.apiVersion));
-    addRow(rows, "Driver Version",      versionNumber(device.properties.driverVersion));
-    addRow(rows, "Vendor ID",           hexValueToString(device.properties.vendorID));
-    addRow(rows, "Device ID",           hexValueToString(device.properties.deviceID));
-    addRow(rows, "Pipeline Cache UUID", toString(device.properties.pipelineCacheUUID));
+    addRow(rows, "Name",                device.properties.deviceName,                   descs[0].description);
+    addRow(rows, "Type",                toString(device.properties.deviceType),         descs[1].description);
+    addRow(rows, "API Version",         versionNumber(device.properties.apiVersion),    descs[2].description);
+    addRow(rows, "Driver Version",      versionNumber(device.properties.driverVersion), descs[3].description);
+    addRow(rows, "Vendor ID",           hexValueToString(device.properties.vendorID),   descs[4].description);
+    addRow(rows, "Device ID",           hexValueToString(device.properties.deviceID),   descs[5].description);
+    addRow(rows, "Pipeline Cache UUID", toString(device.properties.pipelineCacheUUID),  descs[6].description);
 
     std::vector<Data::Entry> out;
     out.resize(1);
@@ -122,6 +161,9 @@ std::vector<Data::Entry> getDeviceLayers(
 
 std::vector<Data::Entry> getFeatures(const vk::PhysicalDevice& device)
 {
+    VariableDescriptions limitVariableDesc("://descriptions/features.txt", transformVariable);
+    std::vector<VariableDescriptions::VariableDescription> descs =
+        limitVariableDesc.variableDescriptions();
 
     auto vkboolToStr = [](const VkBool32& b)
     { return  b == VK_TRUE ? "Supported" : "Unsupported"; };
@@ -132,71 +174,74 @@ std::vector<Data::Entry> getFeatures(const vk::PhysicalDevice& device)
     std::vector<Data::Row> featureRows;
     auto addFeatureRow = [&](
             const std::string& name,
-            const VkBool32& b)
+            const VkBool32& b,
+            const std::string& desc)
     {
         featureRows.push_back(
         {{
-            { Data::Cell::Style::NameLabel, name,           "", -1 },
-            { vkboolToStyle(b),             vkboolToStr(b), "", -1 },
+            { Data::Cell::Style::NameLabel, name,           desc, -1 },
+            { vkboolToStyle(b),             vkboolToStr(b), desc, -1 },
         }});
     };
 
+    int descIndex = 0;
+
     const VkPhysicalDeviceFeatures f = device.features;
-    addFeatureRow("Robust Buffer Access",                         f.robustBufferAccess);
-    addFeatureRow("Full Draw Index Uint32",                       f.fullDrawIndexUint32);
-    addFeatureRow("Image Cube Array",                             f.imageCubeArray);
-    addFeatureRow("Independent Blend",                            f.independentBlend);
-    addFeatureRow("Geometry Shader",                              f.geometryShader);
-    addFeatureRow("Tesselation Shader",                           f.tessellationShader);
-    addFeatureRow("Sample Rate Shading",                          f.sampleRateShading);
-    addFeatureRow("Dual SRC Blend",                               f.dualSrcBlend);
-    addFeatureRow("Logic OP",                                     f.logicOp);
-    addFeatureRow("Multi Draw Indirect",                          f.multiDrawIndirect);
-    addFeatureRow("Draw Inderect First Instance",                 f.drawIndirectFirstInstance);
-    addFeatureRow("Depth CLamp",                                  f.depthClamp);
-    addFeatureRow("Depth Bias Clamp",                             f.depthBiasClamp);
-    addFeatureRow("Fill Mode Non Solid",                          f.fillModeNonSolid);
-    addFeatureRow("Depth Bounds",                                 f.depthBounds);
-    addFeatureRow("Wide Lines",                                   f.wideLines);
-    addFeatureRow("Large Points",                                 f.largePoints);
-    addFeatureRow("Alpha To One",                                 f.alphaToOne);
-    addFeatureRow("Multi Viewport",                               f.multiViewport);
-    addFeatureRow("Sampler Anisotropy",                           f.samplerAnisotropy);
-    addFeatureRow("Texture Compression ETC2",                     f.textureCompressionETC2);
-    addFeatureRow("Texture Compression ASTC_LDR",                 f.textureCompressionASTC_LDR);
-    addFeatureRow("Texture Compression BC",                       f.textureCompressionBC);
-    addFeatureRow("Occlusion Query Precise",                      f.occlusionQueryPrecise);
-    addFeatureRow("Pipeline Staticstics Query",                   f.pipelineStatisticsQuery);
-    addFeatureRow("Vertex Pipeline Stores and Atomics",           f.vertexPipelineStoresAndAtomics);
-    addFeatureRow("Fragment Stores and Atomics",                  f.fragmentStoresAndAtomics);
-    addFeatureRow("Shader Tesselation And Geometry Point Size",   f.shaderTessellationAndGeometryPointSize);
-    addFeatureRow("Shader Image Gather Extended",                 f.shaderImageGatherExtended);
-    addFeatureRow("Shader Storage Image Extended Formats",        f.shaderStorageImageExtendedFormats);
-    addFeatureRow("Shader Storage Image Multisample",             f.shaderStorageImageMultisample);
-    addFeatureRow("Shader Storage Image Read Without Format",     f.shaderStorageImageReadWithoutFormat);
-    addFeatureRow("Shader Storage image Write Without Format",    f.shaderStorageImageWriteWithoutFormat);
-    addFeatureRow("Shader Uniform Buffer Array Dynamic Indexing", f.shaderUniformBufferArrayDynamicIndexing);
-    addFeatureRow("Shader Sampled Array Dynamic Indexing",        f.shaderSampledImageArrayDynamicIndexing);
-    addFeatureRow("Shader Storage Buffer Array Dynamic Indexing", f.shaderStorageBufferArrayDynamicIndexing);
-    addFeatureRow("Shader Storage Image Array Dynamic Indexing",  f.shaderStorageImageArrayDynamicIndexing);
-    addFeatureRow("Shader Clip Distance",                         f.shaderClipDistance);
-    addFeatureRow("Shader Cull Distance",                         f.shaderCullDistance);
-    addFeatureRow("Shader Float64",                               f.shaderFloat64);
-    addFeatureRow("Shader Int64",                                 f.shaderInt64);
-    addFeatureRow("Shader Int16",                                 f.shaderInt16);
-    addFeatureRow("Shader Resource Residency",                    f.shaderResourceResidency);
-    addFeatureRow("Shader Resource Min LOD",                      f.shaderResourceMinLod);
-    addFeatureRow("Sparse Binding",                               f.sparseBinding);
-    addFeatureRow("Sparse Residency Buffer",                      f.sparseResidencyBuffer);
-    addFeatureRow("Sparse Residency Image 2D",                    f.sparseResidencyImage2D);
-    addFeatureRow("Sparse Residency Image 3D",                    f.sparseResidencyImage3D);
-    addFeatureRow("Sparse Residency 2 Samples",                   f.sparseResidency2Samples);
-    addFeatureRow("Sparse Residency 4 Samples",                   f.sparseResidency4Samples);
-    addFeatureRow("Sparse Residency 8 Samples",                   f.sparseResidency8Samples);
-    addFeatureRow("Sparse Residency 16 Samples",                  f.sparseResidency16Samples);
-    addFeatureRow("Sparse Residency Aliased",                     f.sparseResidencyAliased);
-    addFeatureRow("Variable Multisample Rate",                    f.variableMultisampleRate);
-    addFeatureRow("Inherited Queries",                            f.inheritedQueries);
+    addFeatureRow("Robust Buffer Access",                         f.robustBufferAccess, descs[descIndex++].description);
+    addFeatureRow("Full Draw Index Uint32",                       f.fullDrawIndexUint32, descs[descIndex++].description);
+    addFeatureRow("Image Cube Array",                             f.imageCubeArray, descs[descIndex++].description);
+    addFeatureRow("Independent Blend",                            f.independentBlend, descs[descIndex++].description);
+    addFeatureRow("Geometry Shader",                              f.geometryShader, descs[descIndex++].description);
+    addFeatureRow("Tesselation Shader",                           f.tessellationShader, descs[descIndex++].description);
+    addFeatureRow("Sample Rate Shading",                          f.sampleRateShading, descs[descIndex++].description);
+    addFeatureRow("Dual SRC Blend",                               f.dualSrcBlend, descs[descIndex++].description);
+    addFeatureRow("Logic OP",                                     f.logicOp, descs[descIndex++].description);
+    addFeatureRow("Multi Draw Indirect",                          f.multiDrawIndirect, descs[descIndex++].description);
+    addFeatureRow("Draw Inderect First Instance",                 f.drawIndirectFirstInstance, descs[descIndex++].description);
+    addFeatureRow("Depth CLamp",                                  f.depthClamp, descs[descIndex++].description);
+    addFeatureRow("Depth Bias Clamp",                             f.depthBiasClamp, descs[descIndex++].description);
+    addFeatureRow("Fill Mode Non Solid",                          f.fillModeNonSolid, descs[descIndex++].description);
+    addFeatureRow("Depth Bounds",                                 f.depthBounds, descs[descIndex++].description);
+    addFeatureRow("Wide Lines",                                   f.wideLines, descs[descIndex++].description);
+    addFeatureRow("Large Points",                                 f.largePoints, descs[descIndex++].description);
+    addFeatureRow("Alpha To One",                                 f.alphaToOne, descs[descIndex++].description);
+    addFeatureRow("Multi Viewport",                               f.multiViewport, descs[descIndex++].description);
+    addFeatureRow("Sampler Anisotropy",                           f.samplerAnisotropy, descs[descIndex++].description);
+    addFeatureRow("Texture Compression ETC2",                     f.textureCompressionETC2, descs[descIndex++].description);
+    addFeatureRow("Texture Compression ASTC_LDR",                 f.textureCompressionASTC_LDR, descs[descIndex++].description);
+    addFeatureRow("Texture Compression BC",                       f.textureCompressionBC, descs[descIndex++].description);
+    addFeatureRow("Occlusion Query Precise",                      f.occlusionQueryPrecise, descs[descIndex++].description);
+    addFeatureRow("Pipeline Staticstics Query",                   f.pipelineStatisticsQuery, descs[descIndex++].description);
+    addFeatureRow("Vertex Pipeline Stores and Atomics",           f.vertexPipelineStoresAndAtomics, descs[descIndex++].description);
+    addFeatureRow("Fragment Stores and Atomics",                  f.fragmentStoresAndAtomics, descs[descIndex++].description);
+    addFeatureRow("Shader Tesselation And Geometry Point Size",   f.shaderTessellationAndGeometryPointSize, descs[descIndex++].description);
+    addFeatureRow("Shader Image Gather Extended",                 f.shaderImageGatherExtended, descs[descIndex++].description);
+    addFeatureRow("Shader Storage Image Extended Formats",        f.shaderStorageImageExtendedFormats, descs[descIndex++].description);
+    addFeatureRow("Shader Storage Image Multisample",             f.shaderStorageImageMultisample, descs[descIndex++].description);
+    addFeatureRow("Shader Storage Image Read Without Format",     f.shaderStorageImageReadWithoutFormat, descs[descIndex++].description);
+    addFeatureRow("Shader Storage image Write Without Format",    f.shaderStorageImageWriteWithoutFormat, descs[descIndex++].description);
+    addFeatureRow("Shader Uniform Buffer Array Dynamic Indexing", f.shaderUniformBufferArrayDynamicIndexing, descs[descIndex++].description);
+    addFeatureRow("Shader Sampled Array Dynamic Indexing",        f.shaderSampledImageArrayDynamicIndexing, descs[descIndex++].description);
+    addFeatureRow("Shader Storage Buffer Array Dynamic Indexing", f.shaderStorageBufferArrayDynamicIndexing, descs[descIndex++].description);
+    addFeatureRow("Shader Storage Image Array Dynamic Indexing",  f.shaderStorageImageArrayDynamicIndexing, descs[descIndex++].description);
+    addFeatureRow("Shader Clip Distance",                         f.shaderClipDistance, descs[descIndex++].description);
+    addFeatureRow("Shader Cull Distance",                         f.shaderCullDistance, descs[descIndex++].description);
+    addFeatureRow("Shader Float64",                               f.shaderFloat64, descs[descIndex++].description);
+    addFeatureRow("Shader Int64",                                 f.shaderInt64, descs[descIndex++].description);
+    addFeatureRow("Shader Int16",                                 f.shaderInt16, descs[descIndex++].description);
+    addFeatureRow("Shader Resource Residency",                    f.shaderResourceResidency, descs[descIndex++].description);
+    addFeatureRow("Shader Resource Min LOD",                      f.shaderResourceMinLod, descs[descIndex++].description);
+    addFeatureRow("Sparse Binding",                               f.sparseBinding, descs[descIndex++].description);
+    addFeatureRow("Sparse Residency Buffer",                      f.sparseResidencyBuffer, descs[descIndex++].description);
+    addFeatureRow("Sparse Residency Image 2D",                    f.sparseResidencyImage2D, descs[descIndex++].description);
+    addFeatureRow("Sparse Residency Image 3D",                    f.sparseResidencyImage3D, descs[descIndex++].description);
+    addFeatureRow("Sparse Residency 2 Samples",                   f.sparseResidency2Samples, descs[descIndex++].description);
+    addFeatureRow("Sparse Residency 4 Samples",                   f.sparseResidency4Samples, descs[descIndex++].description);
+    addFeatureRow("Sparse Residency 8 Samples",                   f.sparseResidency8Samples, descs[descIndex++].description);
+    addFeatureRow("Sparse Residency 16 Samples",                  f.sparseResidency16Samples, descs[descIndex++].description);
+    addFeatureRow("Sparse Residency Aliased",                     f.sparseResidencyAliased, descs[descIndex++].description);
+    addFeatureRow("Variable Multisample Rate",                    f.variableMultisampleRate, descs[descIndex++].description);
+    addFeatureRow("Inherited Queries",                            f.inheritedQueries, descs[descIndex++].description);
 
     std::vector<Data::Entry> out;
     out.resize(1);
@@ -254,26 +299,7 @@ std::vector<Data::Entry> getLimits(const vk::PhysicalDevice& device)
         return ss.str();
     };
 
-    // Transforms a variable name from 'myVeryOwnVariable' to
-    // 'My Very Own Variable'.
-    // BUG: issues with array indices
-    auto transformLimitVariable = [](const std::string& inStd)
-    {
-        QString in = QString::fromStdString(inStd);
-        QString out;
-        for (int i = 0; i < in.size(); ++i)
-        {
-            QChar c = in[i];
-            if (c.isUpper() || c.isDigit())
-                out.append(" ");
-            if (i == 0)
-                c = c.toUpper();
-            out.append(c);
-        }
-        return out.toStdString();
-    };
-
-    VariableDescriptions limitVariableDesc("://descriptions/limits.txt", transformLimitVariable);
+    VariableDescriptions limitVariableDesc("://descriptions/limits.txt", transformVariable);
     std::vector<VariableDescriptions::VariableDescription> descs =
         limitVariableDesc.variableDescriptions();
 
@@ -418,6 +444,7 @@ std::vector<Data::Entry> getQueues(const vk::PhysicalDevice& device)
             std::vector<Data::Row>& rows,
             const std::string& familyIndex,
             const std::string& queueCount,
+            const std::string& presentation,
             const std::string& timestampValidBits,
             const std::string& flags,
             const std::string& minImageTransferGranularity)
@@ -426,6 +453,7 @@ std::vector<Data::Entry> getQueues(const vk::PhysicalDevice& device)
         {{
             { Data::Cell::Style::NameLabel,  familyIndex,                 "", -1 },
             { Data::Cell::Style::ValueLabel, queueCount,                  "", -1 },
+            { Data::Cell::Style::ValueLabel, presentation,                "", -1 },
             { Data::Cell::Style::ValueLabel, timestampValidBits,          "", -1 },
             { Data::Cell::Style::ValueLabel, flags,                       "", -1 },
             { Data::Cell::Style::ValueLabel, minImageTransferGranularity, "", -1 },
@@ -435,10 +463,12 @@ std::vector<Data::Entry> getQueues(const vk::PhysicalDevice& device)
     std::vector<Data::Row> queueRows;
     for (int familyIndex = 0; familyIndex < device.queueFamilies.size(); ++familyIndex)
     {
+        const bool presentation = device.queuePresentation[familyIndex];
         const VkQueueFamilyProperties& q = device.queueFamilies[familyIndex];
         addQueueRow(queueRows,
                     std::to_string(familyIndex),
                     std::to_string(q.queueCount),
+                    presentation ? "Supported" : "Unsupported",
                     std::to_string(q.timestampValidBits),
                     vk::stringify::toString(q.queueFlags),
                     vk::stringify::toString(q.minImageTransferGranularity));
@@ -449,6 +479,7 @@ std::vector<Data::Entry> getQueues(const vk::PhysicalDevice& device)
     out[0].valueRows = queueRows;
     out[0].header.cells.push_back( { Data::Cell::Style::Header, "Family Index",                    "", -1  } );
     out[0].header.cells.push_back( { Data::Cell::Style::Header, "Queue Count",                     "", -1  } );
+    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Presentation",                    "", -1  } );
     out[0].header.cells.push_back( { Data::Cell::Style::Header, "Capabilities",                    "", -1  } );
     out[0].header.cells.push_back( { Data::Cell::Style::Header, "Min Image Transfer\nGranularity", "", -1  } );
     out[0].header.cells.push_back( { Data::Cell::Style::Header, "Timestamp Valid\nBits",           "", -1  } );
@@ -592,7 +623,16 @@ std::vector<Data::Entry> getFormats(const vk::PhysicalDevice& device)
     out[0].header.cells.push_back( { Data::Cell::Style::Header, "Optimal Tiling",  "", -1  } );
     out[0].header.cells.push_back( { Data::Cell::Style::Header, "Buffer features", "", -1  } );
     return out;
+}
 
+/* -------------------------------------------------------------------------- */
+
+std::vector<Data::Entry> getSurface(
+    const vk::PhysicalDevice& device,
+    const vk::SurfaceWidget& surface)
+{
+    std::vector<Data::Entry> out;
+    return out;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -609,7 +649,9 @@ struct DataCreator::Impl
 
 /* -------------------------------------------------------------------------- */
 
-DataCreator::DataCreator(const vk::Instance& instance)
+DataCreator::DataCreator(
+    const vk::Instance& instance,
+    const vk::SurfaceWidget& surfaceWidget)
     : impl(std::make_shared<Impl>())
 {
     impl->data = std::make_shared<Data>();
@@ -624,6 +666,7 @@ DataCreator::DataCreator(const vk::Instance& instance)
         Data::PhysicalDeviceData d;
         d.name       = device.properties.deviceName;
         d.properties = getDeviceProperties(device);
+        d.properties[0].valueRows[0].cells[1].value = d.name;
         d.extensions = getDeviceExtentions(instance, device);
         d.layers     = getDeviceLayers(instance);
         d.features   = getFeatures(device);
@@ -631,6 +674,7 @@ DataCreator::DataCreator(const vk::Instance& instance)
         d.queues     = getQueues(device);
         d.memories   = getMemory(device);
         d.formats    = getFormats(device);
+        d.surface    = getSurface(device, surfaceWidget);
 
         impl->data->physicalDeviceData.push_back(d);
     }

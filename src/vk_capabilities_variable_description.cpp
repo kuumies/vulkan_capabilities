@@ -79,6 +79,24 @@ VariableDescriptions::VariableDescriptions(
             continue;
         if (line.isEmpty())
             continue;
+        if (line.startsWith("*"))
+        {
+            impl->descriptions[impl->descriptions.size()-1].description += "\n\t";
+            impl->descriptions[impl->descriptions.size()-1].description += line.toStdString();
+            continue;
+        }
+        if (line.startsWith("+"))
+        {
+            impl->descriptions[impl->descriptions.size()-1].description += "\n\t\t\t";
+            impl->descriptions[impl->descriptions.size()-1].description += line.toStdString();
+            continue;
+        }
+        if (line.startsWith("-"))
+        {
+            impl->descriptions[impl->descriptions.size()-1].description += "\n\t\t";
+            impl->descriptions[impl->descriptions.size()-1].description += line.toStdString();
+            continue;
+        }
 
         QString variable = line.section(" ", 0, 0);
         if (variableTransformFun)

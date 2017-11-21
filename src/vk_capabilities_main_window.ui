@@ -448,22 +448,31 @@
            </item>
            <item>
             <widget class="QToolButton" name="deviceButton">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="maximumSize">
               <size>
                <width>70</width>
-               <height>70</height>
+               <height>16777215</height>
               </size>
              </property>
              <property name="font">
               <font>
                <family>Segoe UI</family>
+               <pointsize>8</pointsize>
               </font>
              </property>
              <property name="styleSheet">
               <string notr="true"/>
              </property>
              <property name="text">
-              <string>GeF...080TI</string>
+              <string>MyVery
+OwnGraphics
+Device</string>
              </property>
              <property name="icon">
               <iconset>
@@ -619,8 +628,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>711</width>
-                    <height>767</height>
+                    <width>92</width>
+                    <height>62</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_12">
@@ -855,8 +864,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>693</width>
-                    <height>749</height>
+                    <width>78</width>
+                    <height>62</height>
                    </rect>
                   </property>
                   <layout class="QGridLayout" name="gridLayout_5">
@@ -1039,8 +1048,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>711</width>
-                    <height>767</height>
+                    <width>83</width>
+                    <height>62</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_13">

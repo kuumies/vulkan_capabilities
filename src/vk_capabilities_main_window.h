@@ -10,6 +10,10 @@
 #include <memory>
 #include <QtWidgets/QMainWindow>
 
+/* -------------------------------------------------------------------------- */
+
+#include "vk_capabilities_data.h"
+
 namespace kuu
 {
 namespace vk_capabilities
@@ -30,10 +34,27 @@ public:
     // Constructs the main window with an optional parent widget.
     explicit MainWindow(QWidget* parent = nullptr);
 
+    // Show the progress
+    void showProgress();
+    // Hides the progress
+    void hideProgress();
+
     // Sets the data model to fill the UI fields. If the system does not
     // contain a Vulkan implementation then a special message about this
-    // is visible.
+    // is visible. It is assumed than the data is set from non-UI thread.
+    void setDataAsync(std::shared_ptr<Data> data);
     void setData(std::shared_ptr<Data> data);
+
+signals:
+    void updateProgress();
+
+private slots:
+    void doSetNoVulkan();
+    void doSetNoPhysicalDevices();
+    void doUpdatePhysicalDeviceButtonMenu(const QStringList &devices);
+    void doUpdateEntryUi(QWidget* widget,
+                         const std::vector<Data::Entry>& entry);
+    void doSelectPhysicalDevice(int index);
 
 private:
     struct Impl;
@@ -42,3 +63,4 @@ private:
 
 } // namespace vk_capabilities
 } // namespace kuu
+

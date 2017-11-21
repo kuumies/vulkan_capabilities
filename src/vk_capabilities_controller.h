@@ -26,8 +26,8 @@ public:
     // and creates the model for UI to display the capabilities data.
     Controller();
 
-    // Shows the UI.
-    void showUi();
+    // Starts the application.
+    void start();
 
 private:
     struct Impl;

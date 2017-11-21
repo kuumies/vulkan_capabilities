@@ -23,7 +23,7 @@ struct Instance;
    until Vulkan instance is destroyed.
  * -------------------------------------------------------------------------- */
 struct PhysicalDevice
-{
+{   
     // Constructs the physical device.
     PhysicalDevice(const VkPhysicalDevice& physicalDevice,
                    const Instance& instance);
@@ -43,6 +43,8 @@ struct PhysicalDevice
 
     // Queue families. Vector index is the queue family index.
     std::vector<VkQueueFamilyProperties> queueFamilies;
+    // Queue presentation support status.
+    std::vector<bool> queuePresentation;
 
     // A vector of all of the formats that Vulkan support and the properties
     // associated with the format.

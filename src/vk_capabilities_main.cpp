@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
     app.setWindowIcon(QIcon("://icons/kuu.png"));
 
     kuu::vk_capabilities::Controller controller;
-    controller.showUi();
+    controller.start();
 
     return app.exec();
 }

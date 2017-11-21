@@ -67,6 +67,7 @@ struct Data
         std::vector<Entry> queues;
         std::vector<Entry> memories;
         std::vector<Entry> limits;
+        std::vector<Entry> surface;
     };
     std::vector<PhysicalDeviceData> physicalDeviceData;
 };

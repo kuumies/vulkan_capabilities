@@ -14,5 +14,8 @@
         <file>descriptions/limits.txt</file>
         <file>descriptions/formats.txt</file>
         <file>icons/database.png</file>
+        <file>descriptions/properties.txt</file>
+        <file>descriptions/features.txt</file>
+        <file>icons/Vulkan_100px_Dec16.png</file>
     </qresource>
 </RCC>

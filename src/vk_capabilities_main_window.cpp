@@ -9,6 +9,7 @@
 /* -------------------------------------------------------------------------- */
 
 #include <QtWidgets/QCheckBox>
+#include <QtWidgets/QProgressDialog>
 
 /* -------------------------------------------------------------------------- */
 
@@ -23,16 +24,37 @@ namespace
 {
 
 /* -------------------------------------------------------------------------- *
+   Returns true if the row is a multiline row.
+ * -------------------------------------------------------------------------- */
+bool isMultiline(const std::vector<Data::Cell>& cells)
+{
+    bool out = false;
+    for (const Data::Cell& c : cells)
+    {
+        QString value = QString::fromStdString(c.value);
+        if (value.contains("\n"))
+        {
+            out = true;
+            break;
+        }
+    }
+    return out;
+}
+
+/* -------------------------------------------------------------------------- *
    Returns a layout with cell label.
  * -------------------------------------------------------------------------- */
 QLayout* cellLabelsLayout(const std::vector<Data::Cell>& cells)
 {
+    const bool multiline = isMultiline(cells);
     QHBoxLayout* rLayout = new QHBoxLayout();
     for (const Data::Cell& c : cells)
     {
         QLabel* cellLabel = new QLabel(QString::fromStdString(c.value));
         cellLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
-        cellLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+
+        if (multiline)
+            cellLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
         if (c.size > 0)
         {
             cellLabel->setMinimumWidth(c.size);
@@ -75,8 +97,10 @@ QLayout* cellLabelsLayout(const std::vector<Data::Cell>& cells)
  * -------------------------------------------------------------------------- */
 void updateEntryUi(QWidget* w, const std::vector<Data::Entry>& entries)
 {
+
     QVBoxLayout* wLayout = new QVBoxLayout();
     delete w->layout();
+    qDeleteAll(w->children());
     w->setLayout(wLayout);
 
     for (const Data::Entry& e : entries)
@@ -95,20 +119,34 @@ void updateEntryUi(QWidget* w, const std::vector<Data::Entry>& entries)
 /* -------------------------------------------------------------------------- *
    Update the UI from the data.
  * -------------------------------------------------------------------------- */
-void updateUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
-{
+void updateUi(QMainWindow* mainWindow,
+              Ui::MainWindow& ui,
+              Data& d,
+              bool uiThread,
+              int deviceIndex = -1)
+{ 
+    Qt::ConnectionType connectionType =
+        uiThread ? Qt::AutoConnection
+                 : Qt::BlockingQueuedConnection;
+
     if (!d.hasVulkan)
     {
-        ui.errorMessage->setText("No Vulkan Implementation Found");
-        ui.mainStackedWidget->setCurrentIndex(1);
+        QMetaObject::invokeMethod(
+            mainWindow,
+            "doSetNoVulkan",
+            connectionType);
+
         return;
     }
 
     if (!d.physicalDeviceData.size())
     {
-        ui.errorMessage->setText("No Devices with Vulkan capability");
-        ui.mainStackedWidget->setCurrentIndex(1);
-        return; // No devices
+        QMetaObject::invokeMethod(
+            mainWindow,
+            "doSetNoPhysicalDevices",
+            connectionType);
+
+        return;
     }
 
     ui.mainStackedWidget->setCurrentIndex(0);
@@ -116,27 +154,73 @@ void updateUi(Ui::MainWindow& ui, Data& d, int deviceIndex = -1)
     if (deviceIndex == -1)
         deviceIndex = 0;
 
+    Data::PhysicalDeviceData& dev = d.physicalDeviceData[deviceIndex];   
 
-    Data::PhysicalDeviceData& dev = d.physicalDeviceData[deviceIndex];
+    QMetaObject::invokeMethod(
+        mainWindow,
+        "doUpdateEntryUi",
+        connectionType,
+        Q_ARG(QWidget*, ui.properties),
+        Q_ARG(std::vector<Data::Entry>, dev.properties));
 
-    updateEntryUi(ui.properties, dev.properties);
-    updateEntryUi(ui.extensions, dev.extensions);
-    updateEntryUi(ui.layers,     dev.layers);
-    updateEntryUi(ui.features,   dev.features);
-    updateEntryUi(ui.queues,     dev.queues);
-    updateEntryUi(ui.memory,     dev.memories);
-    updateEntryUi(ui.formats,    dev.formats);
-    updateEntryUi(ui.limits,     dev.limits);
+    QMetaObject::invokeMethod(
+        mainWindow,
+        "doUpdateEntryUi",
+        connectionType,
+        Q_ARG(QWidget*, ui.extensions),
+        Q_ARG(std::vector<Data::Entry>, dev.extensions));
 
-    QMenu* deviceMenu = new QMenu();
-    deviceMenu->setFont(QFont("Segoe UI", 10));
-    for (const Data::PhysicalDeviceData& dev : d.physicalDeviceData)
-        deviceMenu->addAction(QString::fromStdString(dev.name));
+    QMetaObject::invokeMethod(
+        mainWindow,
+        "doUpdateEntryUi",
+        connectionType,
+        Q_ARG(QWidget*, ui.layers),
+        Q_ARG(std::vector<Data::Entry>, dev.layers));
 
-    ui.deviceButton->blockSignals(true);
-    ui.deviceButton->setMenu(deviceMenu);
-    ui.deviceButton->setText(QString::fromStdString(dev.name));
-    ui.deviceButton->blockSignals(false);
+    QMetaObject::invokeMethod(
+        mainWindow,
+        "doUpdateEntryUi",
+        connectionType,
+        Q_ARG(QWidget*, ui.features),
+        Q_ARG(std::vector<Data::Entry>, dev.features));
+
+    QMetaObject::invokeMethod(
+        mainWindow,
+        "doUpdateEntryUi",
+        connectionType,
+        Q_ARG(QWidget*, ui.queues),
+        Q_ARG(std::vector<Data::Entry>, dev.queues));
+
+    QMetaObject::invokeMethod(
+        mainWindow,
+        "doUpdateEntryUi",
+        connectionType,
+        Q_ARG(QWidget*, ui.memory),
+        Q_ARG(std::vector<Data::Entry>, dev.memories));
+
+    QMetaObject::invokeMethod(
+        mainWindow,
+        "doUpdateEntryUi",
+        connectionType,
+        Q_ARG(QWidget*, ui.formats),
+        Q_ARG(std::vector<Data::Entry>, dev.formats));
+
+    QMetaObject::invokeMethod(
+        mainWindow,
+        "doUpdateEntryUi",
+        connectionType,
+        Q_ARG(QWidget*, ui.limits),
+        Q_ARG(std::vector<Data::Entry>, dev.limits));
+
+    QStringList devices;
+    for (Data::PhysicalDeviceData& dev : d.physicalDeviceData)
+        devices.push_back(QString::fromStdString(dev.name));
+
+    QMetaObject::invokeMethod(
+        mainWindow,
+        "doUpdatePhysicalDeviceButtonMenu",
+        connectionType,
+        Q_ARG(QStringList, devices));
 }
 
 } // anonymous namespace
@@ -147,6 +231,8 @@ struct MainWindow::Impl
 {
     Impl(MainWindow* self)
     {
+        qRegisterMetaType<std::vector<Data::Entry>>("std::vector<Data::Entry>");
+
         ui.setupUi(self);
         ui.mainStackedWidget->setCurrentIndex(0);
         ui.capabilitiesStackedWidget->setCurrentIndex(0);
@@ -178,8 +264,12 @@ struct MainWindow::Impl
 
     // UI controls
     Ui::MainWindow ui;
+    // Progress dialog.
+    QProgressDialog progress;
     // Data model.
     std::shared_ptr<Data> data;
+    // Device index.
+    int deviceIndex = 0;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -191,10 +281,129 @@ MainWindow::MainWindow(QWidget* parent)
 
 /* -------------------------------------------------------------------------- */
 
-void MainWindow::setData(std::shared_ptr<Data> data)
+void MainWindow::showProgress()
+{
+    QProgressDialog& progress = impl->progress;
+    Qt::WindowFlags flags = progress.windowFlags();
+    flags = flags & (~Qt::WindowContextHelpButtonHint); // '?' icon
+    flags = flags & (~Qt::WindowCloseButtonHint);       // 'X' icon
+    progress.setWindowFlags(flags);
+    progress.setRange(0, 9);
+    progress.setValue(0);
+    progress.setCancelButton(nullptr);
+    progress.setWindowTitle("Vulkan capabilities...");
+    progress.setLabelText("Checking Vulkan capabilities... please wait...");
+    progress.show();
+
+    auto progressUpdate = [&]()
+    { progress.setValue(progress.value() + 1); };
+
+    QObject::connect(this,
+                     &MainWindow::updateProgress,
+                     progressUpdate);
+
+    QApplication::processEvents(
+        QEventLoop::ExcludeUserInputEvents);
+}
+
+/* -------------------------------------------------------------------------- */
+
+void MainWindow::hideProgress()
+{
+    QProgressDialog& progress = impl->progress;
+    progress.hide();
+    progress.reset();
+
+    QApplication::processEvents(
+        QEventLoop::ExcludeUserInputEvents);
+}
+
+/* -------------------------------------------------------------------------- */
+
+void MainWindow::setDataAsync(std::shared_ptr<Data> data)
 {
     impl->data = data;
-    updateUi(impl->ui, *impl->data);
+    updateUi(this, impl->ui, *impl->data, false);
+}
+
+/* -------------------------------------------------------------------------- */
+
+void MainWindow::setData(std::shared_ptr<Data> data)
+{
+    showProgress();
+    impl->data = data;
+    updateUi(this, impl->ui, *impl->data, true, impl->deviceIndex);
+    QApplication::processEvents(
+        QEventLoop::ExcludeUserInputEvents);
+    hideProgress();
+}
+
+/* -------------------------------------------------------------------------- */
+
+void MainWindow::doSetNoVulkan()
+{
+    impl->ui.errorMessage->setText("No Vulkan Implementation Found");
+    impl->ui.mainStackedWidget->setCurrentIndex(1);
+}
+
+/* -------------------------------------------------------------------------- */
+
+void MainWindow::doSetNoPhysicalDevices()
+{
+    impl->ui.errorMessage->setText("No Devices with Vulkan capability");
+    impl->ui.mainStackedWidget->setCurrentIndex(1);
+}
+
+/* -------------------------------------------------------------------------- */
+
+void MainWindow::doUpdatePhysicalDeviceButtonMenu(const QStringList& devices)
+{
+    QMenu* deviceMenu = new QMenu();
+    deviceMenu->setFont(QFont("Segoe UI", 10));
+    for (int deviceIndex = 0; deviceIndex < devices.size(); ++deviceIndex)
+    {
+        const QString dev = devices[deviceIndex];
+        QAction* a = deviceMenu->addAction(dev);
+        a->setProperty("device_index", deviceIndex);
+
+        connect(a, &QAction::triggered, [&, deviceIndex]()
+        {
+            QMetaObject::invokeMethod(
+                this,
+                "doSelectPhysicalDevice",
+                Q_ARG(int, deviceIndex));
+        });
+    }
+
+    QString devText = "No Device";
+    if (impl->deviceIndex >= 0 && impl->deviceIndex < devices.size())
+        devText = devices[impl->deviceIndex];
+    devText.replace(" ", "\n");
+
+    impl->ui.deviceButton->blockSignals(true);
+    impl->ui.deviceButton->setMenu(deviceMenu);
+    impl->ui.deviceButton->setText(devText);
+    impl->ui.deviceButton->blockSignals(false);
+}
+
+/* -------------------------------------------------------------------------- */
+
+void MainWindow::doUpdateEntryUi(
+    QWidget* widget,
+    const std::vector<Data::Entry>& entry)
+{
+    emit updateProgress();
+    QApplication::processEvents();
+    updateEntryUi(widget, entry);
+    QApplication::processEvents();
+}
+
+/* -------------------------------------------------------------------------- */
+
+void MainWindow::doSelectPhysicalDevice(int index)
+{
+    impl->deviceIndex = index;
+    setData(impl->data);
 }
 
 } // namespace vk_capabilities

@@ -15,6 +15,10 @@
 #include "vk_instance.h"
 #include "vk_stringify.h"
 
+#ifdef _WIN32
+    #include "vk_windows.h"
+#endif
+
 namespace kuu
 {
 namespace vk
@@ -96,6 +100,32 @@ std::vector<VkQueueFamilyProperties> getQueueFamilies(
     return queueFamilyProperties;
 }
 
+std::vector<bool> getQueuePresentationSupports(
+    const VkInstance& instance,
+    const VkPhysicalDevice& physicalDevice,
+    const std::vector<VkQueueFamilyProperties>& queueProperties)
+{
+    std::vector<bool> presentationSupports;
+    for (uint32_t queueFamilyIndex = 0;
+         queueFamilyIndex < queueProperties.size();
+         ++queueFamilyIndex)
+    {
+#ifdef _WIN32
+        using namespace windows;
+        VkBool32 result = vkGetPhysicalDeviceWin32PresentationSupportKHR(
+            instance,
+            physicalDevice,  // [in] physical device handle
+            queueFamilyIndex);
+        presentationSupports.push_back(result == VK_TRUE);
+#else
+        std::cerr << __FUNCTION__ << "Unsupported OS" << std::endl;
+        presentationSupports.push_back(false);
+#endif
+    }
+
+    return presentationSupports;
+}
+
 /* -------------------------------------------------------------------------- */
 
 std::vector<VkExtensionProperties> getExtensions(
@@ -172,12 +202,13 @@ PhysicalDevice::PhysicalDevice(const VkPhysicalDevice& physicalDevice,
                                const Instance& instance)
     : physicalDevice(physicalDevice)
 {
-    properties       = getProperties(physicalDevice);
-    features         = getFeatures(physicalDevice);
-    memoryProperties = getMemoryProperties(physicalDevice);
-    queueFamilies    = getQueueFamilies(physicalDevice);
-    formats          = getFormats(physicalDevice);
-    extensions       = getExtensions(physicalDevice);
+    properties        = getProperties(physicalDevice);
+    features          = getFeatures(physicalDevice);
+    memoryProperties  = getMemoryProperties(physicalDevice);
+    queueFamilies     = getQueueFamilies(physicalDevice);
+    queuePresentation = getQueuePresentationSupports(instance.instance, physicalDevice, queueFamilies);
+    formats           = getFormats(physicalDevice);
+    extensions        = getExtensions(physicalDevice);
 
     const auto it = std::find_if(
         instance.extensionNames.begin(),
