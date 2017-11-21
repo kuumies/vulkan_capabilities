@@ -92,12 +92,38 @@ QLayout* cellLabelsLayout(const std::vector<Data::Cell>& cells)
     return rLayout;
 }
 
+void updateEntryUi(QTableWidget* w, const std::vector<Data::Entry>& entries)
+{
+    const Data::Entry& e = entries.front();
+    w->setRowCount(int(e.valueRows.size()));
+    w->setColumnCount(int(e.valueRows.front().cells.size()));
+    w->setWordWrap(true);
+    w->setTextElideMode(Qt::ElideMiddle);
+
+
+    for (int rIndex = 0; rIndex < e.valueRows.size(); ++rIndex)
+    {
+        const Data::Row& r = e.valueRows[rIndex];
+        for (int cIndex = 0; cIndex < r.cells.size(); ++cIndex)
+        {
+            const Data::Cell& c = r.cells[cIndex];
+
+            QTableWidgetItem* item = new QTableWidgetItem();
+            item->setText(QString::fromStdString(c.value));
+            item->setTextAlignment(Qt::AlignLeft | Qt::AlignTop);
+            w->setItem(rIndex, cIndex, item);
+        }
+    }
+
+    w->resizeColumnsToContents();
+    w->resizeRowsToContents();
+}
+
 /* -------------------------------------------------------------------------- *
    Updates the entry UI
  * -------------------------------------------------------------------------- */
 void updateEntryUi(QWidget* w, const std::vector<Data::Entry>& entries)
-{
-
+{   
     QVBoxLayout* wLayout = new QVBoxLayout();
     delete w->layout();
     qDeleteAll(w->children());
@@ -392,6 +418,12 @@ void MainWindow::doUpdateEntryUi(
     QWidget* widget,
     const std::vector<Data::Entry>& entry)
 {
+    if (widget == impl->ui.formats)
+    {
+        updateEntryUi(impl->ui.tableWidget, entry);
+        return;
+    }
+
     emit updateProgress();
     QApplication::processEvents();
     updateEntryUi(widget, entry);
