@@ -15,6 +15,7 @@
 /* -------------------------------------------------------------------------- */
 #include "vk_capabilities_data.h"
 #include "vk_instance.h"
+#include "vk_surface_properties.h"
 #include "vk_surface_widget.h"
 
 namespace kuu
@@ -35,7 +36,8 @@ public:
     // Construct the APP data creator from the Vulkan instance. This will
     // create fill the data structure. Get it with data() function.
     DataCreator(const vk::Instance& instance,
-                const vk::SurfaceWidget& surfaceWidget);
+                const vk::SurfaceWidget& surfaceWidget,
+                const std::vector<vk::SurfaceProperties> surfaceProperties);
 
     // Returns the data.
     std::shared_ptr<Data> data() const;

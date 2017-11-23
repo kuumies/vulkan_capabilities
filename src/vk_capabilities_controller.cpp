@@ -37,7 +37,7 @@ struct Controller::Impl
     // Surface widget
     std::unique_ptr<vk::SurfaceWidget> surfaceWidget;
     // Surface properties
-    std::vector<std::shared_ptr<vk::SurfaceProperties>> surfaceProperties;
+    std::vector<vk::SurfaceProperties> surfaceProperties;
     // Capabilities data created from vulkan objects.
     std::shared_ptr<Data> capabilitiesData;
 };
@@ -83,7 +83,7 @@ void Controller::start()
         for (const vk::PhysicalDevice& device : impl->instance->physicalDevices)
         {
             impl->surfaceProperties.push_back(
-                std::make_shared<vk::SurfaceProperties>(
+                vk::SurfaceProperties(
                     impl->instance->instance,
                     device.physicalDevice,
                     impl->surfaceWidget->surface()));
@@ -92,7 +92,7 @@ void Controller::start()
                 std::make_shared<vk::MonitorProperties>(
                     device.physicalDevice));
         }
-        impl->capabilitiesData = DataCreator(*impl->instance, *impl->surfaceWidget).data();
+        impl->capabilitiesData = DataCreator(*impl->instance, *impl->surfaceWidget, impl->surfaceProperties).data();
         impl->mainWindow->setDataAsync(impl->capabilitiesData);
     });
 

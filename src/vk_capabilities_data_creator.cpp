@@ -630,9 +630,33 @@ std::vector<Data::Entry> getFormats(const vk::PhysicalDevice& device)
 
 std::vector<Data::Entry> getSurface(
     const vk::PhysicalDevice& device,
-    const vk::SurfaceWidget& surface)
+    const vk::SurfaceWidget& surface,
+    const std::vector<vk::SurfaceProperties> surfaceProperties)
 {   
+    std::vector<Data::Row> rows;
+    auto addRow = [&](
+            const std::string& name,
+            const std::string& desc,
+            const std::string& value)
+    {
+        rows.push_back(
+        {{
+            { Data::Cell::Style::NameLabel,  name,   desc, -1 },
+            { Data::Cell::Style::ValueLabel, value,  "",   -1 },
+        }});
+    };
+
+    for (const vk::SurfaceProperties& property : surfaceProperties)
+    {
+        addRow("Min Image Count", "",
+                std::to_string(property.surfaceCapabilities.maxImageArrayLayers));
+    }
+
     std::vector<Data::Entry> out;
+    out.resize(1);
+    out[0].valueRows = rows;
+    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Name",    "", -1  } );
+    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Value",   "", -1  } );
     return out;
 }
 
@@ -652,7 +676,8 @@ struct DataCreator::Impl
 
 DataCreator::DataCreator(
     const vk::Instance& instance,
-    const vk::SurfaceWidget& surfaceWidget)
+    const vk::SurfaceWidget& surfaceWidget,
+    const std::vector<vk::SurfaceProperties> surfaceProperties)
     : impl(std::make_shared<Impl>())
 {
     impl->data = std::make_shared<Data>();
@@ -675,7 +700,7 @@ DataCreator::DataCreator(
         d.queues     = getQueues(device);
         d.memories   = getMemory(device);
         d.formats    = getFormats(device);
-        d.surface    = getSurface(device, surfaceWidget);
+        d.surface    = getSurface(device, surfaceWidget, surfaceProperties);
 
         impl->data->physicalDeviceData.push_back(d);
     }

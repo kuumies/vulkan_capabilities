@@ -86,11 +86,11 @@ void updateEntryUi(std::vector<QTableWidget*> tableWidgets,
             }
         }
 
-        w->resizeColumnsToContents();
-        w->resizeRowsToContents();
         for (int c = 0; c < w->horizontalHeader()->count(); ++c)
             w->horizontalHeader()->setSectionResizeMode(
                 c, QHeaderView::Stretch);
+        w->resizeColumnsToContents();
+        w->resizeRowsToContents();
     }
 }
 
@@ -194,6 +194,13 @@ void updateUi(QMainWindow* mainWindow,
         connectionType,
         Q_ARG(std::vector<QTableWidget*>, { ui.limitsTableWidget } ),
         Q_ARG(std::vector<Data::Entry>, dev.limits));
+
+    QMetaObject::invokeMethod(
+        mainWindow,
+        "doUpdateEntryUi",
+        connectionType,
+        Q_ARG(std::vector<QTableWidget*>, { ui.surfaceTableWidget } ),
+        Q_ARG(std::vector<Data::Entry>, dev.surface));
 
     QStringList devices;
     for (Data::PhysicalDeviceData& dev : d.physicalDeviceData)
