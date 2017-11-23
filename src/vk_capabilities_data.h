@@ -46,10 +46,10 @@ struct Data
 
     struct Entry
     {
+        bool showHeader = true;
         Row header;
         std::vector<Row> valueRows;
     };
-
 
     // True if the system has Vulkan implementation.
     bool hasVulkan = false;

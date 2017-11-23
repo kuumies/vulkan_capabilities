@@ -42,103 +42,57 @@ bool isMultiline(const std::vector<Data::Cell>& cells)
 }
 
 /* -------------------------------------------------------------------------- *
-   Returns a layout with cell label.
+   Update table widgets from entry data.
  * -------------------------------------------------------------------------- */
-QLayout* cellLabelsLayout(const std::vector<Data::Cell>& cells)
+void updateEntryUi(std::vector<QTableWidget*> tableWidgets,
+                   const std::vector<Data::Entry>& entries)
 {
-    const bool multiline = isMultiline(cells);
-    QHBoxLayout* rLayout = new QHBoxLayout();
-    for (const Data::Cell& c : cells)
+    if (tableWidgets.size() != entries.size())
+        return;
+
+    for (int i = 0; i < entries.size(); ++i)
     {
-        QLabel* cellLabel = new QLabel(QString::fromStdString(c.value));
-        cellLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        const Data::Entry& e = entries[i];
+        QTableWidget* w = tableWidgets[i];
+        w->setRowCount(int(e.valueRows.size()));
+        w->setColumnCount(int(e.valueRows.front().cells.size()));
+        w->setWordWrap(true);
+        w->setTextElideMode(Qt::ElideMiddle);
+        w->verticalHeader()->setVisible(false);
 
-        if (multiline)
-            cellLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
-        if (c.size > 0)
+        if (e.showHeader)
+            w->horizontalHeader()->setVisible(true);
+
+        for (int rIndex = 0; rIndex < e.valueRows.size(); ++rIndex)
         {
-            cellLabel->setMinimumWidth(c.size);
-            cellLabel->setMaximumWidth(c.size);
+            const Data::Row& r = e.valueRows[rIndex];
+            for (int cIndex = 0; cIndex < r.cells.size(); ++cIndex)
+            {
+                const Data::Cell& c = r.cells[cIndex];
+
+                QTableWidgetItem* item = new QTableWidgetItem();
+                item->setText(QString::fromStdString(c.value));
+                //item->setTextAlignment(Qt::AlignLeft | Qt::AlignTop);
+                item->setToolTip(QString::fromStdString(c.desc));
+                if (c.style == Data::Cell::Style::ValueLabelValid)
+                {
+                    item->setFont(QFont("Segoe UI", 10, QFont::Bold));
+                    item->setTextColor(Qt::darkGreen);
+
+                }
+                else if (c.style == Data::Cell::Style::ValueLabelInvalid)
+                {
+                    item->setTextColor(Qt::darkRed);
+                }
+                w->setItem(rIndex, cIndex, item);
+            }
         }
-        if (c.desc.size())
-            cellLabel->setToolTip(QString::fromStdString(c.desc));
 
-        switch(c.style)
-        {
-            case Data::Cell::Style::Header:
-                cellLabel->setProperty("nameHeaderLabel", true);
-                break;
-            case Data::Cell::Style::NameLabel:
-                cellLabel->setProperty("nameValueLabel", true);
-                break;
-            case Data::Cell::Style::ValueLabel:
-                cellLabel->setProperty("nameValueLabel", true);
-                cellLabel->setFrameShape(QFrame::Panel);
-                cellLabel->setFrameShadow(QFrame::Sunken);
-                break;
-            case Data::Cell::Style::ValueLabelValid:
-                cellLabel->setProperty("nameValueValidLabel", true);
-                cellLabel->setFrameShape(QFrame::Panel);
-                cellLabel->setFrameShadow(QFrame::Sunken);
-                break;
-            case Data::Cell::Style::ValueLabelInvalid:
-                cellLabel->setProperty("nameValueInvalidLabel", true);
-                cellLabel->setFrameShape(QFrame::Panel);
-                cellLabel->setFrameShadow(QFrame::Sunken);
-                break;
-        }
-        rLayout->addWidget(cellLabel);
-    }
-    return rLayout;
-}
-
-void updateEntryUi(QTableWidget* w, const std::vector<Data::Entry>& entries)
-{
-    const Data::Entry& e = entries.front();
-    w->setRowCount(int(e.valueRows.size()));
-    w->setColumnCount(int(e.valueRows.front().cells.size()));
-    w->setWordWrap(true);
-    w->setTextElideMode(Qt::ElideMiddle);
-
-
-    for (int rIndex = 0; rIndex < e.valueRows.size(); ++rIndex)
-    {
-        const Data::Row& r = e.valueRows[rIndex];
-        for (int cIndex = 0; cIndex < r.cells.size(); ++cIndex)
-        {
-            const Data::Cell& c = r.cells[cIndex];
-
-            QTableWidgetItem* item = new QTableWidgetItem();
-            item->setText(QString::fromStdString(c.value));
-            item->setTextAlignment(Qt::AlignLeft | Qt::AlignTop);
-            w->setItem(rIndex, cIndex, item);
-        }
-    }
-
-    w->resizeColumnsToContents();
-    w->resizeRowsToContents();
-}
-
-/* -------------------------------------------------------------------------- *
-   Updates the entry UI
- * -------------------------------------------------------------------------- */
-void updateEntryUi(QWidget* w, const std::vector<Data::Entry>& entries)
-{   
-    QVBoxLayout* wLayout = new QVBoxLayout();
-    delete w->layout();
-    qDeleteAll(w->children());
-    w->setLayout(wLayout);
-
-    for (const Data::Entry& e : entries)
-    {
-        QLayout* hLayout = cellLabelsLayout(e.header.cells);
-        wLayout->addLayout(hLayout);
-
-        for (const Data::Row& r : e.valueRows)
-        {
-            QLayout* rLayout = cellLabelsLayout(r.cells);
-            wLayout->addLayout(rLayout);
-        }
+        w->resizeColumnsToContents();
+        w->resizeRowsToContents();
+        for (int c = 0; c < w->horizontalHeader()->count(); ++c)
+            w->horizontalHeader()->setSectionResizeMode(
+                c, QHeaderView::Stretch);
     }
 }
 
@@ -175,7 +129,7 @@ void updateUi(QMainWindow* mainWindow,
         return;
     }
 
-    ui.mainStackedWidget->setCurrentIndex(0);
+//    ui.mainStackedWidget->setCurrentIndex(0);
 
     if (deviceIndex == -1)
         deviceIndex = 0;
@@ -186,56 +140,61 @@ void updateUi(QMainWindow* mainWindow,
         mainWindow,
         "doUpdateEntryUi",
         connectionType,
-        Q_ARG(QWidget*, ui.properties),
+        Q_ARG(std::vector<QTableWidget*>, { ui.propertiesTableWidget } ),
         Q_ARG(std::vector<Data::Entry>, dev.properties));
 
+    std::vector<QTableWidget*> instanceWidgets =
+    {
+        ui.instanceExtensionsTableWidget,
+        ui.deviceExtensionsTableWidget
+    };
     QMetaObject::invokeMethod(
         mainWindow,
         "doUpdateEntryUi",
         connectionType,
-        Q_ARG(QWidget*, ui.extensions),
+        Q_ARG(std::vector<QTableWidget*>, instanceWidgets ),
         Q_ARG(std::vector<Data::Entry>, dev.extensions));
 
     QMetaObject::invokeMethod(
         mainWindow,
         "doUpdateEntryUi",
         connectionType,
-        Q_ARG(QWidget*, ui.layers),
+        Q_ARG(std::vector<QTableWidget*>, { ui.layersTableWidget } ),
         Q_ARG(std::vector<Data::Entry>, dev.layers));
 
     QMetaObject::invokeMethod(
         mainWindow,
         "doUpdateEntryUi",
         connectionType,
-        Q_ARG(QWidget*, ui.features),
+        Q_ARG(std::vector<QTableWidget*>, { ui.featuresTableWidget } ),
         Q_ARG(std::vector<Data::Entry>, dev.features));
 
     QMetaObject::invokeMethod(
         mainWindow,
         "doUpdateEntryUi",
         connectionType,
-        Q_ARG(QWidget*, ui.queues),
+        Q_ARG(std::vector<QTableWidget*>, { ui.queuesTableWidget } ),
         Q_ARG(std::vector<Data::Entry>, dev.queues));
 
     QMetaObject::invokeMethod(
         mainWindow,
         "doUpdateEntryUi",
         connectionType,
-        Q_ARG(QWidget*, ui.memory),
-        Q_ARG(std::vector<Data::Entry>, dev.memories));
+                Q_ARG(std::vector<QTableWidget*>, { ui.memoryTableWidget } ),
+                Q_ARG(std::vector<Data::Entry>, dev.memories));
 
     QMetaObject::invokeMethod(
         mainWindow,
         "doUpdateEntryUi",
         connectionType,
-        Q_ARG(QWidget*, ui.formats),
+        Q_ARG(std::vector<QTableWidget*>, { ui.formatsTableWidget} ),
         Q_ARG(std::vector<Data::Entry>, dev.formats));
 
     QMetaObject::invokeMethod(
         mainWindow,
         "doUpdateEntryUi",
         connectionType,
-        Q_ARG(QWidget*, ui.limits),
+        Q_ARG(std::vector<QTableWidget*>, { ui.limitsTableWidget } ),
         Q_ARG(std::vector<Data::Entry>, dev.limits));
 
     QStringList devices;
@@ -260,7 +219,7 @@ struct MainWindow::Impl
         qRegisterMetaType<std::vector<Data::Entry>>("std::vector<Data::Entry>");
 
         ui.setupUi(self);
-        ui.mainStackedWidget->setCurrentIndex(0);
+        //ui.mainStackedWidget->setCurrentIndex(0);
         ui.capabilitiesStackedWidget->setCurrentIndex(0);
 
         const std::map<QToolButton*, int> buttons =
@@ -274,7 +233,6 @@ struct MainWindow::Impl
             { ui.limitsButton,     6 },
             { ui.formatsButton,    7 },
             { ui.surfaceButton,    8 },
-            { ui.monitorButton,    9 },
         };
 
         for (auto button : buttons)
@@ -370,16 +328,16 @@ void MainWindow::setData(std::shared_ptr<Data> data)
 
 void MainWindow::doSetNoVulkan()
 {
-    impl->ui.errorMessage->setText("No Vulkan Implementation Found");
-    impl->ui.mainStackedWidget->setCurrentIndex(1);
+//    impl->ui.errorMessage->setText("No Vulkan Implementation Found");
+//    impl->ui.mainStackedWidget->setCurrentIndex(1);
 }
 
 /* -------------------------------------------------------------------------- */
 
 void MainWindow::doSetNoPhysicalDevices()
 {
-    impl->ui.errorMessage->setText("No Devices with Vulkan capability");
-    impl->ui.mainStackedWidget->setCurrentIndex(1);
+//    impl->ui.errorMessage->setText("No Devices with Vulkan capability");
+//    impl->ui.mainStackedWidget->setCurrentIndex(1);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -406,7 +364,6 @@ void MainWindow::doUpdatePhysicalDeviceButtonMenu(const QStringList& devices)
     QString devText = "No Device";
     if (impl->deviceIndex >= 0 && impl->deviceIndex < devices.size())
         devText = devices[impl->deviceIndex];
-    devText.replace(" ", "\n");
 
     impl->ui.deviceButton->blockSignals(true);
     impl->ui.deviceButton->setMenu(deviceMenu);
@@ -417,18 +374,12 @@ void MainWindow::doUpdatePhysicalDeviceButtonMenu(const QStringList& devices)
 /* -------------------------------------------------------------------------- */
 
 void MainWindow::doUpdateEntryUi(
-    QWidget* widget,
+    std::vector<QTableWidget*> widgets,
     const std::vector<Data::Entry>& entry)
 {
-    if (widget == impl->ui.formats)
-    {
-        updateEntryUi(impl->ui.tableWidget, entry);
-        return;
-    }
-
     emit updateProgress();
     QApplication::processEvents();
-    updateEntryUi(widget, entry);
+    updateEntryUi(widgets, entry);
     QApplication::processEvents();
 }
 

@@ -86,6 +86,7 @@ std::vector<Data::Entry> getDeviceProperties(
 
     std::vector<Data::Entry> out;
     out.resize(1);
+    out[0].showHeader = false;
     out[0].valueRows = rows;
     out[0].header.cells.push_back( { Data::Cell::Style::Header, "Property",  "", -1  } );
     out[0].header.cells.push_back( { Data::Cell::Style::Header, "Value",     "", -1  } );

@@ -14,6 +14,10 @@
 
 #include "vk_capabilities_data.h"
 
+/* -------------------------------------------------------------------------- */
+
+class QTableWidget;
+
 namespace kuu
 {
 namespace vk_capabilities
@@ -52,7 +56,7 @@ private slots:
     void doSetNoVulkan();
     void doSetNoPhysicalDevices();
     void doUpdatePhysicalDeviceButtonMenu(const QStringList &devices);
-    void doUpdateEntryUi(QWidget* widget,
+    void doUpdateEntryUi(std::vector<QTableWidget*> widgets,
                          const std::vector<Data::Entry>& entry);
     void doSelectPhysicalDevice(int index);
 
