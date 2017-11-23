@@ -51,5 +51,5 @@ struct Instance
     static bool isExtensionSupported(const std::string& extension);
 };
 
-} // namespace vk_capabilities
+} // namespace vk
 } // namespace kuu

@@ -38,6 +38,16 @@ QWidget#formatsScrollAreaWidgetContents
     background-color: white;
 }
 
+QWidget#surfaceScrollAreaWidgetContents
+{
+    background-color: white;
+}
+
+QWidget#monitorScrollAreaWidgetContents
+{
+    background-color: white;
+}
+
 QFrame#sideFrame
 {
     background-color: rgb(64, 66, 68);

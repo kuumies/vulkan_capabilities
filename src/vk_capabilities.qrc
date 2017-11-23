@@ -17,5 +17,7 @@
         <file>descriptions/properties.txt</file>
         <file>descriptions/features.txt</file>
         <file>icons/Vulkan_100px_Dec16.png</file>
+        <file>icons/bubblechart.png</file>
+        <file>icons/monitor.png</file>
     </qresource>
 </RCC>

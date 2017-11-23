@@ -15,6 +15,8 @@
 #include "vk_capabilities_data_creator.h"
 #include "vk_capabilities_main_window.h"
 #include "vk_instance.h"
+#include "vk_monitor_properties.h"
+#include "vk_surface_properties.h"
 #include "vk_surface_widget.h"
 
 namespace kuu
@@ -30,8 +32,12 @@ struct Controller::Impl
     std::unique_ptr<MainWindow> mainWindow;
     // Vulkan objects
     std::shared_ptr<vk::Instance> instance;
+    // Surface properties
+    std::vector<std::shared_ptr<vk::MonitorProperties>> monitorProperties;
     // Surface widget
     std::unique_ptr<vk::SurfaceWidget> surfaceWidget;
+    // Surface properties
+    std::vector<std::shared_ptr<vk::SurfaceProperties>> surfaceProperties;
     // Capabilities data created from vulkan objects.
     std::shared_ptr<Data> capabilitiesData;
 };
@@ -57,6 +63,9 @@ void Controller::start()
         std::vector<std::string> extensions;
         if (vk::Instance::isExtensionSupported("VK_KHR_get_physical_device_properties2"))
             extensions.push_back("VK_KHR_get_physical_device_properties2");
+        if (vk::Instance::isExtensionSupported("VK_KHR_display"))
+            extensions.push_back("VK_KHR_display");
+
 #ifdef _WIN32
         if (vk::Instance::isExtensionSupported("VK_KHR_win32_surface"))
             extensions.push_back("VK_KHR_win32_surface");
@@ -71,6 +80,18 @@ void Controller::start()
 
     std::future<void> uiDataTask = std::async([&]()
     {
+        for (const vk::PhysicalDevice& device : impl->instance->physicalDevices)
+        {
+            impl->surfaceProperties.push_back(
+                std::make_shared<vk::SurfaceProperties>(
+                    impl->instance->instance,
+                    device.physicalDevice,
+                    impl->surfaceWidget->surface()));
+
+            impl->monitorProperties.push_back(
+                std::make_shared<vk::MonitorProperties>(
+                    device.physicalDevice));
+        }
         impl->capabilitiesData = DataCreator(*impl->instance, *impl->surfaceWidget).data();
         impl->mainWindow->setDataAsync(impl->capabilitiesData);
     });

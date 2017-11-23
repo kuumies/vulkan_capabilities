@@ -174,5 +174,5 @@ bool Instance::isExtensionSupported(const std::string& extension)
     return it != extensions.end();
 }
 
-} // namespace vk_capabilities
+} // namespace vk
 } // namespace kuu

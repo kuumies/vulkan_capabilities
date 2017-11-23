@@ -630,7 +630,7 @@ std::vector<Data::Entry> getFormats(const vk::PhysicalDevice& device)
 std::vector<Data::Entry> getSurface(
     const vk::PhysicalDevice& device,
     const vk::SurfaceWidget& surface)
-{
+{   
     std::vector<Data::Entry> out;
     return out;
 }

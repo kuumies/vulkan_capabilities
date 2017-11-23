@@ -273,6 +273,8 @@ struct MainWindow::Impl
             { ui.queuesButton,     5 },
             { ui.limitsButton,     6 },
             { ui.formatsButton,    7 },
+            { ui.surfaceButton,    8 },
+            { ui.monitorButton,    9 },
         };
 
         for (auto button : buttons)
