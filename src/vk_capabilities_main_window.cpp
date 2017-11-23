@@ -77,12 +77,10 @@ void updateEntryUi(std::vector<QTableWidget*> tableWidgets,
                 if (c.style == Data::Cell::Style::ValueLabelValid)
                 {
                     item->setFont(QFont("Segoe UI", 10, QFont::Bold));
-                    item->setTextColor(Qt::darkGreen);
-
                 }
                 else if (c.style == Data::Cell::Style::ValueLabelInvalid)
                 {
-                    item->setTextColor(Qt::darkRed);
+                    item->setFont(QFont("Segoe UI", 10));
                 }
                 w->setItem(rIndex, cIndex, item);
             }
