@@ -26,7 +26,6 @@ struct Data
     {
         enum class Style
         {
-            Header,
             NameLabel,
             ValueLabel,
             ValueLabelValid,
@@ -36,7 +35,6 @@ struct Data
         Style style;
         std::string value;
         std::string desc;
-        int size; // -1, no size
     };
 
     struct Row
@@ -46,8 +44,6 @@ struct Data
 
     struct Entry
     {
-        bool showHeader = true;
-        Row header;
         std::vector<Row> valueRows;
     };
 

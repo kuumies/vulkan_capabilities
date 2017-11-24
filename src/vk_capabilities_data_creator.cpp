@@ -6,8 +6,10 @@
 #include "vk_capabilities_data_creator.h"
 #include "vk_stringify.h"
 #include "vk_capabilities_variable_description.h"
+
+/* -------------------------------------------------------------------------- */
+
 #include <sstream>
-#include <QtCore/QString>
 
 namespace kuu
 {
@@ -24,8 +26,8 @@ void addRow(std::vector<Data::Row>& rows,
 {
     rows.push_back(
     {{
-        { Data::Cell::Style::NameLabel,  name,  "", -1 },
-        { Data::Cell::Style::ValueLabel, value, "", -1 },
+        { Data::Cell::Style::NameLabel,  name,  "" },
+        { Data::Cell::Style::ValueLabel, value, "" },
     }});
 }
 
@@ -38,8 +40,8 @@ void addRow(std::vector<Data::Row>& rows,
 {
     rows.push_back(
     {{
-        { Data::Cell::Style::NameLabel,  name,  desc, -1 },
-        { Data::Cell::Style::ValueLabel, value, desc, -1 },
+        { Data::Cell::Style::NameLabel,  name,  desc },
+        { Data::Cell::Style::ValueLabel, value, desc },
     }});
 }
 
@@ -71,26 +73,22 @@ std::vector<Data::Entry> getDeviceProperties(
 {
     using namespace vk::stringify;
 
-    VariableDescriptions limitVariableDesc("://descriptions/properties.txt", transformVariable);
+    VariableDescriptions limitVariableDesc("://descriptions/properties.txt");
     std::vector<VariableDescriptions::VariableDescription> descs =
         limitVariableDesc.variableDescriptions();
 
     std::vector<Data::Row> rows;
-    addRow(rows, "Name",                device.properties.deviceName,                   descs[0].description);
-    addRow(rows, "Type",                toString(device.properties.deviceType),         descs[1].description);
-    addRow(rows, "API Version",         versionNumber(device.properties.apiVersion),    descs[2].description);
-    addRow(rows, "Driver Version",      versionNumber(device.properties.driverVersion), descs[3].description);
-    addRow(rows, "Vendor ID",           hexValueToString(device.properties.vendorID),   descs[4].description);
-    addRow(rows, "Device ID",           hexValueToString(device.properties.deviceID),   descs[5].description);
-    addRow(rows, "Pipeline Cache UUID", toString(device.properties.pipelineCacheUUID),  descs[6].description);
+    addRow(rows, "Name",                device.properties.deviceName,                       descs[0].description);
+    addRow(rows, "Type",                physicalDeviceType(device.properties.deviceType),   descs[1].description);
+    addRow(rows, "API Version",         versionNumber(device.properties.apiVersion),        descs[2].description);
+    addRow(rows, "Driver Version",      versionNumber(device.properties.driverVersion),     descs[3].description);
+    addRow(rows, "Vendor ID",           hexValueToString(device.properties.vendorID),       descs[4].description);
+    addRow(rows, "Device ID",           hexValueToString(device.properties.deviceID),       descs[5].description);
+    addRow(rows, "Pipeline Cache UUID", uiiid(device.properties.pipelineCacheUUID),         descs[6].description);
 
     std::vector<Data::Entry> out;
     out.resize(1);
-    out[0].showHeader = false;
     out[0].valueRows = rows;
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Property",  "", -1  } );
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Value",     "", -1  } );
-
     return out;
 }
 
@@ -113,11 +111,7 @@ std::vector<Data::Entry> getDeviceExtentions(
     std::vector<Data::Entry> out;
     out.resize(2);
     out[0].valueRows = instanceExtensionRows;
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Supported Instance Extension", "", -1  } );
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Version",                      "", -1  } );
     out[1].valueRows = deviceExtensionsRows;
-    out[1].header.cells.push_back( { Data::Cell::Style::Header, "Supported Device Extension", "", -1  } );
-    out[1].header.cells.push_back( { Data::Cell::Style::Header, "Version",                    "", -1  } );
     return out;
 }
 
@@ -135,9 +129,9 @@ std::vector<Data::Entry> getDeviceLayers(
     {
         rows.push_back(
         {{
-            { Data::Cell::Style::NameLabel,  name,        desc, -1 },
-            { Data::Cell::Style::ValueLabel, specVersion, "",   -1 },
-            { Data::Cell::Style::ValueLabel, implVersion, "",   -1 },
+            { Data::Cell::Style::NameLabel,  name,        desc },
+            { Data::Cell::Style::ValueLabel, specVersion, "" },
+            { Data::Cell::Style::ValueLabel, implVersion, "" },
         }});
     };
 
@@ -152,9 +146,6 @@ std::vector<Data::Entry> getDeviceLayers(
     std::vector<Data::Entry> out;
     out.resize(1);
     out[0].valueRows = instanceLayerRows;
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Name",          "", -1  } );
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Spec. Version", "", -1  } );
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Impl. Version", "", -1  } );
     return out;
 }
 
@@ -180,8 +171,8 @@ std::vector<Data::Entry> getFeatures(const vk::PhysicalDevice& device)
     {
         featureRows.push_back(
         {{
-            { Data::Cell::Style::NameLabel, name,           desc, -1 },
-            { vkboolToStyle(b),             vkboolToStr(b), desc, -1 },
+            { Data::Cell::Style::NameLabel, name,           desc },
+            { vkboolToStyle(b),             vkboolToStr(b), desc },
         }});
     };
 
@@ -247,8 +238,6 @@ std::vector<Data::Entry> getFeatures(const vk::PhysicalDevice& device)
     std::vector<Data::Entry> out;
     out.resize(1);
     out[0].valueRows = featureRows;
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Name",           "", -1  } );
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Support Status", "", -1  } );
     return out;
 }
 
@@ -316,8 +305,8 @@ std::vector<Data::Entry> getLimits(const vk::PhysicalDevice& device)
     {
         limitRows.push_back(
         {{
-            { Data::Cell::Style::NameLabel, name,  desc, -1 },
-            { Data::Cell::Style::ValueLabel,limit, "",   -1 },
+            { Data::Cell::Style::NameLabel, name,  desc },
+            { Data::Cell::Style::ValueLabel,limit, ""   },
         }});
         descIndex++;
     };
@@ -432,8 +421,6 @@ std::vector<Data::Entry> getLimits(const vk::PhysicalDevice& device)
     std::vector<Data::Entry> out;
     out.resize(1);
     out[0].valueRows = limitRows;
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Name",  "", -1  } );
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Value", "", -1  } );
     return out;
 }
 
@@ -452,12 +439,12 @@ std::vector<Data::Entry> getQueues(const vk::PhysicalDevice& device)
     {
         rows.push_back(
         {{
-            { Data::Cell::Style::NameLabel,  familyIndex,                 "", -1 },
-            { Data::Cell::Style::ValueLabel, queueCount,                  "", -1 },
-            { Data::Cell::Style::ValueLabel, presentation,                "", -1 },
-            { Data::Cell::Style::ValueLabel, timestampValidBits,          "", -1 },
-            { Data::Cell::Style::ValueLabel, flags,                       "", -1 },
-            { Data::Cell::Style::ValueLabel, minImageTransferGranularity, "", -1 },
+            { Data::Cell::Style::NameLabel,  familyIndex,                 "" },
+            { Data::Cell::Style::ValueLabel, queueCount,                  "" },
+            { Data::Cell::Style::ValueLabel, presentation,                "" },
+            { Data::Cell::Style::ValueLabel, timestampValidBits,          "" },
+            { Data::Cell::Style::ValueLabel, flags,                       "" },
+            { Data::Cell::Style::ValueLabel, minImageTransferGranularity, "" },
         }});
     };
 
@@ -471,19 +458,13 @@ std::vector<Data::Entry> getQueues(const vk::PhysicalDevice& device)
                     std::to_string(q.queueCount),
                     presentation ? "Supported" : "Unsupported",
                     std::to_string(q.timestampValidBits),
-                    vk::stringify::toString(q.queueFlags),
-                    vk::stringify::toString(q.minImageTransferGranularity));
+                    vk::stringify::queue(q.queueFlags),
+                    vk::stringify::extent3D(q.minImageTransferGranularity));
     }
 
     std::vector<Data::Entry> out;
     out.resize(1);
     out[0].valueRows = queueRows;
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Family Index",                    "", -1  } );
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Queue Count",                     "", -1  } );
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Presentation",                    "", -1  } );
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Capabilities",                    "", -1  } );
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Min Image Transfer\nGranularity", "", -1  } );
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Timestamp Valid\nBits",           "", -1  } );
     return out;
 
 }
@@ -501,10 +482,10 @@ std::vector<Data::Entry> getMemory(const vk::PhysicalDevice& device)
     {
         rows.push_back(
         {{
-            { Data::Cell::Style::NameLabel,  heapIndex,  "", -1 },
-            { Data::Cell::Style::ValueLabel, size,       "", -1 },
-            { Data::Cell::Style::ValueLabel, properties, "", -1 },
-            { Data::Cell::Style::ValueLabel, flags,      "", -1 },
+            { Data::Cell::Style::NameLabel,  heapIndex,  "" },
+            { Data::Cell::Style::ValueLabel, size,       "" },
+            { Data::Cell::Style::ValueLabel, properties, "" },
+            { Data::Cell::Style::ValueLabel, flags,      "" },
         }});
     };
 
@@ -514,15 +495,8 @@ std::vector<Data::Entry> getMemory(const vk::PhysicalDevice& device)
         VkMemoryHeap heap = device.memoryProperties.memoryHeaps[i];
         std::string size = std::to_string(float(heap.size) / float(1024*1024*1024)) + " GB";
         std::string heapIndex = std::to_string(i);
-        std::string  properties;
-        if (heap.flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
-            properties += "Device Local";
-        if (heap.flags & VK_MEMORY_HEAP_MULTI_INSTANCE_BIT_KHX)
-        {
-            if (properties.size())
-                properties += " | ";
-            properties += "Multi Instance";
-        }
+        std::string  properties = vk::stringify::memoryHeap(heap.flags);
+
         std::string flags;
 
         for (int k = 0; k < int(device.memoryProperties.memoryTypeCount); ++k)
@@ -531,35 +505,7 @@ std::vector<Data::Entry> getMemory(const vk::PhysicalDevice& device)
             if (type.heapIndex != i)
                 continue;
 
-
-            std::string  typeFlags;
-            if (type.propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-                typeFlags += "Device Local";
-            if (type.propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
-            {
-                if (typeFlags.size())
-                    typeFlags += " | ";
-                typeFlags += "Host Visible";
-            }
-            if (type.propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
-            {
-                if (typeFlags.size())
-                    typeFlags += " | ";
-                typeFlags += "Host Coherent";
-            }
-            if (type.propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
-            {
-                if (typeFlags.size())
-                    typeFlags += " | ";
-                typeFlags += "Host Cached";
-            }
-            if (type.propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT)
-            {
-                if (typeFlags.size())
-                    typeFlags += " | ";
-                typeFlags += "Lazily Allocated";
-            }
-
+            std::string typeFlags = vk::stringify::memoryProperty(type.propertyFlags);
             if (flags.size())
                 flags += "\n";
             flags += typeFlags;
@@ -568,14 +514,9 @@ std::vector<Data::Entry> getMemory(const vk::PhysicalDevice& device)
         addMemoryRow(memoryRows, heapIndex, size, properties, flags);
     }
 
-
     std::vector<Data::Entry> out;
     out.resize(1);
     out[0].valueRows = memoryRows;
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Heap Index",  "", -1  } );
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Size",        "", -1  } );
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Properties",  "", -1  } );
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Flags",       "", -1  } );
     return out;
 }
 
@@ -597,10 +538,10 @@ std::vector<Data::Entry> getFormats(const vk::PhysicalDevice& device)
     {
         rows.push_back(
         {{
-            { Data::Cell::Style::NameLabel,  name,                  desc, -1 },
-            { Data::Cell::Style::ValueLabel, linearTilingFeatures,  "",   -1 },
-            { Data::Cell::Style::ValueLabel, optimalTilingFeatures, "",   -1 },
-            { Data::Cell::Style::ValueLabel, bufferFeatures,        "",   -1 },
+            { Data::Cell::Style::NameLabel,  name,                  desc },
+            { Data::Cell::Style::ValueLabel, linearTilingFeatures,  "" },
+            { Data::Cell::Style::ValueLabel, optimalTilingFeatures, "" },
+            { Data::Cell::Style::ValueLabel, bufferFeatures,        "" },
         }});
     };
 
@@ -619,44 +560,80 @@ std::vector<Data::Entry> getFormats(const vk::PhysicalDevice& device)
     std::vector<Data::Entry> out;
     out.resize(1);
     out[0].valueRows = formatRows;
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Name",            "", -1  } );
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Linear Tiling",   "", -1  } );
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Optimal Tiling",  "", -1  } );
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Buffer features", "", -1  } );
     return out;
 }
 
 /* -------------------------------------------------------------------------- */
 
 std::vector<Data::Entry> getSurface(
-    const vk::PhysicalDevice& device,
-    const vk::SurfaceWidget& surface,
-    const std::vector<vk::SurfaceProperties> surfaceProperties)
+    const vk::SurfaceProperties& surfaceProperties)
 {   
-    std::vector<Data::Row> rows;
+    VariableDescriptions propertiesVariableDesc("://descriptions/surface_properties.txt");
+    std::vector<VariableDescriptions::VariableDescription> descStrings =
+        propertiesVariableDesc.variableDescriptions();
+
+    const VkSurfaceCapabilitiesKHR caps = surfaceProperties.surfaceCapabilities;
+    std::vector<std::string> values =
+    {
+        std::to_string(caps.minImageCount),
+        std::to_string(caps.maxImageCount),
+        vk::stringify::extent2D(caps.currentExtent),
+        vk::stringify::extent2D(caps.minImageExtent),
+        vk::stringify::extent2D(caps.maxImageExtent),
+        std::to_string(caps.maxImageArrayLayers),
+        vk::stringify::surfaceTransformFlags(caps.supportedTransforms),
+        vk::stringify::surfaceTransformFlags(caps.currentTransform),
+        vk::stringify::compositeAlphaFlags(caps.supportedCompositeAlpha),
+        vk::stringify::imageUsageFlags(caps.supportedUsageFlags)
+    };
+
+    std::string modeStr;
+    auto modes = surfaceProperties.presentModes;
+    for (const auto mode : modes)
+    {
+        if (modeStr.size())
+            modeStr += "\n";
+        modeStr += vk::stringify::presentMode(mode);
+    }
+    values.push_back(modeStr);
+
     auto addRow = [&](
+            std::vector<Data::Row>& rows,
             const std::string& name,
             const std::string& desc,
             const std::string& value)
     {
         rows.push_back(
         {{
-            { Data::Cell::Style::NameLabel,  name,   desc, -1 },
-            { Data::Cell::Style::ValueLabel, value,  "",   -1 },
+            { Data::Cell::Style::NameLabel,  name,   desc },
+            { Data::Cell::Style::ValueLabel, value,  ""   },
         }});
     };
 
-    for (const vk::SurfaceProperties& property : surfaceProperties)
+    std::vector<Data::Row> propertiesRows;
+    for (int i = 0; i < values.size(); ++i)
     {
-        addRow("Min Image Count", "",
-                std::to_string(property.surfaceCapabilities.maxImageArrayLayers));
+        addRow(propertiesRows,
+               descStrings[i].name,
+               descStrings[i].description,
+               values[i]);
+    }
+
+    auto surfaceFormats = surfaceProperties.surfaceFormats;
+    std::vector<Data::Row> formatsRows;
+    for (int i = 0; i < surfaceFormats.size(); ++i)
+    {
+        auto surfaceFormat = surfaceFormats[i];
+        addRow(formatsRows,
+            vk::stringify::format(surfaceFormat.format),
+            "",
+            vk::stringify::colorSpace(surfaceFormat.colorSpace));
     }
 
     std::vector<Data::Entry> out;
-    out.resize(1);
-    out[0].valueRows = rows;
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Name",    "", -1  } );
-    out[0].header.cells.push_back( { Data::Cell::Style::Header, "Value",   "", -1  } );
+    out.resize(2);
+    out[0].valueRows = propertiesRows;
+    out[1].valueRows = formatsRows;
     return out;
 }
 
@@ -687,12 +664,12 @@ DataCreator::DataCreator(
 
     impl->data->hasVulkan = true;
 
-    for (const vk::PhysicalDevice& device : instance.physicalDevices)
+    for (int deviceIndex = 0; deviceIndex < instance.physicalDevices.size(); ++deviceIndex)
     {
+        const vk::PhysicalDevice& device = instance.physicalDevices[deviceIndex];
         Data::PhysicalDeviceData d;
         d.name       = device.properties.deviceName;
         d.properties = getDeviceProperties(device);
-        d.properties[0].valueRows[0].cells[1].value = d.name;
         d.extensions = getDeviceExtentions(instance, device);
         d.layers     = getDeviceLayers(instance);
         d.features   = getFeatures(device);
@@ -700,7 +677,7 @@ DataCreator::DataCreator(
         d.queues     = getQueues(device);
         d.memories   = getMemory(device);
         d.formats    = getFormats(device);
-        d.surface    = getSurface(device, surfaceWidget, surfaceProperties);
+        d.surface    = getSurface(surfaceProperties[deviceIndex]);
 
         impl->data->physicalDeviceData.push_back(d);
     }

@@ -15,37 +15,6 @@ namespace kuu
 {
 namespace vk_capabilities
 {
-namespace
-{
-
-/* -------------------------------------------------------------------------- *
-   Splits a long description text into smaller lines.
- * -------------------------------------------------------------------------- */
-QString splitToLines(const QString& in, const int wordMax = 10)
-{
-    QStringList inWords = in.split(" ");
-    QStringList outWords;
-    QString out;
-    int wordCount = 0;
-    for (int i = 0; i < inWords.size(); ++i)
-    {
-        if (wordCount < wordMax)
-        {
-            outWords << inWords[i];
-            wordCount++;
-        }
-        else
-        {
-            wordCount = 0;
-            out += outWords.join(" ") += "\n";
-            outWords.clear();
-        }
-    }
-    out += outWords.join(" ");
-    return out;
-}
-
-} // anonymous namespace
 
 /* -------------------------------------------------------------------------- */
 
@@ -71,40 +40,54 @@ VariableDescriptions::VariableDescriptions(
         return;
     }
 
+    QString variable;
+    QString desc;
+
     QTextStream ts(&qssFile);
     while(!ts.atEnd())
     {
         QString line = ts.readLine().trimmed();
         if (line.startsWith(";"))
             continue;
-        if (line.isEmpty())
+        if (line.isEmpty() && desc.isEmpty() && variable.isEmpty())
             continue;
-        if (line.startsWith("*"))
+        if (line.startsWith("@@"))
         {
-            impl->descriptions[impl->descriptions.size()-1].description += "\n\t";
-            impl->descriptions[impl->descriptions.size()-1].description += line.toStdString();
-            continue;
-        }
-        if (line.startsWith("+"))
-        {
-            impl->descriptions[impl->descriptions.size()-1].description += "\n\t\t\t";
-            impl->descriptions[impl->descriptions.size()-1].description += line.toStdString();
-            continue;
-        }
-        if (line.startsWith("-"))
-        {
-            impl->descriptions[impl->descriptions.size()-1].description += "\n\t\t";
-            impl->descriptions[impl->descriptions.size()-1].description += line.toStdString();
+            if (!desc.isEmpty())
+            {
+                if (variableTransformFun)
+                    variable = QString::fromStdString(
+                        variableTransformFun(variable.toStdString()));
+
+                impl->descriptions.push_back(
+                {
+                    variable.toStdString(),
+                    desc.toStdString()
+                });
+            }
+
+            variable = QString();
+            desc     = QString();
+
             continue;
         }
 
-        QString variable = line.section(" ", 0, 0);
+        if (variable.isEmpty())
+        {
+            variable = line;
+            continue;
+        }
+
+        if (!desc.isEmpty())
+            desc += "\n";
+        desc += line;
+    }
+
+    if (!desc.isEmpty())
+    {
         if (variableTransformFun)
             variable = QString::fromStdString(
                 variableTransformFun(variable.toStdString()));
-
-        QString desc = variable + " " + line.section(" ", 1);
-        desc = splitToLines(desc, 10);
 
         impl->descriptions.push_back(
         {

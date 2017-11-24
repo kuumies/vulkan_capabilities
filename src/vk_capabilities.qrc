@@ -19,5 +19,6 @@
         <file>icons/Vulkan_100px_Dec16.png</file>
         <file>icons/bubblechart.png</file>
         <file>icons/monitor.png</file>
+        <file>descriptions/surface_properties.txt</file>
     </qresource>
 </RCC>

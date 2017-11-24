@@ -54,7 +54,7 @@ bool getSurfaceCapabilities2(
     {
         std::cerr << __FUNCTION__
                   << ": failed to get surface capabilities as "
-                  << vk::stringify::toDescription(result)
+                  << vk::stringify::resultDesc(result)
                   << std::endl;
     }
 
@@ -77,7 +77,7 @@ VkSurfaceCapabilitiesKHR getSurfaceCapabilities(
     {
         std::cerr << __FUNCTION__
                   << ": failed to get surface capabilities as "
-                  << vk::stringify::toDescription(result)
+                  << vk::stringify::resultDesc(result)
                   << std::endl;
     }
 
@@ -108,7 +108,7 @@ std::vector<VkSurfaceFormatKHR> getSurfaceFormats(
     {
         std::cerr << __FUNCTION__
                   << ": failed to get surface formats as "
-                  << vk::stringify::toDescription(result)
+                  << vk::stringify::resultDesc(result)
                   << std::endl;
     }
 
@@ -139,7 +139,7 @@ std::vector<VkPresentModeKHR> getPresentModes(
     {
         std::cerr << __FUNCTION__
                   << ": failed to get present modes as "
-                  << vk::stringify::toDescription(result)
+                  << vk::stringify::resultDesc(result)
                   << std::endl;
     }
 

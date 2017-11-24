@@ -1,15 +1,39 @@
 ; https://www.khronos.org/registry/vulkan/specs/1.0/man/html/VkPhysicalDeviceProperties.html
 
+@@
+Device Name
 deviceName is a null-terminated UTF-8 string containing the name of the device.
 
+@@
+Device Type
 deviceType is a VkPhysicalDeviceType specifying the type of device.
+<p><p>
+VK_PHYSICAL_DEVICE_TYPE_OTHER - the device does not match any other available types.
+<p><p>
+VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU - the device is typically one embedded in or tightly coupled with the host.
+<p><p>
+VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU - the device is typically a separate processor connected to the host via an interlink.
+<p><p>
+VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU - the device is typically a virtual node in a virtualization environment.
+<p><p>
+VK_PHYSICAL_DEVICE_TYPE_CPU - the device is typically running on the same processors as the host.
 
+@@
+API Version
 apiVersion is the version of Vulkan supported by the device, encoded as described in the API Version Numbers and Semantics section.
 
+@@
+Driver Version
 driverVersion is the vendor-specified version of the driver.
 
+@@
+Vendor ID
 vendorID is a unique identifier for the vendor (see below) of the physical device.
 
+@@
+Device ID
 deviceID is a unique identifier for the physical device among devices available from the vendor.
 
+@@
+Pipeline Cache UUID
 pipelineCacheUUID is an array of size VK_UUID_SIZE, containing 8-bit values that represent a universally unique identifier for the device.

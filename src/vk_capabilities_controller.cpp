@@ -8,6 +8,7 @@
 /* -------------------------------------------------------------------------- */
 
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QMenuBar>
 #include <future>
 
 /* -------------------------------------------------------------------------- */
@@ -15,7 +16,6 @@
 #include "vk_capabilities_data_creator.h"
 #include "vk_capabilities_main_window.h"
 #include "vk_instance.h"
-#include "vk_monitor_properties.h"
 #include "vk_surface_properties.h"
 #include "vk_surface_widget.h"
 
@@ -30,14 +30,12 @@ struct Controller::Impl
 {
     // Main window
     std::unique_ptr<MainWindow> mainWindow;
+
     // Vulkan objects
     std::shared_ptr<vk::Instance> instance;
-    // Surface properties
-    std::vector<std::shared_ptr<vk::MonitorProperties>> monitorProperties;
-    // Surface widget
     std::unique_ptr<vk::SurfaceWidget> surfaceWidget;
-    // Surface properties
     std::vector<vk::SurfaceProperties> surfaceProperties;
+
     // Capabilities data created from vulkan objects.
     std::shared_ptr<Data> capabilitiesData;
 };
@@ -52,7 +50,6 @@ Controller::Controller()
 
 void Controller::start()
 {
-
     impl->mainWindow = std::unique_ptr<MainWindow>(new MainWindow());
     impl->mainWindow->setEnabled(false);
     impl->mainWindow->show();
@@ -65,12 +62,15 @@ void Controller::start()
             extensions.push_back("VK_KHR_get_physical_device_properties2");
         if (vk::Instance::isExtensionSupported("VK_KHR_display"))
             extensions.push_back("VK_KHR_display");
-
+        if (vk::Instance::isExtensionSupported("VK_KHR_surface"))
+        {
+            extensions.push_back("VK_KHR_surface");
 #ifdef _WIN32
-        if (vk::Instance::isExtensionSupported("VK_KHR_win32_surface"))
-            extensions.push_back("VK_KHR_win32_surface");
+            if (vk::Instance::isExtensionSupported("VK_KHR_win32_surface"))
+                extensions.push_back("VK_KHR_win32_surface");
 #endif
-        impl->instance         = std::make_shared<vk::Instance>(extensions);
+        }
+        impl->instance = std::make_shared<vk::Instance>(extensions, true);
     });
 
     while (vulkanInstanceTask.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
@@ -87,10 +87,6 @@ void Controller::start()
                     impl->instance->instance,
                     device.physicalDevice,
                     impl->surfaceWidget->surface()));
-
-            impl->monitorProperties.push_back(
-                std::make_shared<vk::MonitorProperties>(
-                    device.physicalDevice));
         }
         impl->capabilitiesData = DataCreator(*impl->instance, *impl->surfaceWidget, impl->surfaceProperties).data();
         impl->mainWindow->setDataAsync(impl->capabilitiesData);
@@ -99,9 +95,14 @@ void Controller::start()
     while (uiDataTask.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
         QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
 
-    impl->mainWindow->setEnabled(true);
+
     impl->mainWindow->update();
     impl->mainWindow->hideProgress();
+    if (impl->capabilitiesData->hasVulkan &&
+        impl->capabilitiesData->physicalDeviceData.size())
+    {
+        impl->mainWindow->setEnabled(true);
+    }
 }
 
 } // namespace vk_capabilities

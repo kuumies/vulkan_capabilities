@@ -15,31 +15,38 @@ namespace vk
 namespace stringify
 {
 
-// Returns the result as a string.
-std::string toString(const VkResult result);
-// Returns the result description
-std::string toDescription(const VkResult result);
-
 // Returns version number as a string in form <major>.<minor>.<patch>
 std::string versionNumber(const uint32_t version);
 
 // Returns the device type as a string.
-std::string toString(const VkPhysicalDeviceType type);
+std::string physicalDeviceType(const VkPhysicalDeviceType type);
 // Returns the device type description
-std::string toDescription(const VkPhysicalDeviceType type);
+std::string physicalDeviceTypeDesc(const VkPhysicalDeviceType type);
 
 // Returns the UUIID as a string.
-std::string toString(const uint8_t* uuid, int size = VK_UUID_SIZE);
+std::string uiiid(const uint8_t* uuid, int size = VK_UUID_SIZE);
 
-// Returns queue capabilities as a string.
-std::string toString(VkQueueFlags flags);
-// Returns format features as a string.
+// Returns flags as a string.
+std::string queue(VkQueueFlags flags);
 std::string formatFeature(VkFormatFeatureFlags flags);
+std::string surfaceTransformFlags(VkSurfaceTransformFlagsKHR flags);
+std::string compositeAlphaFlags(VkCompositeAlphaFlagsKHR flags);
+std::string imageUsageFlags(VkImageUsageFlags flags);
+std::string memoryProperty(VkMemoryPropertyFlags flags);
+std::string memoryHeap(VkMemoryHeapFlags flagBits);
 
-// Returns the 3D extent as a string.
-std::string toString(const VkExtent3D& e);
+// Returns enums as a string
+std::string result(const VkResult result);
+std::string resultDesc(const VkResult result);
+std::string presentMode(VkPresentModeKHR mode);
+std::string format(VkFormat format);
+std::string colorSpace(VkColorSpaceKHR colorSpace);
 
-// Returns the hex value as a string.
+// Returns extents as a string
+std::string extent2D(const VkExtent2D& e);
+std::string extent3D(const VkExtent3D& e);
+
+// Returns hex value as a string
 std::string hexValueToString(uint32_t v);
 
 } // namespace stringify

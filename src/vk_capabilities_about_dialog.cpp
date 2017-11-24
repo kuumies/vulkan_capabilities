@@ -21,6 +21,10 @@ AboutDialog::AboutDialog(QWidget* parent)
     , impl(std::make_shared<Impl>())
 {
     impl->ui.setupUi(this);
+
+    Qt::WindowFlags flags = windowFlags();
+    flags = flags & (~Qt::WindowContextHelpButtonHint); // '?' icon
+    setWindowFlags(flags);
 }
 
 } // namespace vk_capabilities

@@ -8,7 +8,7 @@
 
 /* -------------------------------------------------------------------------- */
 
-#include <QtWidgets/QCheckBox>
+#include <QtWidgets/QMessageBox>
 #include <QtWidgets/QProgressDialog>
 
 /* -------------------------------------------------------------------------- */
@@ -60,8 +60,7 @@ void updateEntryUi(std::vector<QTableWidget*> tableWidgets,
         w->setTextElideMode(Qt::ElideMiddle);
         w->verticalHeader()->setVisible(false);
 
-        if (e.showHeader)
-            w->horizontalHeader()->setVisible(true);
+        w->horizontalHeader()->setVisible(true);
 
         for (int rIndex = 0; rIndex < e.valueRows.size(); ++rIndex)
         {
@@ -72,8 +71,15 @@ void updateEntryUi(std::vector<QTableWidget*> tableWidgets,
 
                 QTableWidgetItem* item = new QTableWidgetItem();
                 item->setText(QString::fromStdString(c.value));
-                //item->setTextAlignment(Qt::AlignLeft | Qt::AlignTop);
-                item->setToolTip(QString::fromStdString(c.desc));
+
+                if (c.desc.size())
+                {
+                    QString tooltip = "<font size='4'>";
+                    tooltip.append(QString::fromStdString(c.desc));
+                    tooltip.append("</font>");
+                    item->setToolTip(tooltip);
+                }
+
                 if (c.style == Data::Cell::Style::ValueLabelValid)
                 {
                     item->setFont(QFont("Segoe UI", 10, QFont::Bold));
@@ -86,11 +92,11 @@ void updateEntryUi(std::vector<QTableWidget*> tableWidgets,
             }
         }
 
-        for (int c = 0; c < w->horizontalHeader()->count(); ++c)
-            w->horizontalHeader()->setSectionResizeMode(
-                c, QHeaderView::Stretch);
         w->resizeColumnsToContents();
         w->resizeRowsToContents();
+        for (int c = 0; c < w->horizontalHeader()->count(); ++c)
+            w->horizontalHeader()->setSectionResizeMode(
+                c, QHeaderView::Interactive);
     }
 }
 
@@ -126,8 +132,6 @@ void updateUi(QMainWindow* mainWindow,
 
         return;
     }
-
-//    ui.mainStackedWidget->setCurrentIndex(0);
 
     if (deviceIndex == -1)
         deviceIndex = 0;
@@ -195,11 +199,14 @@ void updateUi(QMainWindow* mainWindow,
         Q_ARG(std::vector<QTableWidget*>, { ui.limitsTableWidget } ),
         Q_ARG(std::vector<Data::Entry>, dev.limits));
 
+    std::vector<QTableWidget*> surfaceTableWidgets =
+    { ui.surfaceTableWidget, ui.surfaceFormatsTableWidget };
+
     QMetaObject::invokeMethod(
         mainWindow,
         "doUpdateEntryUi",
         connectionType,
-        Q_ARG(std::vector<QTableWidget*>, { ui.surfaceTableWidget } ),
+        Q_ARG(std::vector<QTableWidget*>, surfaceTableWidgets ),
         Q_ARG(std::vector<Data::Entry>, dev.surface));
 
     QStringList devices;
@@ -224,7 +231,6 @@ struct MainWindow::Impl
         qRegisterMetaType<std::vector<Data::Entry>>("std::vector<Data::Entry>");
 
         ui.setupUi(self);
-        //ui.mainStackedWidget->setCurrentIndex(0);
         ui.capabilitiesStackedWidget->setCurrentIndex(0);
 
         const std::map<QToolButton*, int> buttons =
@@ -333,16 +339,18 @@ void MainWindow::setData(std::shared_ptr<Data> data)
 
 void MainWindow::doSetNoVulkan()
 {
-//    impl->ui.errorMessage->setText("No Vulkan Implementation Found");
-//    impl->ui.mainStackedWidget->setCurrentIndex(1);
+    QMessageBox::critical(
+        this, "No Vulkan Implementation",
+        "Vulkan implementation is missing.");
 }
 
 /* -------------------------------------------------------------------------- */
 
 void MainWindow::doSetNoPhysicalDevices()
 {
-//    impl->ui.errorMessage->setText("No Devices with Vulkan capability");
-//    impl->ui.mainStackedWidget->setCurrentIndex(1);
+    QMessageBox::critical(
+        this, "No physical devices",
+        "No physical devices with Vulkan capabilities.");
 }
 
 /* -------------------------------------------------------------------------- */

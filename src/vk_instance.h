@@ -24,7 +24,8 @@ struct Instance
 {
     // Constructs the instance.
     Instance(const std::vector<std::string>& extensionNames =
-                std::vector<std::string>());
+                std::vector<std::string>(),
+             bool validate = true);
     // Destroys the instance.
     ~Instance();
 
@@ -34,6 +35,11 @@ struct Instance
     // Vulkan instance handle. This a null handle if the system does  not
     // contain a Vulkan  implementation.
     VkInstance instance;
+    
+    // Validation callback. This is created if validate argument was set to
+    // true during instance construction.
+    VkDebugReportCallbackEXT callback;
+    
     // Extension namess that were given in by user during construction.
     std::vector<std::string> extensionNames;
 
@@ -49,6 +55,10 @@ struct Instance
     // Returns true if the Vulkan implementation supports the given in
     // instance extensions. This can be asked before creating an instance.
     static bool isExtensionSupported(const std::string& extension);
+
+    // Returns true if the Vulkan implementation supports the given in
+    // layer. This can be asked before creating an instance.
+    static bool isLayerSupported(const std::string& extension);
 };
 
 } // namespace vk
