@@ -128,7 +128,7 @@ std::string physicalDeviceTypeDesc(const VkPhysicalDeviceType type)
 
 /* -------------------------------------------------------------------------- */
 
-std::string uiiid(const uint8_t* uuid, int size)
+std::string uuid(const uint8_t* uuid, int size)
 {
     std::stringstream ss;
     for (int i = 0; i < size; i++)
@@ -144,6 +144,26 @@ std::string uiiid(const uint8_t* uuid, int size)
     }
     return ss.str();
 }
+
+/* -------------------------------------------------------------------------- */
+
+std::string luid(const uint8_t *luid, int size)
+{
+    std::stringstream ss;
+    for (int i = 0; i < size; i++)
+    {
+        uint8_t u = luid[i];
+        ss << std::setfill ('0')
+           << std::setw(sizeof(uint8_t) * 2)
+           << std::hex
+           << int(u);
+
+        if (i == 3 || i == 5 || i == 7)
+            ss << "-";
+    }
+    return ss.str();
+}
+
 
 /* -------------------------------------------------------------------------- */
 

@@ -53,20 +53,25 @@ struct PhysicalDevice
     // All the available extensions that the device supports.
     std::vector<VkExtensionProperties> extensions;
 
-    // SPIR-V VariablePointers and VariablePointersStorageBuffer capabilities.
+    // Features that requires an extension use
+    bool hasExtensionsFeatures;
     VkPhysicalDeviceVariablePointerFeaturesKHR featuresVariablePointer;
-
-    // Render pass multiview capablities
     VkPhysicalDeviceMultiviewFeaturesKHX multiviewFeatures;
-
-    // Storage 16 bit capabilities
     VkPhysicalDevice16BitStorageFeaturesKHR features16BitStorage;
-
-    // Samper Yuv conversion capability
     VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR yuvSamplerFeatures;
-
-    // Advanced blending operation capability
     VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT blendFeatures;
+
+    // Properties that requires an extension use
+    bool hasExtensionsProperties;
+     VkPhysicalDeviceBlendOperationAdvancedPropertiesEXT blendProperties;
+     VkPhysicalDeviceDiscardRectanglePropertiesEXT  discardRectangleProperties;
+     VkPhysicalDeviceIDPropertiesKHR  idProperties;
+     VkPhysicalDeviceMultiviewPropertiesKHX  multiviewProperties;
+     VkPhysicalDeviceMultiviewPerViewAttributesPropertiesNVX multiviewPerView;
+     VkPhysicalDevicePointClippingPropertiesKHR clippingProperties;
+     VkPhysicalDevicePushDescriptorPropertiesKHR  pushDescriptorProperties;
+     VkPhysicalDeviceSampleLocationsPropertiesEXT sampleLocationsProperties;
+     VkPhysicalDeviceSamplerFilterMinmaxPropertiesEXT samplerMinMaxProperties;
 };
 
 } // namespace vk_capabilities

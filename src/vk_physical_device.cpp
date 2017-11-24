@@ -149,6 +149,80 @@ std::vector<VkExtensionProperties> getExtensions(
 
 /* -------------------------------------------------------------------------- */
 
+bool getProperties2(
+    const VkInstance& instance,
+    const VkPhysicalDevice& physicalDevice,
+    VkPhysicalDeviceBlendOperationAdvancedPropertiesEXT& blendProperties,
+    VkPhysicalDeviceDiscardRectanglePropertiesEXT&  discardRectangleProperties,
+    VkPhysicalDeviceIDPropertiesKHR&  idProperties,
+    VkPhysicalDeviceMultiviewPropertiesKHX&  multiviewProperties,
+    VkPhysicalDeviceMultiviewPerViewAttributesPropertiesNVX& multiviewPerView,
+    VkPhysicalDevicePointClippingPropertiesKHR& clippingProperties,
+    VkPhysicalDevicePushDescriptorPropertiesKHR&  pushDescriptorProperties,
+    VkPhysicalDeviceSampleLocationsPropertiesEXT& sampleLocationsProperties,
+    VkPhysicalDeviceSamplerFilterMinmaxPropertiesEXT& samplerMinMaxProperties)
+{
+    auto fun = (PFN_vkGetPhysicalDeviceProperties2KHR)
+        vkGetInstanceProcAddr(
+            instance,
+            "vkGetPhysicalDeviceProperties2KHR");
+    if (!fun)
+        return false;
+    idProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES_KHR;
+    idProperties.pNext = NULL; // must be NULL
+
+    VkPhysicalDeviceProperties2KHR properties2;
+    properties2.pNext = &idProperties;
+    properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
+    fun(physicalDevice, &properties2);
+
+
+    multiviewProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES_KHX;
+    multiviewProperties.pNext = NULL; // must be NULL
+    properties2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR, &multiviewProperties };
+    //properties2.pNext = &multiviewProperties;
+    fun(physicalDevice, &properties2);
+
+    multiviewPerView.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PER_VIEW_ATTRIBUTES_PROPERTIES_NVX;
+    multiviewPerView.pNext = NULL;
+    properties2.pNext = &multiviewPerView;
+    fun(physicalDevice, &properties2);
+
+    clippingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_POINT_CLIPPING_PROPERTIES_KHR;
+    clippingProperties.pNext = NULL;
+    properties2.pNext = &clippingProperties;
+    fun(physicalDevice, &properties2);
+
+    discardRectangleProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DISCARD_RECTANGLE_PROPERTIES_EXT;
+    discardRectangleProperties.pNext = NULL;
+    properties2.pNext = &discardRectangleProperties;
+    fun(physicalDevice, &properties2);
+
+    sampleLocationsProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLE_LOCATIONS_PROPERTIES_EXT;
+    sampleLocationsProperties.pNext = NULL;
+    properties2.pNext = &sampleLocationsProperties;
+    fun(physicalDevice, &properties2);
+
+    blendProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BLEND_OPERATION_ADVANCED_PROPERTIES_EXT;
+    blendProperties.pNext = NULL;
+    properties2.pNext = &blendProperties;
+    fun(physicalDevice, &properties2);
+
+    samplerMinMaxProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_FILTER_MINMAX_PROPERTIES_EXT;
+    samplerMinMaxProperties.pNext = NULL;
+    properties2.pNext = &samplerMinMaxProperties;
+    fun(physicalDevice, &properties2);
+
+    pushDescriptorProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PUSH_DESCRIPTOR_PROPERTIES_KHR;
+    pushDescriptorProperties.pNext = NULL;
+    properties2.pNext = &pushDescriptorProperties   ;
+    fun(physicalDevice, &properties2);
+
+    return true;
+}
+
+/* -------------------------------------------------------------------------- */
+
 bool getFeatures2(
     const VkInstance& instance,
     const VkPhysicalDevice& physicalDevice,
@@ -201,6 +275,7 @@ bool getFeatures2(
 PhysicalDevice::PhysicalDevice(const VkPhysicalDevice& physicalDevice,
                                const Instance& instance)
     : physicalDevice(physicalDevice)
+    , hasExtensionsFeatures(false)
 {
     properties        = getProperties(physicalDevice);
     features          = getFeatures(physicalDevice);
@@ -218,13 +293,27 @@ PhysicalDevice::PhysicalDevice(const VkPhysicalDevice& physicalDevice,
 
     if (it != instance.extensionNames.end())
     {
-        getFeatures2(instance.instance,
-                     physicalDevice,
-                     featuresVariablePointer,
-                     multiviewFeatures,
-                     features16BitStorage,
-                     yuvSamplerFeatures,
-                     blendFeatures);
+        hasExtensionsFeatures = getFeatures2(
+            instance.instance,
+            physicalDevice,
+            featuresVariablePointer,
+            multiviewFeatures,
+            features16BitStorage,
+            yuvSamplerFeatures,
+            blendFeatures);
+
+        hasExtensionsProperties = getProperties2(
+            instance.instance,
+            physicalDevice,
+            blendProperties,
+            discardRectangleProperties,
+            idProperties,
+            multiviewProperties,
+            multiviewPerView,
+            clippingProperties,
+            pushDescriptorProperties,
+            sampleLocationsProperties,
+            samplerMinMaxProperties);
     }
 }
 

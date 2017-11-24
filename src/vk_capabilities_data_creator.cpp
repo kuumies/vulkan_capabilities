@@ -84,11 +84,30 @@ std::vector<Data::Entry> getDeviceProperties(
     addRow(rows, "Driver Version",      versionNumber(device.properties.driverVersion),     descs[3].description);
     addRow(rows, "Vendor ID",           hexValueToString(device.properties.vendorID),       descs[4].description);
     addRow(rows, "Device ID",           hexValueToString(device.properties.deviceID),       descs[5].description);
-    addRow(rows, "Pipeline Cache UUID", uiiid(device.properties.pipelineCacheUUID),         descs[6].description);
+    addRow(rows, "Pipeline Cache UUID", uuid(device.properties.pipelineCacheUUID),         descs[6].description);
+
+    auto vkboolToStr = [](const VkBool32& b)
+    { return  b == VK_TRUE ? "Supported" : "Unsupported"; };
+
+    std::vector<Data::Row> rowsExt;
+    if (device.hasExtensionsProperties)
+    {
+        const VkPhysicalDeviceIDPropertiesKHR&  idProperties = device.idProperties;
+        addRow(rowsExt, "Device UUID",        uuid(idProperties.deviceUUID), "");
+        addRow(rowsExt, "Driver UUID",        uuid(idProperties.driverUUID), "");
+        addRow(rowsExt, "Device LUID",        luid(idProperties.deviceLUID), "");
+        addRow(rowsExt, "Device Node Mask",   std::to_string(idProperties.deviceNodeMask), "");
+        addRow(rowsExt, "Device  LUID valid", vkboolToStr(idProperties.deviceLUIDValid), "");
+
+        const VkPhysicalDeviceMultiviewPropertiesKHX&  multiview = device.multiviewProperties;
+        addRow(rowsExt, "Max Multiview View Count",     std::to_string(multiview.maxMultiviewViewCount),     "");
+        addRow(rowsExt, "Max Multiview Instance Index", std::to_string(multiview.maxMultiviewInstanceIndex), "");
+    }
 
     std::vector<Data::Entry> out;
-    out.resize(1);
+    out.resize(2);
     out[0].valueRows = rows;
+    out[1].valueRows = rowsExt;
     return out;
 }
 
@@ -163,6 +182,7 @@ std::vector<Data::Entry> getFeatures(const vk::PhysicalDevice& device)
     { return  b == VK_TRUE ? Data::Cell::Style::ValueLabelValid
                            : Data::Cell::Style::ValueLabelInvalid; };
 
+
     std::vector<Data::Row> featureRows;
     auto addFeatureRow = [&](
             const std::string& name,
@@ -235,9 +255,48 @@ std::vector<Data::Entry> getFeatures(const vk::PhysicalDevice& device)
     addFeatureRow("Variable Multisample Rate",                    f.variableMultisampleRate, descs[descIndex++].description);
     addFeatureRow("Inherited Queries",                            f.inheritedQueries, descs[descIndex++].description);
 
+
+    std::vector<Data::Row> featureRowsExt;
+    auto addFeatureRowExt = [&](
+            const std::string& name,
+            const VkBool32& b,
+            const std::string& desc)
+    {
+        featureRowsExt.push_back(
+        {{
+            { Data::Cell::Style::NameLabel,  name,  desc },
+            { vkboolToStyle(b), vkboolToStr(b), desc },
+        }});
+    };
+
+    if (device.hasExtensionsFeatures)
+    {
+        VkPhysicalDeviceVariablePointerFeaturesKHR vp = device.featuresVariablePointer;
+        addFeatureRowExt("Variable Pointers Storage Buffer", vp.variablePointersStorageBuffer, "");
+        addFeatureRowExt("Variable Pointers",                vp.variablePointers,              "");
+
+        VkPhysicalDeviceMultiviewFeaturesKHX mv = device.multiviewFeatures;
+        addFeatureRowExt("Multiview",                    mv.multiview,                   "");
+        addFeatureRowExt("Multiview Geometry Shader",    mv.multiviewGeometryShader,     "");
+        addFeatureRowExt("Multiview Tesselation Shader", mv.multiviewTessellationShader, "");
+
+        VkPhysicalDevice16BitStorageFeaturesKHR s16 = device.features16BitStorage;
+        addFeatureRowExt("Storage Buffer 16 bit Access",                s16.storageBuffer16BitAccess,           "");
+        addFeatureRowExt("Uniform and Storage Buffer 16 bit Access",    s16.uniformAndStorageBuffer16BitAccess, "");
+        addFeatureRowExt("Storage Push Constant 16",                    s16.storagePushConstant16,              "");
+        addFeatureRowExt("Storage Input/Output 16",                     s16.storageInputOutput16,               "");
+
+        VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR yuv = device.yuvSamplerFeatures;
+        addFeatureRowExt("Sampler Ycbcr Conversion", yuv.samplerYcbcrConversion,           "");
+
+        VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT blend = device.blendFeatures;;
+        addFeatureRowExt("Advanced Blend Coherent Operations", blend.advancedBlendCoherentOperations, "");
+    }
+
     std::vector<Data::Entry> out;
-    out.resize(1);
+    out.resize(2);
     out[0].valueRows = featureRows;
+    out[1].valueRows = featureRowsExt;
     return out;
 }
 

@@ -23,8 +23,10 @@ std::string physicalDeviceType(const VkPhysicalDeviceType type);
 // Returns the device type description
 std::string physicalDeviceTypeDesc(const VkPhysicalDeviceType type);
 
-// Returns the UUIID as a string.
-std::string uiiid(const uint8_t* uuid, int size = VK_UUID_SIZE);
+// Returns the UUID as a string.
+std::string uuid(const uint8_t* uuid, int size = VK_UUID_SIZE);
+// Returns the LUID as a string.
+std::string luid(const uint8_t* luid, int size = VK_LUID_SIZE_KHR);
 
 // Returns flags as a string.
 std::string queue(VkQueueFlags flags);
