@@ -35,7 +35,8 @@ std::string surfaceTransformFlags(VkSurfaceTransformFlagsKHR flags);
 std::string compositeAlphaFlags(VkCompositeAlphaFlagsKHR flags);
 std::string imageUsageFlags(VkImageUsageFlags flags);
 std::string memoryProperty(VkMemoryPropertyFlags flags);
-std::string memoryHeap(VkMemoryHeapFlags flagBits);
+std::string memoryHeap(VkMemoryHeapFlags flags);
+std::string sampleCount(VkSampleCountFlags flags);
 
 // Returns enums as a string
 std::string result(const VkResult result);
@@ -43,6 +44,7 @@ std::string resultDesc(const VkResult result);
 std::string presentMode(VkPresentModeKHR mode);
 std::string format(VkFormat format);
 std::string colorSpace(VkColorSpaceKHR colorSpace);
+std::string pointClippingBehavior(VkPointClippingBehaviorKHR behavior);
 
 // Returns extents as a string
 std::string extent2D(const VkExtent2D& e);

@@ -102,6 +102,37 @@ std::vector<Data::Entry> getDeviceProperties(
         const VkPhysicalDeviceMultiviewPropertiesKHX&  multiview = device.multiviewProperties;
         addRow(rowsExt, "Max Multiview View Count",     std::to_string(multiview.maxMultiviewViewCount),     "");
         addRow(rowsExt, "Max Multiview Instance Index", std::to_string(multiview.maxMultiviewInstanceIndex), "");
+
+        VkPhysicalDeviceBlendOperationAdvancedPropertiesEXT blendProperties = device.blendProperties;
+        addRow(rowsExt, "Advanced Blend Max Color Attachments",       std::to_string(blendProperties.advancedBlendMaxColorAttachments));
+        addRow(rowsExt, "Advanced Blend Independent Blend",           vkboolToStr(blendProperties.advancedBlendIndependentBlend));
+        addRow(rowsExt, "Advanced Blend Non Premultiplied Src Color", vkboolToStr(blendProperties.advancedBlendNonPremultipliedSrcColor));
+        addRow(rowsExt, "Advanced Blend Non Premultiplied Dst Color", vkboolToStr(blendProperties.advancedBlendNonPremultipliedDstColor));
+        addRow(rowsExt, "Advanced Blend Correlated Overlap",          vkboolToStr(blendProperties.advancedBlendCorrelatedOverlap));
+        addRow(rowsExt, "Advanced Blend All Operations",              vkboolToStr(blendProperties.advancedBlendAllOperations));
+
+        VkPhysicalDeviceDiscardRectanglePropertiesEXT  discardRectangleProperties  = device.discardRectangleProperties;
+        addRow(rowsExt, "Max Discard Rectangles",      std::to_string(discardRectangleProperties.maxDiscardRectangles));
+
+        VkPhysicalDevicePointClippingPropertiesKHR clippingProperties = device.clippingProperties;
+        addRow(rowsExt, "Point Clipping Behavior",   vk::stringify::pointClippingBehavior(clippingProperties.pointClippingBehavior));
+
+        VkPhysicalDevicePushDescriptorPropertiesKHR  pushDescriptorProperties = device.pushDescriptorProperties;
+        addRow(rowsExt, "Max Push Descriptors",      std::to_string(pushDescriptorProperties.maxPushDescriptors));
+
+        VkPhysicalDeviceSampleLocationsPropertiesEXT sampleLocationsProperties = device.sampleLocationsProperties;
+        addRow(rowsExt, "Sample Location Sample Counts",    vk::stringify::sampleCount(sampleLocationsProperties.sampleLocationSampleCounts));
+        addRow(rowsExt, "Max Sample Location Grid Size",    vk::stringify::extent2D(sampleLocationsProperties.maxSampleLocationGridSize));
+        addRow(rowsExt, "Sample Location Coordinate Range",
+               "[" +
+               std::to_string(sampleLocationsProperties.sampleLocationCoordinateRange[0]) + "," +
+               std::to_string(sampleLocationsProperties.sampleLocationCoordinateRange[1]) + "]");
+        addRow(rowsExt, "Sample Location Sub Pixel Bits", std::to_string(sampleLocationsProperties.sampleLocationSubPixelBits));
+        addRow(rowsExt, "Variable Sample Locations",      vkboolToStr(sampleLocationsProperties.variableSampleLocations));
+
+        VkPhysicalDeviceSamplerFilterMinmaxPropertiesEXT samplerMinMaxProperties = device.samplerMinMaxProperties;
+        addRow(rowsExt, "Filter Minmax Single Component Formats", vkboolToStr(samplerMinMaxProperties.filterMinmaxSingleComponentFormats));
+        addRow(rowsExt, "Filter Minmax Image Component Mapping",  vkboolToStr(samplerMinMaxProperties.filterMinmaxImageComponentMapping));
     }
 
     std::vector<Data::Entry> out;

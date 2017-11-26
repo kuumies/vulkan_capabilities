@@ -63,15 +63,15 @@ struct PhysicalDevice
 
     // Properties that requires an extension use
     bool hasExtensionsProperties;
-     VkPhysicalDeviceBlendOperationAdvancedPropertiesEXT blendProperties;
-     VkPhysicalDeviceDiscardRectanglePropertiesEXT  discardRectangleProperties;
-     VkPhysicalDeviceIDPropertiesKHR  idProperties;
-     VkPhysicalDeviceMultiviewPropertiesKHX  multiviewProperties;
-     VkPhysicalDeviceMultiviewPerViewAttributesPropertiesNVX multiviewPerView;
-     VkPhysicalDevicePointClippingPropertiesKHR clippingProperties;
-     VkPhysicalDevicePushDescriptorPropertiesKHR  pushDescriptorProperties;
-     VkPhysicalDeviceSampleLocationsPropertiesEXT sampleLocationsProperties;
-     VkPhysicalDeviceSamplerFilterMinmaxPropertiesEXT samplerMinMaxProperties;
+    VkPhysicalDeviceBlendOperationAdvancedPropertiesEXT blendProperties;
+    VkPhysicalDeviceDiscardRectanglePropertiesEXT  discardRectangleProperties;
+    VkPhysicalDeviceIDPropertiesKHR  idProperties;
+    VkPhysicalDeviceMultiviewPropertiesKHX  multiviewProperties;
+    VkPhysicalDeviceMultiviewPerViewAttributesPropertiesNVX multiviewPerView;
+    VkPhysicalDevicePointClippingPropertiesKHR clippingProperties;
+    VkPhysicalDevicePushDescriptorPropertiesKHR  pushDescriptorProperties;
+    VkPhysicalDeviceSampleLocationsPropertiesEXT sampleLocationsProperties;
+    VkPhysicalDeviceSamplerFilterMinmaxPropertiesEXT samplerMinMaxProperties;
 };
 
 } // namespace vk_capabilities

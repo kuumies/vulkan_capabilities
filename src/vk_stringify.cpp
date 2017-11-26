@@ -267,28 +267,17 @@ std::string memoryHeap(VkMemoryHeapFlags flags)
 
 /* -------------------------------------------------------------------------- */
 
-std::string extent2D(const VkExtent2D& e)
+std::string sampleCount(VkSampleCountFlags flags)
 {
-    return "[" + std::to_string(e.width)  + ", "
-               + std::to_string(e.height) + "]";
-}
-
-/* -------------------------------------------------------------------------- */
-
-std::string extent3D(const VkExtent3D& e)
-{
-    return "[" + std::to_string(e.width) + ", "
-               + std::to_string(e.height) + ", "
-            + std::to_string(e.depth) + "]";
-}
-
-/* -------------------------------------------------------------------------- */
-
-std::string hexValueToString(uint32_t v)
-{
-    std::stringstream ss;
-    ss << "0x" << std::hex << v;
-    return ss.str();
+    std::string str;
+    set(str, VK_SAMPLE_COUNT_1_BIT,  flags, "VK_SAMPLE_COUNT_1_BIT",  "\n");
+    set(str, VK_SAMPLE_COUNT_2_BIT,  flags, "VK_SAMPLE_COUNT_2_BIT",  "\n");
+    set(str, VK_SAMPLE_COUNT_4_BIT,  flags, "VK_SAMPLE_COUNT_4_BIT",  "\n");
+    set(str, VK_SAMPLE_COUNT_8_BIT,  flags, "VK_SAMPLE_COUNT_8_BIT",  "\n");
+    set(str, VK_SAMPLE_COUNT_16_BIT, flags, "VK_SAMPLE_COUNT_16_BIT", "\n");
+    set(str, VK_SAMPLE_COUNT_32_BIT, flags, "VK_SAMPLE_COUNT_32_BIT", "\n");
+    set(str, VK_SAMPLE_COUNT_64_BIT, flags, "VK_SAMPLE_COUNT_64_BIT", "\n");
+    return str;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -569,6 +558,45 @@ std::string colorSpace(VkColorSpaceKHR colorSpace)
         case VK_COLOR_SPACE_EXTENDED_SRGB_NONLINEAR_EXT: out = "VK_COLOR_SPACE_EXTENDED_SRGB_NONLINEAR_EXT"; break;
     }
     return out;
+}
+
+/* -------------------------------------------------------------------------- */
+
+std::string pointClippingBehavior(VkPointClippingBehaviorKHR behavior)
+{
+    static const std::map<VkPointClippingBehaviorKHR, std::string> strings =
+    {
+        { VK_POINT_CLIPPING_BEHAVIOR_ALL_CLIP_PLANES_KHR,       "VK_POINT_CLIPPING_BEHAVIOR_ALL_CLIP_PLANES_KHR"       },
+        { VK_POINT_CLIPPING_BEHAVIOR_USER_CLIP_PLANES_ONLY_KHR, "VK_POINT_CLIPPING_BEHAVIOR_USER_CLIP_PLANES_ONLY_KHR" },
+    };
+
+    return strings.at(behavior);
+}
+
+/* -------------------------------------------------------------------------- */
+
+std::string extent2D(const VkExtent2D& e)
+{
+    return "[" + std::to_string(e.width)  + ", "
+               + std::to_string(e.height) + "]";
+}
+
+/* -------------------------------------------------------------------------- */
+
+std::string extent3D(const VkExtent3D& e)
+{
+    return "[" + std::to_string(e.width) + ", "
+               + std::to_string(e.height) + ", "
+            + std::to_string(e.depth) + "]";
+}
+
+/* -------------------------------------------------------------------------- */
+
+std::string hexValueToString(uint32_t v)
+{
+    std::stringstream ss;
+    ss << "0x" << std::hex << v;
+    return ss.str();
 }
 
 } // namespace stringify

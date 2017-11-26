@@ -491,10 +491,10 @@
          <item>
           <widget class="QStackedWidget" name="capabilitiesStackedWidget">
            <property name="currentIndex">
-            <number>0</number>
+            <number>1</number>
            </property>
            <widget class="QWidget" name="page">
-            <layout class="QVBoxLayout" name="verticalLayout">
+            <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0,0,1">
              <item>
               <layout class="QHBoxLayout" name="horizontalLayout_11">
                <item>
@@ -633,6 +633,9 @@
               <widget class="QTableWidget" name="propertiesTableWidget">
                <property name="frameShape">
                 <enum>QFrame::NoFrame</enum>
+               </property>
+               <property name="sizeAdjustPolicy">
+                <enum>QAbstractScrollArea::AdjustToContents</enum>
                </property>
                <property name="editTriggers">
                 <set>QAbstractItemView::NoEditTriggers</set>
