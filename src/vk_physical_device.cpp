@@ -215,7 +215,7 @@ bool getProperties2(
 
     pushDescriptorProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PUSH_DESCRIPTOR_PROPERTIES_KHR;
     pushDescriptorProperties.pNext = NULL;
-    properties2.pNext = &pushDescriptorProperties   ;
+    properties2.pNext = &pushDescriptorProperties;
     fun(physicalDevice, &properties2);
 
     return true;

@@ -142,7 +142,7 @@ void updateUi(QMainWindow* mainWindow,
     Data::PhysicalDeviceData& dev = d.physicalDeviceData[deviceIndex];   
 
     std::vector<QTableWidget*> propertiesTableWidgets =
-    { ui.propertiesTableWidget, ui.propertiesExtTableWidget };
+    { ui.propertiesTableWidget };
     QMetaObject::invokeMethod(
         mainWindow,
         "doUpdateEntryUi",
@@ -170,7 +170,7 @@ void updateUi(QMainWindow* mainWindow,
         Q_ARG(std::vector<Data::Entry>, dev.layers));
 
     std::vector<QTableWidget*> featuresTableWidgets =
-    { ui.featuresTableWidget, ui.featuresExtTableWidget };
+    { ui.featuresTableWidget };
     QMetaObject::invokeMethod(
         mainWindow,
         "doUpdateEntryUi",
@@ -192,11 +192,14 @@ void updateUi(QMainWindow* mainWindow,
                 Q_ARG(std::vector<QTableWidget*>, { ui.memoryTableWidget } ),
                 Q_ARG(std::vector<Data::Entry>, dev.memories));
 
+    std::vector<QTableWidget*> formatTableWidgets =
+    { ui.formatsTableWidget, ui.formatsTableWidget2, ui.formatsTableWidget3 };
+
     QMetaObject::invokeMethod(
         mainWindow,
         "doUpdateEntryUi",
         connectionType,
-        Q_ARG(std::vector<QTableWidget*>, { ui.formatsTableWidget} ),
+        Q_ARG(std::vector<QTableWidget*>, formatTableWidgets),
         Q_ARG(std::vector<Data::Entry>, dev.formats));
 
     QMetaObject::invokeMethod(

@@ -11,6 +11,11 @@ QHeaderView::section
     font: bold 12pt "Segoe UI";
 }
 
+QTabWidget
+{
+    border:none;
+}
+
 QFrame#capabilitiesStackedWidgetFrame
 {
     background-color: white;

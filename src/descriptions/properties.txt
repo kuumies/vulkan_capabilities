@@ -37,3 +37,23 @@ deviceID is a unique identifier for the physical device among devices available 
 @@
 Pipeline Cache UUID
 pipelineCacheUUID is an array of size VK_UUID_SIZE, containing 8-bit values that represent a universally unique identifier for the device.
+
+@@
+Device UUID
+deviceUUID is an array of size VK_UUID_SIZE, containing 8-bit values that represent a universally unique identifier for the device.
+
+@@
+Driver UUID
+driverUUID is an array of size VK_UUID_SIZE, containing 8-bit values that represent a universally unique identifier for the driver build in use by the device.
+
+@@
+Device LUID
+deviceLUID is an array of size VK_LUID_SIZE_KHR, containing 8-bit values that represent a locally unique identifier for the device.
+
+@@
+Device Node Mask
+deviceNodeMask is a bitfield identifying the node within a linked device adapter corresponding to the device.
+
+@@
+Device LUID Valid
+deviceLUIDValid is a boolean value that will be VK_TRUE if deviceLUID contains a valid LUID and deviceNodeMask contains a valid node mask, and VK_FALSE if they do not.

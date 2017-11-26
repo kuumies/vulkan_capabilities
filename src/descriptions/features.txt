@@ -288,3 +288,47 @@ variableMultisampleRate indicates whether all pipelines that will be bound to a 
 @@
 F
 inheritedQueries indicates whether a secondary command buffer may be executed while a query is active.
+
+@@
+F
+variablePointersStorageBuffer indicates whether the implementation supports the SPIR-V VariablePointersStorageBuffer capability. When this feature is not enabled, shader modules must not declare the SPV_KHR_variable_pointers extension or the VariablePointersStorageBuffer capability.
+
+@@
+F
+variablePointers indicates whether the implementation supports the SPIR-V VariablePointers capability. When this feature is not enabled, shader modules must not declare the VariablePointers capability.
+
+@@
+F
+multiview indicates whether the implementation supports multiview rendering within a render pass. If this feature is not enabled, the view mask of each subpass must always be zero.
+
+@@
+F
+multiviewGeometryShader indicates whether the implementation supports multiview rendering within a render pass, with geometry shaders. If this feature is not enabled, then a pipeline compiled against a subpass with a non-zero view mask must not include a geometry shader.
+
+@@
+F
+multiviewTessellationShader indicates whether the implementation supports multiview rendering within a render pass, with tessellation shaders. If this feature is not enabled, then a pipeline compiled against a subpass with a non-zero view mask must not include any tessellation shaders.
+
+@@
+F
+storageBuffer16BitAccess indicates whether objects in the StorageBuffer storage class with the Block decoration can have 16-bit integer and 16-bit floating-point members. If this feature is not enabled, 16-bit integer or 16-bit floating-point members must not be used in such objects. This also indicates whether shader modules can declare the StorageBuffer16BitAccess capability.
+
+@@
+F
+uniformAndStorageBuffer16BitAccess indicates whether objects in the Uniform storage class with the Block decoration and in the StorageBuffer storage class with the same decoration can have 16-bit integer and 16-bit floating-point members. If this feature is not enabled, 16-bit integer or 16-bit floating-point members must not be used in such objects. This also indicates whether shader modules can declare the UniformAndStorageBuffer16BitAccess capability.
+
+@@
+F
+storagePushConstant16 indicates whether objects in the PushConstant storage class can have 16-bit integer and 16-bit floating-point members. If this feature is not enabled, 16-bit integer or floating-point members must not be used in such objects. This also indicates whether shader modules can declare the StoragePushConstant16 capability.
+
+@@
+F
+storageInputOutput16 indicates whether objects in the Input and Output storage classes can have 16-bit integer and 16-bit floating-point members. If this feature is not enabled, 16-bit integer or 16-bit floating-point members must not be used in such objects. This also indicates whether shader modules can declare the StorageInputOutput16 capability.
+
+@@
+F
+samplerYcbcrConversion indicates whether the implementation supports sampler Y’CBCR conversion. If samplerYcbcrConversion is VK_FALSE, sampler Y’CBCR conversion is not supported, and samplers using sampler Y’CBCR conversion must not be used.
+
+@@
+F
+advancedBlendCoherentOperations indicates whether blending using advanced blend operations is guaranteed to execute atomically and in primitive order. If this is VK_TRUE, VK_ACCESS_COLOR_ATTACHMENT_READ_NONCOHERENT_BIT_EXT is treated the same as VK_ACCESS_COLOR_ATTACHMENT_READ_BIT and advanced blending needs no additional synchronization over basic blending. If this is VK_FALSE, then memory dependencies are required to guarantee order between two advanced blending operations that occur on the same sample.

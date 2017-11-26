@@ -21,7 +21,7 @@ namespace vk_capabilities
 class VariableDescriptions
 {
 public:
-    struct VariableDescription
+    struct Variable
     {
         std::string name;
         std::string description;
@@ -33,7 +33,7 @@ public:
         const std::string& filePath,
         const VariableTransformFun& variableTransform = nullptr);
 
-    std::vector<VariableDescription> variableDescriptions() const;
+    std::vector<Variable> variables() const;
 
 private:
     struct Impl;

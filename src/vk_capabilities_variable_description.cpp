@@ -20,7 +20,7 @@ namespace vk_capabilities
 
 struct VariableDescriptions::Impl
 {
-    std::vector<VariableDescription> descriptions;
+    std::vector<Variable> variables;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -59,7 +59,7 @@ VariableDescriptions::VariableDescriptions(
                     variable = QString::fromStdString(
                         variableTransformFun(variable.toStdString()));
 
-                impl->descriptions.push_back(
+                impl->variables.push_back(
                 {
                     variable.toStdString(),
                     desc.toStdString()
@@ -89,7 +89,7 @@ VariableDescriptions::VariableDescriptions(
             variable = QString::fromStdString(
                 variableTransformFun(variable.toStdString()));
 
-        impl->descriptions.push_back(
+        impl->variables.push_back(
         {
             variable.toStdString(),
             desc.toStdString()
@@ -99,9 +99,9 @@ VariableDescriptions::VariableDescriptions(
 
 /* -------------------------------------------------------------------------- */
 
-std::vector<VariableDescriptions::VariableDescription>
-    VariableDescriptions::variableDescriptions() const
-{ return impl->descriptions; }
+std::vector<VariableDescriptions::Variable>
+    VariableDescriptions::variables() const
+{ return impl->variables; }
 
 } // namespace vk_capabilities
 } // namespace kuu
