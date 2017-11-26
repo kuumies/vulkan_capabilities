@@ -131,8 +131,9 @@ std::vector<Data::Entry> getDeviceExtentions(
     const vk::Instance& instance,
     const vk::PhysicalDevice& device)
 {
+    vk::InstanceInfo info;
     std::vector<Data::Row> instanceExtensionRows;
-    for (const VkExtensionProperties& ex : instance.availableExtensions)
+    for (const VkExtensionProperties& ex : info.extensions)
         addRow(instanceExtensionRows,
                ex.extensionName,
                std::to_string(ex.specVersion));
@@ -168,8 +169,9 @@ std::vector<Data::Entry> getDeviceLayers(
         }});
     };
 
+    vk::InstanceInfo info;
     std::vector<Data::Row> instanceLayerRows;
-    for (const VkLayerProperties& l : instance.availableLayers)
+    for (const VkLayerProperties& l : info.layers)
         addLayerRow(instanceLayerRows,
                     l.layerName,
                     l.description,
@@ -760,14 +762,15 @@ DataCreator::DataCreator(
 {
     impl->data = std::make_shared<Data>();
 
-    if (instance.instance == VK_NULL_HANDLE)
+    if (instance.handle() == VK_NULL_HANDLE)
         return; // No Vulkan implementation
 
     impl->data->hasVulkan = true;
 
-    for (int deviceIndex = 0; deviceIndex < instance.physicalDevices.size(); ++deviceIndex)
+    auto devices = instance.physicalDevices();
+    for (int deviceIndex = 0; deviceIndex < devices.size(); ++deviceIndex)
     {
-        const vk::PhysicalDevice& device = instance.physicalDevices[deviceIndex];
+        const vk::PhysicalDevice& device = devices[deviceIndex];
         Data::PhysicalDeviceData d;
         d.name       = device.properties.deviceName;
         d.properties = getDeviceProperties(device);

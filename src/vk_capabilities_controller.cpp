@@ -57,34 +57,42 @@ void Controller::start()
 
     std::future<void> vulkanInstanceTask = std::async([&]()
     {
+        const vk::InstanceInfo instanceInfo;
+
         std::vector<std::string> extensions;
-        if (vk::Instance::isExtensionSupported("VK_KHR_get_physical_device_properties2"))
+        if (instanceInfo.isExtensionSupported("VK_KHR_get_physical_device_properties2"))
             extensions.push_back("VK_KHR_get_physical_device_properties2");
-        if (vk::Instance::isExtensionSupported("VK_KHR_display"))
+        if (instanceInfo.isExtensionSupported("VK_KHR_display"))
             extensions.push_back("VK_KHR_display");
-        if (vk::Instance::isExtensionSupported("VK_KHR_surface"))
+        if (instanceInfo.isExtensionSupported("VK_KHR_surface"))
         {
             extensions.push_back("VK_KHR_surface");
 #ifdef _WIN32
-            if (vk::Instance::isExtensionSupported("VK_KHR_win32_surface"))
+            if (instanceInfo.isExtensionSupported("VK_KHR_win32_surface"))
                 extensions.push_back("VK_KHR_win32_surface");
 #endif
         }
-        impl->instance = std::make_shared<vk::Instance>(extensions, true);
+        impl->instance = std::make_shared<vk::Instance>();
+        impl->instance->setApplicationName("V-Caps");
+        impl->instance->setEngineName("V-CAPS-ENGINE");
+        impl->instance->setExtensionNames(extensions);
+        impl->instance->setValidateEnabled(true);
+        impl->instance->create();
     });
 
     while (vulkanInstanceTask.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
         QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
 
-    impl->surfaceWidget = std::unique_ptr<vk::SurfaceWidget>(new vk::SurfaceWidget(impl->instance->instance));
+    impl->surfaceWidget = std::unique_ptr<vk::SurfaceWidget>(new vk::SurfaceWidget(impl->instance->handle()));
 
     std::future<void> uiDataTask = std::async([&]()
     {
-        for (const vk::PhysicalDevice& device : impl->instance->physicalDevices)
+        auto devices = impl->instance->physicalDevices();
+        for (const vk::PhysicalDevice& device : devices)
         {
             impl->surfaceProperties.push_back(
                 vk::SurfaceProperties(
-                    impl->instance->instance,
+                    impl->instance->handle(),
                     device.physicalDevice,
                     impl->surfaceWidget->surface()));
         }

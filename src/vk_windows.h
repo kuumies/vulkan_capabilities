@@ -33,10 +33,22 @@ namespace windows
 // find the correct function pointer. If the function fails to locate the
 // correct function pointer then an error message is printed into cerr and
 // VK_FALSE is returned.
+
 VkBool32 vkGetPhysicalDeviceWin32PresentationSupportKHR(
-    VkInstance                                  instance,
-    VkPhysicalDevice                            physicalDevice,
-    uint32_t                                    queueFamilyIndex);
+    VkInstance instance,
+    VkPhysicalDevice physicalDevice,
+    uint32_t queueFamilyIndex);
+
+VkResult vkCreateDebugReportCallback(
+    VkInstance instance,
+    const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
+    const VkAllocationCallbacks* pAllocator,
+    VkDebugReportCallbackEXT* pCallback);
+
+void vkDestroyDebugReportCallback(
+    VkInstance instance,
+    VkDebugReportCallbackEXT callback,
+    const VkAllocationCallbacks* pAllocator);
 
 /* -------------------------------------------------------------------------- */
 

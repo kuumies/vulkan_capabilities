@@ -76,6 +76,43 @@ VkResult vkCreateWin32SurfaceKHR(
     return fun(instance, pCreateInfo, pAllocator, pSurface);
 }
 
+/* -------------------------------------------------------------------------- *
+   Implementation of vkCreateDebugReportCallback. This is an extension
+   function whose adress needs to be retrieved.
+ * -------------------------------------------------------------------------- */
+VkResult vkCreateDebugReportCallback(
+    VkInstance instance,
+    const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
+    const VkAllocationCallbacks* pAllocator,
+    VkDebugReportCallbackEXT* pCallback)
+{
+    auto func = (PFN_vkCreateDebugReportCallbackEXT)
+        vkGetInstanceProcAddr(
+            instance,
+            "vkCreateDebugReportCallbackEXT");
+
+    VkResult result = VK_ERROR_INITIALIZATION_FAILED;
+    if (func)
+        result = func(instance, pCreateInfo, pAllocator, pCallback);
+    return result;
+}
+
+/* -------------------------------------------------------------------------- *
+   Implementation of vkDestroyDebugReportCallback. This is an extension
+   function whose adress needs to be retrieved.
+ * -------------------------------------------------------------------------- */
+void vkDestroyDebugReportCallback(
+    VkInstance instance,
+    VkDebugReportCallbackEXT callback,
+    const VkAllocationCallbacks* pAllocator)
+{
+    auto func = (PFN_vkDestroyDebugReportCallbackEXT)
+        vkGetInstanceProcAddr(instance,
+                              "vkDestroyDebugReportCallbackEXT");
+    if (func)
+        func(instance, callback, pAllocator);
+}
+
 #endif
 
 } // namespace windows

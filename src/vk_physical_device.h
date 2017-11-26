@@ -14,10 +14,6 @@ namespace kuu
 namespace vk
 {
 
-/* -------------------------------------------------------------------------- */
-
-struct Instance;
-
 /* -------------------------------------------------------------------------- *
    A Vulkan physical device wrapper struct. Physical device handle is valid
    until Vulkan instance is destroyed.
@@ -26,7 +22,7 @@ struct PhysicalDevice
 {   
     // Constructs the physical device.
     PhysicalDevice(const VkPhysicalDevice& physicalDevice,
-                   const Instance& instance);
+                   const VkInstance& instance);
 
     // Physical device handle.
     VkPhysicalDevice physicalDevice;

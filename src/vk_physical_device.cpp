@@ -273,7 +273,7 @@ bool getFeatures2(
 /* -------------------------------------------------------------------------- */
 
 PhysicalDevice::PhysicalDevice(const VkPhysicalDevice& physicalDevice,
-                               const Instance& instance)
+                               const VkInstance& instance)
     : physicalDevice(physicalDevice)
     , hasExtensionsFeatures(false)
 {
@@ -281,40 +281,31 @@ PhysicalDevice::PhysicalDevice(const VkPhysicalDevice& physicalDevice,
     features          = getFeatures(physicalDevice);
     memoryProperties  = getMemoryProperties(physicalDevice);
     queueFamilies     = getQueueFamilies(physicalDevice);
-    queuePresentation = getQueuePresentationSupports(instance.instance, physicalDevice, queueFamilies);
+    queuePresentation = getQueuePresentationSupports(instance, physicalDevice, queueFamilies);
     formats           = getFormats(physicalDevice);
     extensions        = getExtensions(physicalDevice);
 
-    const auto it = std::find_if(
-        instance.extensionNames.begin(),
-        instance.extensionNames.end(),
-        [](const std::string& ex)
-    { return ex == std::string("VK_KHR_get_physical_device_properties2"); });
+    hasExtensionsFeatures = getFeatures2(
+        instance,
+        physicalDevice,
+        featuresVariablePointer,
+        multiviewFeatures,
+        features16BitStorage,
+        yuvSamplerFeatures,
+        blendFeatures);
 
-    if (it != instance.extensionNames.end())
-    {
-        hasExtensionsFeatures = getFeatures2(
-            instance.instance,
-            physicalDevice,
-            featuresVariablePointer,
-            multiviewFeatures,
-            features16BitStorage,
-            yuvSamplerFeatures,
-            blendFeatures);
-
-        hasExtensionsProperties = getProperties2(
-            instance.instance,
-            physicalDevice,
-            blendProperties,
-            discardRectangleProperties,
-            idProperties,
-            multiviewProperties,
-            multiviewPerView,
-            clippingProperties,
-            pushDescriptorProperties,
-            sampleLocationsProperties,
-            samplerMinMaxProperties);
-    }
+    hasExtensionsProperties = getProperties2(
+        instance,
+        physicalDevice,
+        blendProperties,
+        discardRectangleProperties,
+        idProperties,
+        multiviewProperties,
+        multiviewPerView,
+        clippingProperties,
+        pushDescriptorProperties,
+        sampleLocationsProperties,
+        samplerMinMaxProperties);
 }
 
 } // namespace vk_capabilities
