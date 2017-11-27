@@ -15,17 +15,19 @@ namespace vk
 {
 
 /* -------------------------------------------------------------------------- *
-   A Vulkan physical device wrapper struct. Physical device handle is valid
-   until Vulkan instance is destroyed.
- * -------------------------------------------------------------------------- */
-struct PhysicalDevice
-{   
-    // Constructs the physical device.
-    PhysicalDevice(const VkPhysicalDevice& physicalDevice,
-                   const VkInstance& instance);
+   Physical device information.
 
-    // Physical device handle.
-    VkPhysicalDevice physicalDevice;
+   To retrieve some of the information user must use an extension 
+   'VK_KHR_get_physical_device_properties2' when creating the Vulkan 
+   instance. When the extension is used then hasExtensionsFeatures and
+   hasExtensionsProperties is set to true and the values are valid.
+ * -------------------------------------------------------------------------- */
+struct PhysicalDeviceInfo
+{
+    // Constructs the information of the physical device. Instance is needed
+    // to retrieve info from extension functions.
+    PhysicalDeviceInfo(const VkPhysicalDevice& physicalDevice,
+                       const VkInstance& instance);
 
     // Main properties (name, type etc.)
     VkPhysicalDeviceProperties properties;
@@ -57,7 +59,7 @@ struct PhysicalDevice
     VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR yuvSamplerFeatures;
     VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT blendFeatures;
 
-    // Properties that requires an extension use
+    // Properties (and limits) that requires an extension use
     bool hasExtensionsProperties;
     VkPhysicalDeviceBlendOperationAdvancedPropertiesEXT blendProperties;
     VkPhysicalDeviceDiscardRectanglePropertiesEXT  discardRectangleProperties;
@@ -68,6 +70,68 @@ struct PhysicalDevice
     VkPhysicalDevicePushDescriptorPropertiesKHR  pushDescriptorProperties;
     VkPhysicalDeviceSampleLocationsPropertiesEXT sampleLocationsProperties;
     VkPhysicalDeviceSamplerFilterMinmaxPropertiesEXT samplerMinMaxProperties;
+};
+
+/* -------------------------------------------------------------------------- *
+   A Vulkan physical device wrapper struct. 
+
+   This will create a logical device of the physical device to access
+   the hardware.
+
+   Physical device handle is valid until Vulkan instance is destroyed. 
+   Physica device instance must be destroy'd before Vulkan instance instance.
+ * -------------------------------------------------------------------------- */
+class PhysicalDevice
+{
+public:
+    // Queue family parameters, used to add a new queue to be created along
+    // with the logical device.
+    struct QueueFamilyParams
+    {
+        uint32_t queueFamilyIndex;
+        uint32_t queueCount;
+        float priority;
+    };
+
+    // Constructs the physical device from physical device and instance 
+    // handles.
+    PhysicalDevice(const VkPhysicalDevice& physicalDevice,
+                   const VkInstance& instance);
+
+    // Sets and gets the logical device extensions name to use.
+    PhysicalDevice& setExtensions(const std::vector<std::string>& extensions);
+    std::vector<std::string> extensions() const;
+
+    // Sets and gets the physical device features that should be enabled for
+    // the logical device.
+    PhysicalDevice& setFeatures(const VkPhysicalDeviceFeatures& deviceFeatures);
+    VkPhysicalDeviceFeatures features() const;
+
+    // Adds a queue of certain queue family to be created.
+    PhysicalDevice& addQueueFamily(const QueueFamilyParams& queue);
+    PhysicalDevice& addQueueFamily(uint32_t queueFamilyIndex,
+                        uint32_t queueCount,
+                        float priority);
+    // Returns the queue family params.
+    std::vector<QueueFamilyParams> queueFamilyParams() const;
+    
+    // Creates the logical device with the give in queue families.
+    void create();
+    // Destroys the logical device.
+    void destroy();
+
+    // Returns true if the device is valid. Device is valid if the
+    // logical device handle is not a VK_NULL_HANDLE.
+    bool isValid() const;
+
+    // Returns the physical device handle.
+    VkPhysicalDevice physicalDeviceHandle() const;
+    // Returns the logical device handle.
+    VkDevice logicalDeviceHandle() const;
+
+private:
+    struct Impl;
+    std::shared_ptr<Impl> impl;
 };
 
 } // namespace vk_capabilities

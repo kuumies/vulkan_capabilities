@@ -23,6 +23,16 @@ namespace vk
    an instance requires user to give in the extensions and layers to be used
    along with the Vulkan and the availabity of particular extension or layer
    can be asked from this struct.
+
+   Example:
+
+    const vk::InstanceInfo instanceInfo;
+    if (instanceInfo.isExtensionSupported("VK_KHR_surface"))
+    {
+       // use extensions with instance
+    }
+
+
  * -------------------------------------------------------------------------- */
 struct InstanceInfo
 {
@@ -48,6 +58,30 @@ struct InstanceInfo
 
    User needs to manually call create function after giving in the possible
    extra data (e.g. application name, etc.).
+
+   Instance class adds the validation layer and extensions it needs if user
+   calls setValidateEnabled. This will also include a debug message callback
+   where validation errors are printed into standard error output. Some im-
+   plementations might not support the valiation layer, in that case if the
+   instance is created with validtion enable the instance creation will fail.
+
+   All errors are printend into standard erro output.
+
+   Example:
+
+      Instance instance;
+      instance.setApplicationName("my_app")
+              .setValidateEnabled(true);
+      instance.create();
+      if (!instance.isValid())
+        return;
+
+      // ...
+
+      // Manually destroy instance. Automatic destruction happens after
+      // last copy of instance goes out-of-scope. 
+      // instance.destroy(); 
+
  * -------------------------------------------------------------------------- */
 class Instance
 {
