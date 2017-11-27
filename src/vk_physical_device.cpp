@@ -321,6 +321,7 @@ struct PhysicalDevice::Impl
         : physicalDevice(physicalDevice)
         , instance(instance)
         , info(physicalDevice, instance)
+        , features(info.features)
     {}
 
     /* ---------------------------------------------------------------------- *
@@ -360,6 +361,11 @@ struct PhysicalDevice::Impl
         for (auto& extension : extensions)
             extensionNamesStr.push_back(extension.c_str());
 
+        // Layers
+        std::vector<const char*> layerNamesStr;
+        for (auto& layer : layers)
+            layerNamesStr.push_back(layer.c_str());
+
         // Fill create info
         VkDeviceCreateInfo deviceInfo = {};
         deviceInfo.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO; // Type of the struct.
@@ -367,8 +373,8 @@ struct PhysicalDevice::Impl
         deviceInfo.flags                   = 0;                                    // Must be 0.
         deviceInfo.queueCreateInfoCount    = uint32_t(queueInfos.size());          // Queue info count.
         deviceInfo.pQueueCreateInfos       = queueInfos.data();                    // Queue infos.
-        deviceInfo.enabledLayerCount       = 0;                                    // Layer count.
-        deviceInfo.ppEnabledLayerNames     = NULL;                                 // Layer names.
+        deviceInfo.enabledLayerCount       = uint32_t(extensionNamesStr.size());   // Layer count.
+        deviceInfo.ppEnabledLayerNames     = layerNamesStr.data();                 // Layer names.
         deviceInfo.enabledExtensionCount   = uint32_t(extensionNamesStr.size());   // Extension count.
         deviceInfo.ppEnabledExtensionNames = extensionNamesStr.data();             // Extension names.
         deviceInfo.pEnabledFeatures        = &features;                            // Features to enable.
@@ -403,8 +409,9 @@ struct PhysicalDevice::Impl
     VkDevice logicalDevice = VK_NULL_HANDLE;
     std::vector<QueueFamilyParams> queueFamilyParams;
     std::vector<std::string> extensions;
-    VkPhysicalDeviceFeatures features;
+    std::vector<std::string> layers;
     PhysicalDeviceInfo info;
+    VkPhysicalDeviceFeatures features;
 };
 
 /* -------------------------------------------------------------------------- *
@@ -430,6 +437,22 @@ PhysicalDevice& PhysicalDevice::setExtensions(
  * -------------------------------------------------------------------------- */
 std::vector<std::string> PhysicalDevice::extensions() const
 { return impl->extensions; }
+
+/* -------------------------------------------------------------------------- *
+   Sets the logical device layers.
+ * -------------------------------------------------------------------------- */
+PhysicalDevice& PhysicalDevice::setLayers(
+    const std::vector<std::string>& layers)
+{
+    impl->layers = layers;
+    return *this;
+}
+
+/* -------------------------------------------------------------------------- *
+   Returns the logical device layers.
+ * -------------------------------------------------------------------------- */
+std::vector<std::string> PhysicalDevice::layers() const
+{ return impl->layers; }
 
 /* -------------------------------------------------------------------------- *
    Sets the device features.

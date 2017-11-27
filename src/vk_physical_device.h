@@ -98,12 +98,16 @@ public:
     PhysicalDevice(const VkPhysicalDevice& physicalDevice,
                    const VkInstance& instance);
 
-    // Sets and gets the logical device extensions name to use.
+    // Sets and gets the logical device extension names to use.
     PhysicalDevice& setExtensions(const std::vector<std::string>& extensions);
     std::vector<std::string> extensions() const;
 
+    // Sets and gets the logical device layer names to use.
+    PhysicalDevice& setLayers(const std::vector<std::string>& layers);
+    std::vector<std::string> layers() const;
+
     // Sets and gets the physical device features that should be enabled for
-    // the logical device.
+    // the logical device. By default this is the features struct from info.
     PhysicalDevice& setFeatures(const VkPhysicalDeviceFeatures& deviceFeatures);
     VkPhysicalDeviceFeatures features() const;
 
