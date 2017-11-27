@@ -124,6 +124,9 @@ public:
     // logical device handle is not a VK_NULL_HANDLE.
     bool isValid() const;
 
+    // Returns the info of physical device.
+    PhysicalDeviceInfo info() const;
+
     // Returns the physical device handle.
     VkPhysicalDevice physicalDeviceHandle() const;
     // Returns the logical device handle.

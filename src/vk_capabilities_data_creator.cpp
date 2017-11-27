@@ -82,20 +82,21 @@ std::vector<Data::Entry> getDeviceProperties(
     const std::vector<VariableDescriptions::Variable>& variables =
         limitVariableDesc.variables();
 
-    const VkPhysicalDeviceIDPropertiesKHR& idProperties = device.idProperties;
+    const vk::PhysicalDeviceInfo& info = device.info();
+    const VkPhysicalDeviceIDPropertiesKHR& idProperties = info.idProperties;
 
     std::vector<std::string> values =
     {
-        device.properties.deviceName,
-        vk::stringify::physicalDeviceType(device.properties.deviceType),
-        vk::stringify::versionNumber(device.properties.apiVersion),
-        vk::stringify::versionNumber(device.properties.driverVersion),
-        vk::stringify::hexValueToString(device.properties.vendorID),
-        vk::stringify::hexValueToString(device.properties.deviceID),
-        vk::stringify::uuid(device.properties.pipelineCacheUUID),
+        info.properties.deviceName,
+        vk::stringify::physicalDeviceType(info.properties.deviceType),
+        vk::stringify::versionNumber(info.properties.apiVersion),
+        vk::stringify::versionNumber(info.properties.driverVersion),
+        vk::stringify::hexValueToString(info.properties.vendorID),
+        vk::stringify::hexValueToString(info.properties.deviceID),
+        vk::stringify::uuid(info.properties.pipelineCacheUUID),
     };
 
-    if (device.hasExtensionsProperties)
+    if (info.hasExtensionsProperties)
     {
         std::vector<std::string> valuesExt =
         {
@@ -138,8 +139,9 @@ std::vector<Data::Entry> getDeviceExtentions(
                ex.extensionName,
                std::to_string(ex.specVersion));
 
+    const vk::PhysicalDeviceInfo& devInfo = device.info();
     std::vector<Data::Row> deviceExtensionsRows;
-    for (const VkExtensionProperties& ex : device.extensions)
+    for (const VkExtensionProperties& ex : devInfo.extensions)
         addRow(deviceExtensionsRows, ex.extensionName, std::to_string(ex.specVersion));
 
     std::vector<Data::Entry> out;
@@ -212,7 +214,8 @@ std::vector<Data::Entry> getFeatures(const vk::PhysicalDevice& device)
 
     int descIndex = 0;
 
-    const VkPhysicalDeviceFeatures f = device.features;
+    const vk::PhysicalDeviceInfo& info = device.info();
+    const VkPhysicalDeviceFeatures f = info.features;
     addFeatureRow("Robust Buffer Access",                         f.robustBufferAccess, descs[descIndex++].description);
     addFeatureRow("Full Draw Index Uint32",                       f.fullDrawIndexUint32, descs[descIndex++].description);
     addFeatureRow("Image Cube Array",                             f.imageCubeArray, descs[descIndex++].description);
@@ -269,27 +272,27 @@ std::vector<Data::Entry> getFeatures(const vk::PhysicalDevice& device)
     addFeatureRow("Variable Multisample Rate",                    f.variableMultisampleRate, descs[descIndex++].description);
     addFeatureRow("Inherited Queries",                            f.inheritedQueries, descs[descIndex++].description);
 
-    if (device.hasExtensionsFeatures)
+    if (info.hasExtensionsFeatures)
     {
-        VkPhysicalDeviceVariablePointerFeaturesKHR vp = device.featuresVariablePointer;
+        VkPhysicalDeviceVariablePointerFeaturesKHR vp = info.featuresVariablePointer;
         addFeatureRow("Variable Pointers Storage Buffer", vp.variablePointersStorageBuffer, descs[descIndex++].description);
         addFeatureRow("Variable Pointers",                vp.variablePointers,              descs[descIndex++].description);
 
-        VkPhysicalDeviceMultiviewFeaturesKHX mv = device.multiviewFeatures;
+        VkPhysicalDeviceMultiviewFeaturesKHX mv = info.multiviewFeatures;
         addFeatureRow("Multiview",                    mv.multiview,                   descs[descIndex++].description);
         addFeatureRow("Multiview Geometry Shader",    mv.multiviewGeometryShader,     descs[descIndex++].description);
         addFeatureRow("Multiview Tesselation Shader", mv.multiviewTessellationShader, descs[descIndex++].description);
 
-        VkPhysicalDevice16BitStorageFeaturesKHR s16 = device.features16BitStorage;
+        VkPhysicalDevice16BitStorageFeaturesKHR s16 = info.features16BitStorage;
         addFeatureRow("Storage Buffer 16 bit Access",                s16.storageBuffer16BitAccess,           descs[descIndex++].description);
         addFeatureRow("Uniform and Storage Buffer 16 bit Access",    s16.uniformAndStorageBuffer16BitAccess, descs[descIndex++].description);
         addFeatureRow("Storage Push Constant 16",                    s16.storagePushConstant16,              descs[descIndex++].description);
         addFeatureRow("Storage Input/Output 16",                     s16.storageInputOutput16,               descs[descIndex++].description);
 
-        VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR yuv = device.yuvSamplerFeatures;
+        VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR yuv = info.yuvSamplerFeatures;
         addFeatureRow("Sampler Y'CbCr Conversion", yuv.samplerYcbcrConversion,           descs[descIndex++].description);
 
-        VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT blend = device.blendFeatures;;
+        VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT blend = info.blendFeatures;;
         addFeatureRow("Advanced Blend Coherent Operations", blend.advancedBlendCoherentOperations, descs[descIndex++].description);
     }
 
@@ -351,7 +354,8 @@ std::vector<Data::Entry> getLimits(const vk::PhysicalDevice& device)
     std::vector<VariableDescriptions::Variable> descs =
         limitVariableDesc.variables();
 
-    const VkPhysicalDeviceLimits& limits = device.properties.limits;
+    const vk::PhysicalDeviceInfo& info = device.info();
+    const VkPhysicalDeviceLimits& limits = info.properties.limits;
     int descIndex = 0;
 
     std::vector<Data::Row> limitRows;
@@ -476,13 +480,13 @@ std::vector<Data::Entry> getLimits(const vk::PhysicalDevice& device)
     addRow(descs[descIndex].name, std::to_string(limits.optimalBufferCopyRowPitchAlignment), descs[descIndex].description);
     addRow(descs[descIndex].name, std::to_string(limits.nonCoherentAtomSize),                descs[descIndex].description);
 
-    if (device.hasExtensionsProperties)
+    if (info.hasExtensionsProperties)
     {
-        const VkPhysicalDeviceMultiviewPropertiesKHX&  multiview = device.multiviewProperties;
+        const VkPhysicalDeviceMultiviewPropertiesKHX&  multiview = info.multiviewProperties;
         addRow("Max Multiview View Count",     std::to_string(multiview.maxMultiviewViewCount),                descs[descIndex].description);
         addRow("Max Multiview Instance Index", std::to_string(multiview.maxMultiviewInstanceIndex),                descs[descIndex].description);
 
-        VkPhysicalDeviceBlendOperationAdvancedPropertiesEXT blendProperties = device.blendProperties;
+        VkPhysicalDeviceBlendOperationAdvancedPropertiesEXT blendProperties = info.blendProperties;
         addRow("Advanced Blend Max Color Attachments",       std::to_string(blendProperties.advancedBlendMaxColorAttachments),                descs[descIndex].description);
         addRow("Advanced Blend Independent Blend",           vkboolToStr(blendProperties.advancedBlendIndependentBlend),                descs[descIndex].description);
         addRow("Advanced Blend Non Premultiplied Src Color", vkboolToStr(blendProperties.advancedBlendNonPremultipliedSrcColor),                descs[descIndex].description);
@@ -490,16 +494,16 @@ std::vector<Data::Entry> getLimits(const vk::PhysicalDevice& device)
         addRow("Advanced Blend Correlated Overlap",          vkboolToStr(blendProperties.advancedBlendCorrelatedOverlap),                descs[descIndex].description);
         addRow("Advanced Blend All Operations",              vkboolToStr(blendProperties.advancedBlendAllOperations),                descs[descIndex].description);
 
-        VkPhysicalDeviceDiscardRectanglePropertiesEXT  discardRectangleProperties  = device.discardRectangleProperties;
+        VkPhysicalDeviceDiscardRectanglePropertiesEXT  discardRectangleProperties  = info.discardRectangleProperties;
         addRow("Max Discard Rectangles",      std::to_string(discardRectangleProperties.maxDiscardRectangles),                descs[descIndex].description);
 
-        VkPhysicalDevicePointClippingPropertiesKHR clippingProperties = device.clippingProperties;
+        VkPhysicalDevicePointClippingPropertiesKHR clippingProperties = info.clippingProperties;
         addRow("Point Clipping Behavior",   vk::stringify::pointClippingBehavior(clippingProperties.pointClippingBehavior),                descs[descIndex].description);
 
-        VkPhysicalDevicePushDescriptorPropertiesKHR  pushDescriptorProperties = device.pushDescriptorProperties;
+        VkPhysicalDevicePushDescriptorPropertiesKHR  pushDescriptorProperties = info.pushDescriptorProperties;
         addRow("Max Push Descriptors",      std::to_string(pushDescriptorProperties.maxPushDescriptors),                descs[descIndex].description);
 
-        VkPhysicalDeviceSampleLocationsPropertiesEXT sampleLocationsProperties = device.sampleLocationsProperties;
+        VkPhysicalDeviceSampleLocationsPropertiesEXT sampleLocationsProperties = info.sampleLocationsProperties;
         addRow("Sample Location Sample Counts",    vk::stringify::sampleCount(sampleLocationsProperties.sampleLocationSampleCounts),                descs[descIndex].description);
         addRow("Max Sample Location Grid Size",    vk::stringify::extent2D(sampleLocationsProperties.maxSampleLocationGridSize),                descs[descIndex].description);
         addRow("Sample Location Coordinate Range",
@@ -509,7 +513,7 @@ std::vector<Data::Entry> getLimits(const vk::PhysicalDevice& device)
         addRow("Sample Location Sub Pixel Bits", std::to_string(sampleLocationsProperties.sampleLocationSubPixelBits),                descs[descIndex].description);
         addRow("Variable Sample Locations",      vkboolToStr(sampleLocationsProperties.variableSampleLocations),                descs[descIndex].description);
 
-        VkPhysicalDeviceSamplerFilterMinmaxPropertiesEXT samplerMinMaxProperties = device.samplerMinMaxProperties;
+        VkPhysicalDeviceSamplerFilterMinmaxPropertiesEXT samplerMinMaxProperties = info.samplerMinMaxProperties;
         addRow("Filter Minmax Single Component Formats", vkboolToStr(samplerMinMaxProperties.filterMinmaxSingleComponentFormats),                descs[descIndex].description);
         addRow("Filter Minmax Image Component Mapping",  vkboolToStr(samplerMinMaxProperties.filterMinmaxImageComponentMapping),                descs[descIndex].description);
     }
@@ -544,11 +548,12 @@ std::vector<Data::Entry> getQueues(const vk::PhysicalDevice& device)
         }});
     };
 
+    const vk::PhysicalDeviceInfo& info = device.info();
     std::vector<Data::Row> queueRows;
-    for (int familyIndex = 0; familyIndex < device.queueFamilies.size(); ++familyIndex)
+    for (int familyIndex = 0; familyIndex < info.queueFamilies.size(); ++familyIndex)
     {
-        const bool presentation = device.queuePresentation[familyIndex];
-        const VkQueueFamilyProperties& q = device.queueFamilies[familyIndex];
+        const bool presentation = info.queuePresentation[familyIndex];
+        const VkQueueFamilyProperties& q = info.queueFamilies[familyIndex];
         addQueueRow(queueRows,
                     std::to_string(familyIndex),
                     std::to_string(q.queueCount),
@@ -585,19 +590,20 @@ std::vector<Data::Entry> getMemory(const vk::PhysicalDevice& device)
         }});
     };
 
+    const vk::PhysicalDeviceInfo& info = device.info();
     std::vector<Data::Row> memoryRows;
-    for (int i = 0; i < int(device.memoryProperties.memoryHeapCount); ++i)
+    for (int i = 0; i < int(info.memoryProperties.memoryHeapCount); ++i)
     {
-        VkMemoryHeap heap = device.memoryProperties.memoryHeaps[i];
+        VkMemoryHeap heap = info.memoryProperties.memoryHeaps[i];
         std::string size = std::to_string(float(heap.size) / float(1024*1024*1024)) + " GB";
         std::string heapIndex = std::to_string(i);
         std::string  properties = vk::stringify::memoryHeap(heap.flags);
 
         std::string flags;
 
-        for (int k = 0; k < int(device.memoryProperties.memoryTypeCount); ++k)
+        for (int k = 0; k < int(info.memoryProperties.memoryTypeCount); ++k)
         {
-            VkMemoryType type = device.memoryProperties.memoryTypes[k];
+            VkMemoryType type = info.memoryProperties.memoryTypes[k];
             if (type.heapIndex != i)
                 continue;
 
@@ -620,14 +626,16 @@ std::vector<Data::Entry> getMemory(const vk::PhysicalDevice& device)
 
 std::vector<Data::Entry> getFormats(const vk::PhysicalDevice& device)
 {
+    const vk::PhysicalDeviceInfo& info = device.info();
+
     VariableDescriptions formatVariableDesc("://descriptions/formats.txt");
     std::vector<VariableDescriptions::Variable> formatStrings =
         formatVariableDesc.variables();
 
     std::vector<Data::Row> formatLinearRows;
-    for (int i = 0; i < device.formats.size(); ++i)
+    for (int i = 0; i < info.formats.size(); ++i)
     {
-        const std::pair<VkFormat, VkFormatProperties>& f = device.formats[i];
+        const std::pair<VkFormat, VkFormatProperties>& f = info.formats[i];
         formatLinearRows.push_back(
         {{
             { Data::Cell::Style::NameLabel,  formatStrings[i].name,                                        formatStrings[i].description},
@@ -636,9 +644,9 @@ std::vector<Data::Entry> getFormats(const vk::PhysicalDevice& device)
     }
 
     std::vector<Data::Row> formatOptimalRows;
-    for (int i = 0; i < device.formats.size(); ++i)
+    for (int i = 0; i < info.formats.size(); ++i)
     {
-        const std::pair<VkFormat, VkFormatProperties>& f = device.formats[i];
+        const std::pair<VkFormat, VkFormatProperties>& f = info.formats[i];
         formatOptimalRows.push_back(
         {{
             { Data::Cell::Style::NameLabel,  formatStrings[i].name,                                        formatStrings[i].description},
@@ -647,9 +655,9 @@ std::vector<Data::Entry> getFormats(const vk::PhysicalDevice& device)
     }
 
     std::vector<Data::Row> bufferRows;
-    for (int i = 0; i < device.formats.size(); ++i)
+    for (int i = 0; i < info.formats.size(); ++i)
     {
-        const std::pair<VkFormat, VkFormatProperties>& f = device.formats[i];
+        const std::pair<VkFormat, VkFormatProperties>& f = info.formats[i];
         bufferRows.push_back(
         {{
             { Data::Cell::Style::NameLabel,  formatStrings[i].name,                                        formatStrings[i].description},
@@ -772,7 +780,7 @@ DataCreator::DataCreator(
     {
         const vk::PhysicalDevice& device = devices[deviceIndex];
         Data::PhysicalDeviceData d;
-        d.name       = device.properties.deviceName;
+        d.name       = device.info().properties.deviceName;
         d.properties = getDeviceProperties(device);
         d.extensions = getDeviceExtentions(instance, device);
         d.layers     = getDeviceLayers(instance);

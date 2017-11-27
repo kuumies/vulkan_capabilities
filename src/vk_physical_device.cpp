@@ -314,6 +314,16 @@ PhysicalDeviceInfo::PhysicalDeviceInfo(
 struct PhysicalDevice::Impl
 {
     /* ---------------------------------------------------------------------- *
+       Constructs the implementation.
+    * ----------------------------------------------------------------------- */
+    Impl(const VkPhysicalDevice& physicalDevice,
+         const VkInstance& instance)
+        : physicalDevice(physicalDevice)
+        , instance(instance)
+        , info(physicalDevice, instance)
+    {}
+
+    /* ---------------------------------------------------------------------- *
        Destroys the logical device if it is created and has not been 
        destroyed.
     * ----------------------------------------------------------------------- */
@@ -337,7 +347,7 @@ struct PhysicalDevice::Impl
             VkDeviceQueueCreateInfo queueInfo;
             queueInfo.sType            = type;                    // Type of the struct.
             queueInfo.queueFamilyIndex = params.queueFamilyIndex; // Queue family index.
-            queueInfo.queueCount       = params.count;            // Count of queues.
+            queueInfo.queueCount       = params.queueCount;       // Count of queues.
             queueInfo.pQueuePriorities = &params.priority;        // Priority of the queue.
             queueInfo.pNext            = NULL;                    // No extension usage
             queueInfo.flags            = 0;                       // Must be 0.
@@ -391,9 +401,10 @@ struct PhysicalDevice::Impl
     VkInstance instance = VK_NULL_HANDLE;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkDevice logicalDevice = VK_NULL_HANDLE;
-    std::vector<<QueueFamilyParams> queueFamilyParams;
-    std::vector<std::string>& extensions;
+    std::vector<QueueFamilyParams> queueFamilyParams;
+    std::vector<std::string> extensions;
     VkPhysicalDeviceFeatures features;
+    PhysicalDeviceInfo info;
 };
 
 /* -------------------------------------------------------------------------- *
@@ -401,11 +412,8 @@ struct PhysicalDevice::Impl
  * -------------------------------------------------------------------------- */
 PhysicalDevice::PhysicalDevice(const VkPhysicalDevice& physicalDevice,
                                const VkInstance& instance)
-    : impl(std::make_shared<Impl>())
-{
-    impl->instance       = instance;
-    impl->physicalDevice = physicalDevice;
-}
+    : impl(std::make_shared<Impl>(physicalDevice, instance))
+{}
 
 /* -------------------------------------------------------------------------- *
    Sets the logical device extensions.
@@ -458,16 +466,17 @@ PhysicalDevice& PhysicalDevice::addQueueFamily(
     float priority)
 {
     return addQueueFamily(
-        QueueFamilyParams(
+        QueueFamilyParams({
             queueFamilyIndex, 
             queueCount, 
-            priority));
+            priority}));
 }
 
 /* -------------------------------------------------------------------------- *
    Returns the queue family parameters.
  * -------------------------------------------------------------------------- */
-std::vector<QueueFamilyParams> PhysicalDevice::queueFamilyParams() const
+std::vector<PhysicalDevice::QueueFamilyParams>
+    PhysicalDevice::queueFamilyParams() const
 { return impl->queueFamilyParams; }
 
 /* -------------------------------------------------------------------------- *
@@ -495,6 +504,12 @@ bool PhysicalDevice::isValid() const
 { return impl->logicalDevice != VK_NULL_HANDLE; }
 
 /* -------------------------------------------------------------------------- *
+   Returns the info of physical device.
+ * -------------------------------------------------------------------------- */
+PhysicalDeviceInfo PhysicalDevice::info() const
+{ return impl->info; }
+
+/* -------------------------------------------------------------------------- *
    Returns the physical device handle.
  * -------------------------------------------------------------------------- */
 VkPhysicalDevice PhysicalDevice::physicalDeviceHandle() const
@@ -503,7 +518,7 @@ VkPhysicalDevice PhysicalDevice::physicalDeviceHandle() const
 /* -------------------------------------------------------------------------- *
    Returns the logical device handle.
  * -------------------------------------------------------------------------- */
-VkPhysicalDevice PhysicalDevice::logicalDeviceHandle() const
+VkDevice PhysicalDevice::logicalDeviceHandle() const
 { return impl->logicalDevice; }
 
 } // namespace vk_capabilities

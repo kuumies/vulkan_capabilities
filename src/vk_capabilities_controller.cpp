@@ -93,7 +93,7 @@ void Controller::start()
             impl->surfaceProperties.push_back(
                 vk::SurfaceProperties(
                     impl->instance->handle(),
-                    device.physicalDevice,
+                    device.physicalDeviceHandle(),
                     impl->surfaceWidget->surface()));
         }
         impl->capabilitiesData = DataCreator(*impl->instance, *impl->surfaceWidget, impl->surfaceProperties).data();
