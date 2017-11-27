@@ -68,11 +68,12 @@ struct Swapchain::Impl
         info.clipped               = VK_TRUE;                             // Allow other widget to clip the surface
         info.oldSwapchain          = VK_NULL_HANDLE;                      // No old swap chain
 
+        // Create swapchain
         const VkResult result =
             vkCreateSwapchainKHR(
                 logicalDevice, // [in]  logical device.
                 &info,         // [in]  info
-                nullptr,       // [in]  allocator
+                NULL,          // [in]  allocator
                 &swapchain);   // [out] swapchain handle
         if (result != VK_SUCCESS)
         {
@@ -83,26 +84,120 @@ struct Swapchain::Impl
             return;
         }
 
+        // Get swapchain image count
         uint32_t swapchainImageCount;
         vkGetSwapchainImagesKHR(
             logicalDevice,        // [in]  Logical device handle
             swapchain,            // [in]  Swapchain handle
             &swapchainImageCount, // [out] Swapchain image count
-            nullptr);             // [in]  Allocator
+            NULL);                // [in]  Allocator
 
         swapchainImages.resize(swapchainImageCount);
 
+        // Get swapchain images
         vkGetSwapchainImagesKHR(
             logicalDevice,           // [in]  Logical device handle
             swapchain,               // [in]  Swapchain handle
             &swapchainImageCount,    // [out] Swapchain image count
             swapchainImages.data()); // [in]  Allocator
+
+        // Create swapchain image views
+        swapchainImageViews.resize(swapchainImageCount);
+        for (size_t i = 0; i < swapchainImageCount; ++i)
+        {
+            // Color image, no mipmapping, no layers
+            VkImageSubresourceRange subresourceRange =
+            {  VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+            // No remapping
+            VkComponentMapping components =
+            { VK_COMPONENT_SWIZZLE_IDENTITY,
+              VK_COMPONENT_SWIZZLE_IDENTITY,
+              VK_COMPONENT_SWIZZLE_IDENTITY,
+              VK_COMPONENT_SWIZZLE_IDENTITY };
+
+            VkStructureType type = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+
+            VkImageViewCreateInfo info;
+            info.sType            = type;                  // Must be this type
+            info.pNext            = NULL;                  // No allocator
+            info.flags            = 0;                     // Must be 0
+            info.image            = swapchainImages[i];    // Image
+            info.viewType         = VK_IMAGE_VIEW_TYPE_2D; // Image is 2D
+            info.format           = surfaceFormat.format;  // Image format
+            info.components       = components;            // No swizzling (remapping)
+            info.subresourceRange = subresourceRange;      // Content of image
+
+            const VkResult result =
+                vkCreateImageView(
+                    logicalDevice,            // [in]  Logical device.
+                    &info,                    // [in]  Image view params
+                    NULL,                     // [in]  Allocator
+                    &swapchainImageViews[i]); // [out] Image view handle
+
+            if (result != VK_SUCCESS)
+            {
+                std::cerr << __FUNCTION__
+                          << ": swap chain image view creation failed as "
+                          << vk::stringify::result(result)
+                          << std::endl;
+                return;
+            }
+        }
+
+        // Create swapchain framebuffers
+        swapchainFramebuffers.resize(swapchainImageCount);
+        for (size_t i = 0; i < swapchainImageCount; ++i)
+        {
+            std::vector<VkImageView> attachments =
+            { swapchainImageViews[i] };
+
+            VkStructureType type = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            VkFramebufferCreateInfo info;
+            info.sType           = type;                         // Must be this type.
+            info.pNext           = NULL;                         // Must be null
+            info.flags           = 0;                            // Must be 0
+            info.renderPass      = renderPass;                   // Render pass handle.
+            info.attachmentCount = uint32_t(attachments.size()); // Attachment count
+            info.pAttachments    = attachments.data();           // Attachments
+            info.width           = imageExtent.width;            // Width of framebuffer
+            info.height          = imageExtent.height;           // Height of framebuffer
+            info.layers          = 1;                            // Single layer
+
+            const VkResult result =
+                vkCreateFramebuffer(
+                    logicalDevice,
+                    &info,
+                    NULL,
+                    &swapchainFramebuffers[i]);
+
+            if (result != VK_SUCCESS)
+            {
+                std::cerr << __FUNCTION__
+                          << ": swap chain framebuffer creation failed as "
+                          << vk::stringify::result(result)
+                          << std::endl;
+                return;
+            }
+        }
     }
     /* ----------------------------------------------------------------------- *
         Destroys the swapchain.
      * ----------------------------------------------------------------------- */
     void destroy()
     {
+        for (size_t i = 0; i < swapchainFramebuffers.size(); i++)
+            vkDestroyFramebuffer(
+                logicalDevice,            // [in] logical device handle
+                swapchainFramebuffers[i], // [in] framebuffer handle
+                NULL);                    // [in] allocator
+
+        for (size_t i = 0; i < swapchainImageViews.size(); i++)
+            vkDestroyImageView(
+                logicalDevice,          // [in] logical device handle
+                swapchainImageViews[i], // [in] image view handle
+                NULL);                  // [in] allocatior
+
         vkDestroySwapchainKHR(
             logicalDevice,      // [in] logical device handle
             swapchain,          // [in] swapchain handle
@@ -111,6 +206,7 @@ struct Swapchain::Impl
 
     VkSurfaceKHR surface;
     VkDevice logicalDevice;
+    VkRenderPass renderPass;
     VkSurfaceFormatKHR surfaceFormat;
     VkPresentModeKHR presentMode;
     VkExtent2D imageExtent;
@@ -120,17 +216,20 @@ struct Swapchain::Impl
     VkSwapchainKHR swapchain = VK_NULL_HANDLE;
     std::vector<VkImage> swapchainImages;
     std::vector<VkImageView> swapchainImageViews;
+    std::vector<VkFramebuffer> swapchainFramebuffers;
 };
 
 /* -------------------------------------------------------------------------- *
    Constructs the swap chain instance.
  * -------------------------------------------------------------------------- */
 Swapchain::Swapchain(const VkSurfaceKHR& surface,
-                     const VkDevice& logicalDevice)
+                     const VkDevice& logicalDevice,
+                     const VkRenderPass& renderPass)
     : impl(std::make_shared<Impl>())
 {
     impl->surface       = surface;
     impl->logicalDevice = logicalDevice;
+    impl->renderPass    = renderPass;
 }
 
 /* -------------------------------------------------------------------------- *

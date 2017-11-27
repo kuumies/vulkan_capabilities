@@ -143,14 +143,15 @@ void Controller::runDeviceTest(int deviceIndex)
     if (!physicalDevice.isValid())
         return;
 
-    const VkExtent2D widgetExtent = { impl->surfaceWidget->width(), impl->surfaceWidget->height() };
+    const VkExtent2D widgetExtent = { uint32_t(impl->surfaceWidget->width()), uint32_t(impl->surfaceWidget->height()) };
     const vk::SurfaceProperties surfaceInfo = impl->surfaceProperties[deviceIndex];
     const VkSurfaceFormatKHR surfaceFormat = vk::helper::findSwapchainSurfaceFormat(surfaceInfo.surfaceFormats);
     const VkPresentModeKHR presentMode     = vk::helper::findSwapchainPresentMode(surfaceInfo.presentModes);
     const VkExtent2D extent                = vk::helper::findSwapchainImageExtent(surfaceInfo.surfaceCapabilities, widgetExtent);
     const int imageCount                   = vk::helper::findSwapchainImageCount(surfaceInfo.surfaceCapabilities);
 
-    impl->swapChain = std::make_shared<vk::Swapchain>(impl->surfaceWidget->surface(), physicalDevice.logicalDeviceHandle());
+    VkRenderPass renderPass = VK_NULL_HANDLE;
+    impl->swapChain = std::make_shared<vk::Swapchain>(impl->surfaceWidget->surface(), physicalDevice.logicalDeviceHandle(), renderPass);
     impl->swapChain->setSurfaceFormat(surfaceFormat)
                     .setPresentMode(presentMode)
                     .setImageExtent(extent)

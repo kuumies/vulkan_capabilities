@@ -21,7 +21,9 @@ class Swapchain
 {
 public:
     // Constructs the swap chain.
-    Swapchain(const VkSurfaceKHR& surface, const VkDevice& logicalDevice);
+    Swapchain(const VkSurfaceKHR& surface,
+              const VkDevice& logicalDevice,
+              const VkRenderPass& renderPass);
 
     // Sets and gets the surface format.
     Swapchain& setSurfaceFormat(const VkSurfaceFormatKHR& surfaceFormat);
