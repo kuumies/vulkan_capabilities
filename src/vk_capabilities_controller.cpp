@@ -15,6 +15,7 @@
 
 #include "vk/vk_helper.h"
 #include "vk/vk_instance.h"
+#include "vk/vk_render_pass.h"
 #include "vk/vk_surface_properties.h"
 #include "vk/vk_surface_widget.h"
 #include "vk/vk_swapchain.h"
@@ -42,7 +43,8 @@ struct Controller::Impl
     std::shared_ptr<Data> capabilitiesData;
 
     // Test data.
-    std::shared_ptr<vk::Swapchain> swapChain;
+    std::shared_ptr<vk::RenderPass> renderPass;
+    std::shared_ptr<vk::Swapchain> swapchain;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -150,16 +152,69 @@ void Controller::runDeviceTest(int deviceIndex)
     const VkExtent2D extent                = vk::helper::findSwapchainImageExtent(surfaceInfo.surfaceCapabilities, widgetExtent);
     const int imageCount                   = vk::helper::findSwapchainImageCount(surfaceInfo.surfaceCapabilities);
 
-    VkRenderPass renderPass = VK_NULL_HANDLE;
-    impl->swapChain = std::make_shared<vk::Swapchain>(impl->surfaceWidget->surface(), physicalDevice.logicalDeviceHandle(), renderPass);
-    impl->swapChain->setSurfaceFormat(surfaceFormat)
+    VkAttachmentDescription colorAttachment;
+    colorAttachment.flags          = 0;                                 // No aliases
+    colorAttachment.format         = surfaceFormat.format;              // Surface format
+    colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;             // No multisampling
+    colorAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;       // Clear the content on load
+    colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;      // Keep the content stored-
+    colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;   // We do not care about stencil
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;  // We do not care about stencil
+    colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;         // We do not care as content is going to be cleared
+    colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;   // Attachment is going to be presented to surface
+
+    VkAttachmentReference colorAttachmentRef;
+    colorAttachmentRef.attachment = 0;                                        // Reference to first (and only) attachment
+    colorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // Used as color attachment
+
+    VkSubpassDescription subpass;
+    subpass.flags                   = 0;                               // No flags
+    subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS; // Graphics pipeline
+    subpass.inputAttachmentCount    = 0;                               // No input attachments
+    subpass.pInputAttachments       = NULL;
+    subpass.colorAttachmentCount    = 1;                               // Color attachment
+    subpass.pColorAttachments       = &colorAttachmentRef;
+    subpass.pResolveAttachments     = NULL;                            // No multisampling
+    subpass.pDepthStencilAttachment = NULL;                            // No depth/stencil attachment
+    subpass.preserveAttachmentCount = 0;                               // This subpass is not a passtrought
+    subpass.pPreserveAttachments    = NULL;
+
+    // Attachment usage dependency. Only this subpass is using the attachment...
+//    srcSubpass – Index of a first (previous) subpass or VK_SUBPASS_EXTERNAL if we want to indicate dependency between subpass and operations outside of a render pass.
+//    dstSubpass – Index of a second (later) subpass (or VK_SUBPASS_EXTERNAL).
+//    srcStageMask – Pipeline stage during which a given attachment was used before (in a src subpass).
+//    dstStageMask – Pipeline stage during which a given attachment will be used later (in a dst subpass).
+//    srcAccessMask – Types of memory operations that occurred in a src subpass or before a render pass.
+//    dstAccessMask – Types of memory operations that occurred in a dst subpass or after a render pass.
+//    dependencyFlags – Flag describing the type (region) of dependency.
+
+    VkSubpassDependency dependency;
+    dependency.srcSubpass      = VK_SUBPASS_EXTERNAL;                           // Implicit subpass before
+    dependency.dstSubpass      = 0;                                             // This subpass
+    dependency.srcStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask   = 0;
+    dependency.dstAccessMask   = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                                 VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependency.dependencyFlags = 0;
+
+    impl->renderPass = std::make_shared<vk::RenderPass>(physicalDevice.logicalDeviceHandle());
+    impl->renderPass->setAttachmentDescriptions( { colorAttachment } );
+    impl->renderPass->setSubpassDescriptions( { subpass } );
+    impl->renderPass->setSubpassDependencies( { dependency } );
+    impl->renderPass->create();
+    if (!impl->renderPass->isValid())
+        return;
+
+    impl->swapchain = std::make_shared<vk::Swapchain>(impl->surfaceWidget->surface(), physicalDevice.logicalDeviceHandle(), impl->renderPass->handle());
+    impl->swapchain->setSurfaceFormat(surfaceFormat)
                     .setPresentMode(presentMode)
                     .setImageExtent(extent)
                     .setImageCount(imageCount)
                     .setPreTransform(surfaceInfo.surfaceCapabilities.currentTransform)
                     .setQueueIndicies( { uint32_t(graphics), uint32_t(presentation) } );
-    impl->swapChain->create();
-    if (!impl->swapChain->isValid())
+    impl->swapchain->create();
+    if (!impl->swapchain->isValid())
         return;
 }
 
