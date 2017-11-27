@@ -82,6 +82,21 @@ struct Swapchain::Impl
                       << std::endl;
             return;
         }
+
+        uint32_t swapchainImageCount;
+        vkGetSwapchainImagesKHR(
+            logicalDevice,        // [in]  Logical device handle
+            swapchain,            // [in]  Swapchain handle
+            &swapchainImageCount, // [out] Swapchain image count
+            nullptr);             // [in]  Allocator
+
+        swapchainImages.resize(swapchainImageCount);
+
+        vkGetSwapchainImagesKHR(
+            logicalDevice,           // [in]  Logical device handle
+            swapchain,               // [in]  Swapchain handle
+            &swapchainImageCount,    // [out] Swapchain image count
+            swapchainImages.data()); // [in]  Allocator
     }
     /* ----------------------------------------------------------------------- *
         Destroys the swapchain.
@@ -103,6 +118,8 @@ struct Swapchain::Impl
     VkSurfaceTransformFlagBitsKHR preTransform;
     std::vector<uint32_t> queueIndices;
     VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+    std::vector<VkImage> swapchainImages;
+    std::vector<VkImageView> swapchainImageViews;
 };
 
 /* -------------------------------------------------------------------------- *
