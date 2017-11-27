@@ -109,7 +109,7 @@ std::vector<bool> getQueuePresentationSupports(
     for (uint32_t queueFamilyIndex = 0;
          queueFamilyIndex < queueProperties.size();
          ++queueFamilyIndex)
-    {
+    {       
 #ifdef _WIN32
         using namespace windows;
         VkBool32 result = vkGetPhysicalDeviceWin32PresentationSupportKHR(
@@ -373,7 +373,7 @@ struct PhysicalDevice::Impl
         deviceInfo.flags                   = 0;                                    // Must be 0.
         deviceInfo.queueCreateInfoCount    = uint32_t(queueInfos.size());          // Queue info count.
         deviceInfo.pQueueCreateInfos       = queueInfos.data();                    // Queue infos.
-        deviceInfo.enabledLayerCount       = uint32_t(extensionNamesStr.size());   // Layer count.
+        deviceInfo.enabledLayerCount       = uint32_t(layerNamesStr.size());       // Layer count.
         deviceInfo.ppEnabledLayerNames     = layerNamesStr.data();                 // Layer names.
         deviceInfo.enabledExtensionCount   = uint32_t(extensionNamesStr.size());   // Extension count.
         deviceInfo.ppEnabledExtensionNames = extensionNamesStr.data();             // Extension names.
@@ -402,6 +402,8 @@ struct PhysicalDevice::Impl
         vkDestroyDevice(
             logicalDevice, // [in] Logical device
             NULL);         // [in] Allocator
+
+        logicalDevice = VK_NULL_HANDLE;
     }
 
     VkInstance instance = VK_NULL_HANDLE;

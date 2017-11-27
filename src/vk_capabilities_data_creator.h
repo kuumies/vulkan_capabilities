@@ -12,11 +12,12 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-/* -------------------------------------------------------------------------- */
+#include "vk/vk_instance.h"
+#include "vk/vk_surface_properties.h"
+#include "vk/vk_surface_widget.h"
 #include "vk_capabilities_data.h"
-#include "vk_instance.h"
-#include "vk_surface_properties.h"
-#include "vk_surface_widget.h"
+
+/* -------------------------------------------------------------------------- */
 
 namespace kuu
 {

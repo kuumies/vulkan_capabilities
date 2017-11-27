@@ -267,6 +267,9 @@ struct MainWindow::Impl
             AboutDialog dlg;
             dlg.exec();
         });
+
+        connect(ui.actionDeviceTest, &QAction::triggered,
+                self, &MainWindow::doRunDevicetest);
     }
 
     // UI controls
@@ -343,6 +346,13 @@ void MainWindow::setData(std::shared_ptr<Data> data)
     QApplication::processEvents(
         QEventLoop::ExcludeUserInputEvents);
     hideProgress();
+}
+
+/* -------------------------------------------------------------------------- */
+
+void MainWindow::doRunDevicetest()
+{
+    emit runDeviceTest(impl->deviceIndex);
 }
 
 /* -------------------------------------------------------------------------- */

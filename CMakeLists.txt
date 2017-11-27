@@ -1,10 +1,10 @@
-#---------------------------------------------------------------------
-# Vulkan test project definition
+#-------------------------------------------------------------------------------
+# Vulkan capabilities project definition
 
 cmake_minimum_required(VERSION 3.0.0)
-project(vulkan_test)
+project(vulkan_capabilities)
 
-#---------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # Setup compiler
 
 if(MSVC)
@@ -25,7 +25,7 @@ if (BUILD_TYPE STREQUAL "debug")
     set (IS_DEBUG "ON")
 endif(BUILD_TYPE STREQUAL "debug")
 
-#---------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # Search dependency libraries
 
 find_package(vulkan REQUIRED)
@@ -51,7 +51,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
-#---------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # Application sources
 
 file(GLOB_RECURSE CPP_SOURCES src/*.cpp)

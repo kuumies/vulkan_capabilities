@@ -121,6 +121,8 @@ public:
 
     // Returns the available physical devices.
     std::vector<PhysicalDevice> physicalDevices() const;
+    // Returns physical device.
+    PhysicalDevice physicalDevice(int index) const;
 
 private:
     struct Impl;

@@ -51,8 +51,10 @@ public:
 
 signals:
     void updateProgress();
+    void runDeviceTest(int deviceIndex);
 
 private slots:
+    void doRunDevicetest();
     void doSetNoVulkan();
     void doSetNoPhysicalDevices();
     void doUpdatePhysicalDeviceButtonMenu(const QStringList &devices);

@@ -4,7 +4,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "vk_capabilities_data_creator.h"
-#include "vk_stringify.h"
+#include "vk/vk_stringify.h"
 #include "vk_capabilities_variable_description.h"
 
 /* -------------------------------------------------------------------------- */

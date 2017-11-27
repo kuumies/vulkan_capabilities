@@ -13,11 +13,13 @@
 
 /* -------------------------------------------------------------------------- */
 
+#include "vk/vk_helper.h"
+#include "vk/vk_instance.h"
+#include "vk/vk_surface_properties.h"
+#include "vk/vk_surface_widget.h"
+#include "vk/vk_swapchain.h"
 #include "vk_capabilities_data_creator.h"
 #include "vk_capabilities_main_window.h"
-#include "vk_instance.h"
-#include "vk_surface_properties.h"
-#include "vk_surface_widget.h"
 
 namespace kuu
 {
@@ -38,6 +40,9 @@ struct Controller::Impl
 
     // Capabilities data created from vulkan objects.
     std::shared_ptr<Data> capabilitiesData;
+
+    // Test data.
+    std::shared_ptr<vk::Swapchain> swapChain;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -54,6 +59,8 @@ void Controller::start()
     impl->mainWindow->setEnabled(false);
     impl->mainWindow->show();
     impl->mainWindow->showProgress();
+    connect(impl->mainWindow.get(), &MainWindow::runDeviceTest,
+            this, &Controller::runDeviceTest);
 
     std::future<void> vulkanInstanceTask = std::async([&]()
     {
@@ -84,11 +91,12 @@ void Controller::start()
         QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
 
     impl->surfaceWidget = std::unique_ptr<vk::SurfaceWidget>(new vk::SurfaceWidget(impl->instance->handle()));
+    impl->surfaceWidget->resize(720, 576);
 
     std::future<void> uiDataTask = std::async([&]()
     {
         auto devices = impl->instance->physicalDevices();
-        for (const vk::PhysicalDevice& device : devices)
+        for (vk::PhysicalDevice& device : devices)
         {
             impl->surfaceProperties.push_back(
                 vk::SurfaceProperties(
@@ -111,6 +119,47 @@ void Controller::start()
     {
         impl->mainWindow->setEnabled(true);
     }
+}
+
+/* -------------------------------------------------------------------------- */
+
+void Controller::runDeviceTest(int deviceIndex)
+{
+    vk::PhysicalDevice physicalDevice =
+        impl->instance->physicalDevice(deviceIndex);
+    const vk::PhysicalDeviceInfo info = physicalDevice.info();
+
+    const int graphics     = vk::helper::findQueueFamilyIndex(VK_QUEUE_GRAPHICS_BIT, info.queueFamilies);
+    const int presentation = vk::helper::findPresentationQueueFamilyIndex(
+        physicalDevice.physicalDeviceHandle(),
+        impl->surfaceWidget->surface(),
+        info.queueFamilies,
+        { graphics });
+
+    physicalDevice.setExtensions( { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
+    physicalDevice.addQueueFamily(graphics,     1, 1.0f);
+    physicalDevice.addQueueFamily(presentation, 1, 1.0f);
+    physicalDevice.create();
+    if (!physicalDevice.isValid())
+        return;
+
+    const VkExtent2D widgetExtent = { impl->surfaceWidget->width(), impl->surfaceWidget->height() };
+    const vk::SurfaceProperties surfaceInfo = impl->surfaceProperties[deviceIndex];
+    const VkSurfaceFormatKHR surfaceFormat = vk::helper::findSwapchainSurfaceFormat(surfaceInfo.surfaceFormats);
+    const VkPresentModeKHR presentMode     = vk::helper::findSwapchainPresentMode(surfaceInfo.presentModes);
+    const VkExtent2D extent                = vk::helper::findSwapchainImageExtent(surfaceInfo.surfaceCapabilities, widgetExtent);
+    const int imageCount                   = vk::helper::findSwapchainImageCount(surfaceInfo.surfaceCapabilities);
+
+    impl->swapChain = std::make_shared<vk::Swapchain>(impl->surfaceWidget->surface(), physicalDevice.logicalDeviceHandle());
+    impl->swapChain->setSurfaceFormat(surfaceFormat)
+                    .setPresentMode(presentMode)
+                    .setImageExtent(extent)
+                    .setImageCount(imageCount)
+                    .setPreTransform(surfaceInfo.surfaceCapabilities.currentTransform)
+                    .setQueueIndicies( { uint32_t(graphics), uint32_t(presentation) } );
+    impl->swapChain->create();
+    if (!impl->swapChain->isValid())
+        return;
 }
 
 } // namespace vk_capabilities

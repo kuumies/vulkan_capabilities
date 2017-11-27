@@ -269,6 +269,10 @@ struct Instance::Impl
      * ---------------------------------------------------------------------- */
     void destroy()
     {
+        for (PhysicalDevice& physicalDevice : physicalDevices)
+            physicalDevice.destroy();
+        physicalDevices.clear();
+
         if (callback)
             vk::windows::vkDestroyDebugReportCallback(
                 instance,
@@ -397,6 +401,17 @@ VkInstance Instance::handle() const
  * -------------------------------------------------------------------------- */
 std::vector<PhysicalDevice> Instance::physicalDevices() const
 { return impl->physicalDevices; }
+
+/* -------------------------------------------------------------------------- *
+   Returns the physical device by index. If the index is not valid then
+   an invalid physical device is returned.
+ * -------------------------------------------------------------------------- */
+PhysicalDevice Instance::physicalDevice(int index) const
+{
+    if (index < 0 || index >= impl->physicalDevices.size())
+        return PhysicalDevice(VK_NULL_HANDLE, VK_NULL_HANDLE);
+    return impl->physicalDevices[index];
+}
 
 } // namespace vk
 } // namespace kuu

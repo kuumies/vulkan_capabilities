@@ -1694,7 +1694,14 @@
     </property>
     <addaction name="actionAbout"/>
    </widget>
+   <widget class="QMenu" name="menuRun">
+    <property name="title">
+     <string>Run</string>
+    </property>
+    <addaction name="actionDeviceTest"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuRun"/>
    <addaction name="menuHelp"/>
   </widget>
   <action name="actionExit">
@@ -1708,6 +1715,11 @@
   <action name="actionAbout">
    <property name="text">
     <string>About...</string>
+   </property>
+  </action>
+  <action name="actionDeviceTest">
+   <property name="text">
+    <string>Device Test...</string>
    </property>
   </action>
  </widget>
@@ -1730,4 +1742,7 @@
    </hints>
   </connection>
  </connections>
+ <slots>
+  <slot>doRunDeviceTest()</slot>
+ </slots>
 </ui>
