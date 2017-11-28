@@ -20,7 +20,7 @@ namespace vk
 class RenderPass
 {
 public:
-    // Constructs the swap chain.
+    // Constructs the render pass.
     RenderPass(const VkDevice& logicalDevice);
 
     // Sets and gets the attachment descriptions.

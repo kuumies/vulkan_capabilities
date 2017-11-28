@@ -7,18 +7,27 @@
 
 /* -------------------------------------------------------------------------- */
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/mat4x4.hpp>
+#include <glm/geometric.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QMenuBar>
 #include <future>
 
 /* -------------------------------------------------------------------------- */
 
+#include "vk/vk_buffer.h"
 #include "vk/vk_helper.h"
 #include "vk/vk_instance.h"
 #include "vk/vk_render_pass.h"
+#include "vk/vk_shader_module.h"
 #include "vk/vk_surface_properties.h"
 #include "vk/vk_surface_widget.h"
 #include "vk/vk_swapchain.h"
+#include "vk/vk_descriptor_set.h"
 #include "vk_capabilities_data_creator.h"
 #include "vk_capabilities_main_window.h"
 
@@ -129,6 +138,7 @@ void Controller::runDeviceTest(int deviceIndex)
 {
     vk::PhysicalDevice physicalDevice =
         impl->instance->physicalDevice(deviceIndex);
+
     const vk::PhysicalDeviceInfo info = physicalDevice.info();
 
     const int graphics     = vk::helper::findQueueFamilyIndex(VK_QUEUE_GRAPHICS_BIT, info.queueFamilies);
@@ -144,6 +154,9 @@ void Controller::runDeviceTest(int deviceIndex)
     physicalDevice.create();
     if (!physicalDevice.isValid())
         return;
+
+    VkPhysicalDevice pd = physicalDevice.physicalDeviceHandle();
+    VkDevice ld         = physicalDevice.logicalDeviceHandle();
 
     const VkExtent2D widgetExtent = { uint32_t(impl->surfaceWidget->width()), uint32_t(impl->surfaceWidget->height()) };
     const vk::SurfaceProperties surfaceInfo = impl->surfaceProperties[deviceIndex];
@@ -163,9 +176,24 @@ void Controller::runDeviceTest(int deviceIndex)
     colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;         // We do not care as content is going to be cleared
     colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;   // Attachment is going to be presented to surface
 
+    VkAttachmentDescription depthStencilAttachment;
+    depthStencilAttachment.flags          = 0;                                 // No aliases
+    depthStencilAttachment.format         = VK_FORMAT_D32_SFLOAT_S8_UINT;      // Surface format
+    depthStencilAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;             // No multisampling
+    depthStencilAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;       // Clear the content on load
+    depthStencilAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;      // Keep the content stored-
+    depthStencilAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;   // We do not care about stencil
+    depthStencilAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;  // We do not care about stencil
+    depthStencilAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;         // We do not care as content is going to be cleared
+    depthStencilAttachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL; // Attachment is depth/stencil
+
     VkAttachmentReference colorAttachmentRef;
-    colorAttachmentRef.attachment = 0;                                        // Reference to first (and only) attachment
+    colorAttachmentRef.attachment = 0;                                        // Reference to first
     colorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // Used as color attachment
+
+    VkAttachmentReference depthStencilAttachmentRef;
+    depthStencilAttachmentRef.attachment = 1;                                                // Reference to second attachment
+    depthStencilAttachmentRef.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL; // Used as depth/stencil attachment
 
     VkSubpassDescription subpass;
     subpass.flags                   = 0;                               // No flags
@@ -175,7 +203,7 @@ void Controller::runDeviceTest(int deviceIndex)
     subpass.colorAttachmentCount    = 1;                               // Color attachment
     subpass.pColorAttachments       = &colorAttachmentRef;
     subpass.pResolveAttachments     = NULL;                            // No multisampling
-    subpass.pDepthStencilAttachment = NULL;                            // No depth/stencil attachment
+    subpass.pDepthStencilAttachment = &depthStencilAttachmentRef;      // Depth/stencil attachment
     subpass.preserveAttachmentCount = 0;                               // This subpass is not a passtrought
     subpass.pPreserveAttachments    = NULL;
 
@@ -199,23 +227,138 @@ void Controller::runDeviceTest(int deviceIndex)
     dependency.dependencyFlags = 0;
 
     impl->renderPass = std::make_shared<vk::RenderPass>(physicalDevice.logicalDeviceHandle());
-    impl->renderPass->setAttachmentDescriptions( { colorAttachment } );
+    impl->renderPass->setAttachmentDescriptions( { colorAttachment, depthStencilAttachment } );
     impl->renderPass->setSubpassDescriptions( { subpass } );
     impl->renderPass->setSubpassDependencies( { dependency } );
     impl->renderPass->create();
     if (!impl->renderPass->isValid())
         return;
 
-    impl->swapchain = std::make_shared<vk::Swapchain>(impl->surfaceWidget->surface(), physicalDevice.logicalDeviceHandle(), impl->renderPass->handle());
+    impl->swapchain = std::make_shared<vk::Swapchain>(impl->surfaceWidget->surface(),
+                                                      physicalDevice.physicalDeviceHandle(),
+                                                      physicalDevice.logicalDeviceHandle(),
+                                                      impl->renderPass->handle());
     impl->swapchain->setSurfaceFormat(surfaceFormat)
                     .setPresentMode(presentMode)
                     .setImageExtent(extent)
                     .setImageCount(imageCount)
                     .setPreTransform(surfaceInfo.surfaceCapabilities.currentTransform)
-                    .setQueueIndicies( { uint32_t(graphics), uint32_t(presentation) } );
+                    .setQueueIndicies( { uint32_t(graphics), uint32_t(presentation) } )
+                    .setCreateDepthStencilBuffer(true);
     impl->swapchain->create();
     if (!impl->swapchain->isValid())
         return;
+
+    vk::ShaderModule vshModule(ld, "shaders/test.vert.spv");
+    vshModule.setStageName("main");
+    vshModule.setStage(VK_SHADER_STAGE_VERTEX_BIT);
+    vshModule.create();
+    if (!vshModule.isValid())
+        return;
+
+    vk::ShaderModule fshModule(ld, "shaders/test.frag.spv");
+    fshModule.setStageName("main");
+    fshModule.setStage(VK_SHADER_STAGE_FRAGMENT_BIT);
+    fshModule.create();
+    if (!fshModule.isValid())
+        return;
+
+    const std::vector<float> vertices =
+    {
+         0.0f, -0.5f,  0.0f, 1.0f, 0.0f, 0.0f,
+         0.5f,  0.5f,  0.0f, 0.0f, 1.0f, 0.0f,
+        -0.5f,  0.5f,  0.0f, 0.0f, 0.0f, 1.0f
+    };
+
+    vk::Buffer vertexBuffer(pd, ld);
+    vertexBuffer.setSize(vertices.size() * sizeof(float));
+    vertexBuffer.setUsage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    vertexBuffer.setMemoryProperties(
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    vertexBuffer.create();
+    if (!vertexBuffer.isValid())
+        return;
+
+    void* vertexDst = vertexBuffer.map();
+    memcpy(vertexDst, vertices.data(), size_t(vertexBuffer.size()));
+    vertexBuffer.unmap();
+
+    const std::vector<uint32_t> indices =
+    {
+        0
+    };
+
+    vk::Buffer indexBuffer(pd, ld);
+    indexBuffer.setSize(indices.size() * sizeof(uint32_t));
+    indexBuffer.setUsage(VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+    indexBuffer.setMemoryProperties(
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    indexBuffer.create();
+    if (!indexBuffer.isValid())
+        return;
+
+    void* indexDst = indexBuffer.map();
+    memcpy(indexDst, indices.data(), size_t(indexBuffer.size()));
+    indexBuffer.unmap();
+
+    struct Matrices
+    {
+        glm::mat4 model;
+        glm::mat4 view;
+        glm::mat4 projection;
+    } matrices;
+    const float aspect = extent.width / float(extent.height);
+    matrices.view       = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -5.0f));
+    matrices.projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 150.0f);
+    matrices.projection[1][1] *= -1;
+
+    vk::Buffer uniformBuffer(pd, ld);
+    uniformBuffer.setSize(sizeof(matrices));
+    uniformBuffer.setUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    uniformBuffer.setMemoryProperties(
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    uniformBuffer.create();
+    if (!uniformBuffer.isValid())
+        return;
+
+    void* uniformDst = uniformBuffer.map();
+    memcpy(uniformDst, &matrices, size_t(uniformBuffer.size()));
+    uniformBuffer.unmap();
+
+    vk::DescriptorPool descriptorPool(ld);
+    descriptorPool.setType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    descriptorPool.setMaxSetCount(1);
+    descriptorPool.setDescriptorCount(1);
+    descriptorPool.create();
+    if (!descriptorPool.isValid())
+        return;
+
+    VkDescriptorSetLayoutBinding layoutBinding;
+    layoutBinding.binding            = 0;
+    layoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layoutBinding.descriptorCount    = 1;
+    layoutBinding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
+    layoutBinding.pImmutableSamplers = NULL;
+
+    VkDescriptorBufferInfo bufferInfo = {};
+    bufferInfo.buffer = uniformBuffer.handle();
+    bufferInfo.offset = 0;
+    bufferInfo.range = uniformBuffer.size();
+
+    vk::DescriptorSet descriptorSet(ld);
+    descriptorSet.setPool(descriptorPool.handle());
+    descriptorSet.setLayoutBinding(layoutBinding);
+    descriptorSet.setBufferInfo(bufferInfo);
+    descriptorSet.setBindingPoint(0);
+    descriptorSet.create();
+    if (!descriptorSet.isValid())
+        return;
+
+    VkWriteDescriptorSet writeDescriptorSet = descriptorSet.writeDescriptorSet();
+    vkUpdateDescriptorSets(ld, 1, &writeDescriptorSet, 0, NULL);
 }
 
 } // namespace vk_capabilities

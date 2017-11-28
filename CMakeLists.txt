@@ -4,6 +4,17 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(vulkan_capabilities)
 
+#---------------------------------------------------------------------
+# Externals
+
+set (EXTERNAL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external)
+set(CMAKE_MODULE_PATH
+    ${CMAKE_MODULE_PATH}
+    ${EXTERNAL_DIR}/glm
+)
+
+include(add_glm)
+
 #-------------------------------------------------------------------------------
 # Setup compiler
 
@@ -57,11 +68,13 @@ set(CMAKE_AUTORCC ON)
 file(GLOB_RECURSE CPP_SOURCES src/*.cpp)
 file(GLOB_RECURSE UI_SOURCES  src/*.ui)
 file(GLOB_RECURSE QRC_SOURCES src/*.qrc)
+file(GLOB_RECURSE GLSL_SOURCES src/*.vert src/*.frag)
 
 add_executable(${PROJECT_NAME}
     ${CPP_SOURCES}
     ${UI_SOURCES}
     ${QRC_SOURCES}
+    ${GLSL_SOURCES}
 )
 
 target_link_libraries(
@@ -71,3 +84,42 @@ target_link_libraries(
 )
 
 install(TARGETS ${PROJECT_NAME}   RUNTIME DESTINATION bin)
+
+#-------------------------------------------------------------------------------
+# GLSL to SPIR-V
+# based on the code from: https://gist.github.com/vlsh/a0d191701cb48f157b05be7f74d79396
+
+if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64")
+  set(GLSL_VALIDATOR "$ENV{VULKAN_SDK}/Bin/glslangValidator.exe")
+else()
+  set(GLSL_VALIDATOR "$ENV{VULKAN_SDK}/Bin32/glslangValidator.exe")
+endif()
+
+foreach(GLSL ${GLSL_SOURCES})
+  get_filename_component(FILE_NAME ${GLSL} NAME)
+  set(SPIRV "${PROJECT_BINARY_DIR}/shaders/${FILE_NAME}.spv")
+  add_custom_command(
+    OUTPUT ${SPIRV}
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/shaders/"
+    COMMAND ${GLSL_VALIDATOR} -V ${GLSL} -o ${SPIRV}
+    DEPENDS ${GLSL})
+  list(APPEND SPIRV_BINARY_FILES ${SPIRV})
+endforeach(GLSL)
+
+add_custom_target(
+    Shaders
+    DEPENDS ${SPIRV_BINARY_FILES}
+    )
+
+add_dependencies(${PROJECT_NAME} Shaders)
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E remove_directory "$<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders/"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders/"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${PROJECT_BINARY_DIR}/shaders"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders"
+        )
+
+install(FILES "$<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders" DESTINATION bin/)
+

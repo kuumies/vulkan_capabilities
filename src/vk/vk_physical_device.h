@@ -141,5 +141,5 @@ private:
     std::shared_ptr<Impl> impl;
 };
 
-} // namespace vk_capabilities
+} // namespace vk
 } // namespace kuu

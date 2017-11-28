@@ -6,6 +6,7 @@
 #include "vk_swapchain.h"
 #include <algorithm>
 #include <iostream>
+#include "vk_image.h"
 #include "vk_stringify.h"
 
 /* -------------------------------------------------------------------------- */
@@ -20,6 +21,19 @@ namespace vk
  * -------------------------------------------------------------------------- */
 struct Swapchain::Impl
 {
+    /* ----------------------------------------------------------------------- *
+       Constructs the swapchain.
+     * ----------------------------------------------------------------------- */
+    Impl(const VkSurfaceKHR& surface,
+         const VkPhysicalDevice& physicalDevice,
+         const VkDevice& logicalDevice,
+         const VkRenderPass& renderPass)
+        : surface(surface)
+        , logicalDevice(logicalDevice)
+        , renderPass(renderPass)
+        , depthStencilImage(physicalDevice, logicalDevice)
+    {}
+
     /* ----------------------------------------------------------------------- *
         Destroys the swapchain.
      * ----------------------------------------------------------------------- */
@@ -145,12 +159,29 @@ struct Swapchain::Impl
             }
         }
 
+        // Create depth/stencil attachment
+        if (createDepthStencilImage)
+        {
+            depthStencilImage.setType(VK_IMAGE_TYPE_2D);
+            depthStencilImage.setFormat(VK_FORMAT_D32_SFLOAT_S8_UINT);
+            depthStencilImage.setExtent( { imageExtent.width, imageExtent.height, 1 } );
+            depthStencilImage.setTiling(VK_IMAGE_TILING_OPTIMAL);
+            depthStencilImage.setUsage(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+            depthStencilImage.setInitialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
+            depthStencilImage.setImageViewAspect(VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
+            depthStencilImage.setMemoryProperty(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            depthStencilImage.create();
+            if (!depthStencilImage.isValid())
+                return;
+        }
+
         // Create swapchain framebuffers
         swapchainFramebuffers.resize(swapchainImageCount);
         for (size_t i = 0; i < swapchainImageCount; ++i)
         {
             std::vector<VkImageView> attachments =
-            { swapchainImageViews[i] };
+            { swapchainImageViews[i],
+              depthStencilImage.imageViewHandle() };
 
             VkStructureType type = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
             VkFramebufferCreateInfo info;
@@ -186,6 +217,8 @@ struct Swapchain::Impl
      * ----------------------------------------------------------------------- */
     void destroy()
     {
+        depthStencilImage.destroy();
+
         for (size_t i = 0; i < swapchainFramebuffers.size(); i++)
             vkDestroyFramebuffer(
                 logicalDevice,            // [in] logical device handle
@@ -217,20 +250,20 @@ struct Swapchain::Impl
     std::vector<VkImage> swapchainImages;
     std::vector<VkImageView> swapchainImageViews;
     std::vector<VkFramebuffer> swapchainFramebuffers;
+
+    bool createDepthStencilImage = false;
+    Image depthStencilImage;
 };
 
 /* -------------------------------------------------------------------------- *
    Constructs the swap chain instance.
  * -------------------------------------------------------------------------- */
 Swapchain::Swapchain(const VkSurfaceKHR& surface,
+                     const VkPhysicalDevice& physicalDevice,
                      const VkDevice& logicalDevice,
                      const VkRenderPass& renderPass)
-    : impl(std::make_shared<Impl>())
-{
-    impl->surface       = surface;
-    impl->logicalDevice = logicalDevice;
-    impl->renderPass    = renderPass;
-}
+    : impl(std::make_shared<Impl>(surface, physicalDevice, logicalDevice, renderPass))
+{}
 
 /* -------------------------------------------------------------------------- *
    Sets the swap chain format.
@@ -321,6 +354,21 @@ Swapchain& Swapchain::setQueueIndicies(const std::vector<uint32_t>& indices)
  * -------------------------------------------------------------------------- */
 std::vector<uint32_t> Swapchain::queueIndices() const
 { return impl->queueIndices; }
+
+/* -------------------------------------------------------------------------- *
+   Sets the depth/stencil buffer creation enabled or disabled.
+ * -------------------------------------------------------------------------- */
+Swapchain& Swapchain::setCreateDepthStencilBuffer(bool create)
+{
+    impl->createDepthStencilImage = create;
+    return *this;
+}
+
+/* -------------------------------------------------------------------------- *
+   Returns true if the depth/stencil buffer is created.
+ * -------------------------------------------------------------------------- */
+bool Swapchain::isCreateDepthStencilBuffer() const
+{ return impl->createDepthStencilImage; }
 
 /* -------------------------------------------------------------------------- *
    Creates the swap chain.

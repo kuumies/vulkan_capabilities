@@ -546,5 +546,5 @@ VkPhysicalDevice PhysicalDevice::physicalDeviceHandle() const
 VkDevice PhysicalDevice::logicalDeviceHandle() const
 { return impl->logicalDevice; }
 
-} // namespace vk_capabilities
+} // namespace vk
 } // namespace kuu

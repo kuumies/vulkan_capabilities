@@ -22,6 +22,7 @@ class Swapchain
 public:
     // Constructs the swap chain.
     Swapchain(const VkSurfaceKHR& surface,
+              const VkPhysicalDevice& physicalDevice,
               const VkDevice& logicalDevice,
               const VkRenderPass& renderPass);
 
@@ -48,6 +49,10 @@ public:
     // Sets the queue family indices who uses the image from swapchain.
     Swapchain& setQueueIndicies(const std::vector<uint32_t>& indices);
     std::vector<uint32_t> queueIndices() const;
+
+    // Sets the depth/stencil buffer to be created.
+    Swapchain& setCreateDepthStencilBuffer(bool create);
+    bool isCreateDepthStencilBuffer() const;
 
     // Creates and destroys the swap chain
     void create();

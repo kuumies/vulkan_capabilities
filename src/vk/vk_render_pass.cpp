@@ -69,7 +69,7 @@ struct RenderPass::Impl
     }
 
     /* ----------------------------------------------------------------------- *
-        Destroys the swapchain.
+        Destroys the render pass.
      * ----------------------------------------------------------------------- */
     void destroy()
     {
@@ -173,5 +173,5 @@ bool RenderPass::isValid() const
 VkRenderPass RenderPass::handle() const
 { return impl->renderPass; }
 
-} // namespace vk_capabilities
+} // namespace vk
 } // namespace kuu
