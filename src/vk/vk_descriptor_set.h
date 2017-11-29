@@ -25,18 +25,16 @@ public:
     // Constructs the pool.
     DescriptorPool(const VkDevice& logicalDevice);
 
-    // Sets and gets the type
-    DescriptorPool& setType(VkDescriptorType type);
-    VkDescriptorType type() const;
-
-    // Sets and gets the descriptor count. The default is 1.
-    DescriptorPool& setDescriptorCount(uint32_t count);
-    uint32_t descriptorCount() const;
+    // Adds a size of descriptor types.
+    DescriptorPool& addTypeSize(const VkDescriptorPoolSize& size);
+    DescriptorPool& addTypeSize(VkDescriptorType type, uint32_t size);
+    // Returns the descriptor type sizes.
+    std::vector<VkDescriptorPoolSize> typeSizes() const;
 
     // Sets and gets the max descriptor set count that can be allocated from
     // the pool. The default is 1.
-    DescriptorPool& setMaxSetCount(uint32_t count);
-    uint32_t maxSetCount() const;
+    DescriptorPool& setMaxCount(uint32_t count);
+    uint32_t maxCount() const;
 
     // Creates and destroys the pool.
     void create();
@@ -54,32 +52,35 @@ private:
 };
 
 /* -------------------------------------------------------------------------- *
-   A vulkan descriptor set wrapper class
+   A vulkan descriptor sets wrapper class
  * -------------------------------------------------------------------------- */
-class DescriptorSet
+class DescriptorSets
 {
 public:
-    // Constructs the descriptor set.
-    DescriptorSet(const VkDevice& logicalDevice);
+    // Constructs the descriptor sets.
+    DescriptorSets(const VkDevice& logicalDevice,
+                   const VkDescriptorPool& pool);
 
-    // Sets and gets the layout binding.
-    DescriptorSet& setLayoutBinding(const VkDescriptorSetLayoutBinding& layoutBinding);
-    VkDescriptorSetLayoutBinding layoutBinding() const;
-
-    // Sets and gets the pool.
-    DescriptorSet& setPool(const VkDescriptorPool& pool);
-    VkDescriptorPool pool() const;
+    // Adds a layout binding.
+    DescriptorSets& addLayoutBinding(const VkDescriptorSetLayoutBinding& layoutBinding);
+    DescriptorSets& addLayoutBinding(
+        uint32_t binding,
+        VkDescriptorType descriptorType,
+        uint32_t descriptorCount,
+        VkShaderStageFlags stageFlags,
+        const VkSampler* immutableSamplers = NULL);
+    std::vector<VkDescriptorSetLayoutBinding> layoutBindings() const;
 
     // Sets the buffer info. The descriptor set is set to be a buffer
     // descriptor set.
-    DescriptorSet& setBufferInfo(const VkDescriptorBufferInfo& info);
+    DescriptorSets& setBufferInfo(const VkDescriptorBufferInfo& info);
     // Sets the image info. The descriptor set is set to be a image
     // descriptor set.
-    DescriptorSet& setImageInfo(const VkDescriptorImageInfo& info);
+    DescriptorSets& setImageInfo(const VkDescriptorImageInfo& info);
 
     // Sets and gets the binding point of descriptor. The default binding
     // point is 0.
-    DescriptorSet& setBindingPoint(uint32_t point);
+    DescriptorSets& setBindingPoint(uint32_t point);
     uint32_t bindingPoint() const;
 
     // Creates and destroys the descriptor set.
@@ -94,8 +95,8 @@ public:
     // Returns the  descriptor set layout handles
     VkDescriptorSetLayout layoutHandle() const;
 
-    // Returns write description set.
-    VkWriteDescriptorSet writeDescriptorSet() const;
+    // Updates the buffer descriptor sets.
+    void writeUniformBuffer(const std::vector<VkDescriptorBufferInfo>& bufferInfos);
 
 private:
     struct Impl;

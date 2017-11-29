@@ -22,6 +22,8 @@
 #include "vk/vk_buffer.h"
 #include "vk/vk_helper.h"
 #include "vk/vk_instance.h"
+#include "vk/vk_mesh.h"
+#include "vk/vk_pipeline.h"
 #include "vk/vk_render_pass.h"
 #include "vk/vk_shader_module.h"
 #include "vk/vk_surface_properties.h"
@@ -263,6 +265,7 @@ void Controller::runDeviceTest(int deviceIndex)
     if (!fshModule.isValid())
         return;
 
+
     const std::vector<float> vertices =
     {
          0.0f, -0.5f,  0.0f, 1.0f, 0.0f, 0.0f,
@@ -270,38 +273,20 @@ void Controller::runDeviceTest(int deviceIndex)
         -0.5f,  0.5f,  0.0f, 0.0f, 0.0f, 1.0f
     };
 
-    vk::Buffer vertexBuffer(pd, ld);
-    vertexBuffer.setSize(vertices.size() * sizeof(float));
-    vertexBuffer.setUsage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-    vertexBuffer.setMemoryProperties(
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    vertexBuffer.create();
-    if (!vertexBuffer.isValid())
-        return;
-
-    void* vertexDst = vertexBuffer.map();
-    memcpy(vertexDst, vertices.data(), size_t(vertexBuffer.size()));
-    vertexBuffer.unmap();
-
     const std::vector<uint32_t> indices =
     {
-        0
+        0, 1, 2
     };
 
-    vk::Buffer indexBuffer(pd, ld);
-    indexBuffer.setSize(indices.size() * sizeof(uint32_t));
-    indexBuffer.setUsage(VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-    indexBuffer.setMemoryProperties(
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    indexBuffer.create();
-    if (!indexBuffer.isValid())
+    vk::Mesh mesh(pd, ld);
+    mesh.setVertices(vertices);
+    mesh.setIndices(indices);
+    mesh.addVertexAttributeDescription(0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0);
+    mesh.addVertexAttributeDescription(1, 0, VK_FORMAT_R32G32B32_SFLOAT, 3 * sizeof(float));
+    mesh.setVertexBindingDescription(0, 6 * sizeof(float), VK_VERTEX_INPUT_RATE_VERTEX);
+    mesh.create();
+    if (!mesh.isValid())
         return;
-
-    void* indexDst = indexBuffer.map();
-    memcpy(indexDst, indices.data(), size_t(indexBuffer.size()));
-    indexBuffer.unmap();
 
     struct Matrices
     {
@@ -329,36 +314,25 @@ void Controller::runDeviceTest(int deviceIndex)
     uniformBuffer.unmap();
 
     vk::DescriptorPool descriptorPool(ld);
-    descriptorPool.setType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-    descriptorPool.setMaxSetCount(1);
-    descriptorPool.setDescriptorCount(1);
+    descriptorPool.addTypeSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1);
     descriptorPool.create();
     if (!descriptorPool.isValid())
         return;
 
-    VkDescriptorSetLayoutBinding layoutBinding;
-    layoutBinding.binding            = 0;
-    layoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    layoutBinding.descriptorCount    = 1;
-    layoutBinding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
-    layoutBinding.pImmutableSamplers = NULL;
-
-    VkDescriptorBufferInfo bufferInfo = {};
-    bufferInfo.buffer = uniformBuffer.handle();
-    bufferInfo.offset = 0;
-    bufferInfo.range = uniformBuffer.size();
-
-    vk::DescriptorSet descriptorSet(ld);
-    descriptorSet.setPool(descriptorPool.handle());
-    descriptorSet.setLayoutBinding(layoutBinding);
-    descriptorSet.setBufferInfo(bufferInfo);
-    descriptorSet.setBindingPoint(0);
+    vk::DescriptorSets descriptorSet(ld, descriptorPool.handle());
+    descriptorSet.addLayoutBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT);
     descriptorSet.create();
     if (!descriptorSet.isValid())
         return;
+    descriptorSet.writeUniformBuffer( { { uniformBuffer.handle(), 0, uniformBuffer.size() } } );
 
-    VkWriteDescriptorSet writeDescriptorSet = descriptorSet.writeDescriptorSet();
-    vkUpdateDescriptorSets(ld, 1, &writeDescriptorSet, 0, NULL);
+    vk::Pipeline pipeline(ld);
+    pipeline.addShaderStage(vshModule.createInfo());
+    pipeline.addShaderStage(fshModule.createInfo());
+    pipeline.setVertexInputState(
+        { mesh.vertexBindingDescription() },
+        mesh.vertexAttributeDescriptions() );
+    pipeline.setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_FALSE);
 }
 
 } // namespace vk_capabilities
