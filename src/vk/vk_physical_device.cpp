@@ -324,94 +324,8 @@ struct PhysicalDevice::Impl
         , features(info.features)
     {}
 
-    /* ---------------------------------------------------------------------- *
-       Destroys the logical device if it is created and has not been 
-       destroyed.
-    * ----------------------------------------------------------------------- */
-    ~Impl()
-    {
-        destroy();
-    }
-
-    /* ---------------------------------------------------------------------- *
-       Creates the logical device.
-    * ----------------------------------------------------------------------- */
-    void create()
-    {
-        // Fill the queue create infos.
-        std::vector<VkDeviceQueueCreateInfo> queueInfos;
-        for (size_t i = 0; i < queueFamilyParams.size(); ++i)
-        {
-            const QueueFamilyParams& params = queueFamilyParams[i];
-
-            VkStructureType type = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-            VkDeviceQueueCreateInfo queueInfo;
-            queueInfo.sType            = type;                    // Type of the struct.
-            queueInfo.queueFamilyIndex = params.queueFamilyIndex; // Queue family index.
-            queueInfo.queueCount       = params.queueCount;       // Count of queues.
-            queueInfo.pQueuePriorities = &params.priority;        // Priority of the queue.
-            queueInfo.pNext            = NULL;                    // No extension usage
-            queueInfo.flags            = 0;                       // Must be 0.
-
-            queueInfos.push_back(queueInfo);
-        }
-
-        // Extensions
-        std::vector<const char*> extensionNamesStr;
-        for (auto& extension : extensions)
-            extensionNamesStr.push_back(extension.c_str());
-
-        // Layers
-        std::vector<const char*> layerNamesStr;
-        for (auto& layer : layers)
-            layerNamesStr.push_back(layer.c_str());
-
-        // Fill create info
-        VkDeviceCreateInfo deviceInfo = {};
-        deviceInfo.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO; // Type of the struct.
-        deviceInfo.pNext                   = NULL;                                 // Extension chain.
-        deviceInfo.flags                   = 0;                                    // Must be 0.
-        deviceInfo.queueCreateInfoCount    = uint32_t(queueInfos.size());          // Queue info count.
-        deviceInfo.pQueueCreateInfos       = queueInfos.data();                    // Queue infos.
-        deviceInfo.enabledLayerCount       = uint32_t(layerNamesStr.size());       // Layer count.
-        deviceInfo.ppEnabledLayerNames     = layerNamesStr.data();                 // Layer names.
-        deviceInfo.enabledExtensionCount   = uint32_t(extensionNamesStr.size());   // Extension count.
-        deviceInfo.ppEnabledExtensionNames = extensionNamesStr.data();             // Extension names.
-        deviceInfo.pEnabledFeatures        = &features;                            // Features to enable.
-        
-        // Create the logical device.
-        const VkResult result = vkCreateDevice(
-            physicalDevice,     // [in]  Physical device handle
-            &deviceInfo,        // [in]  Device info
-            NULL,               // [in]  Allocator
-            &logicalDevice);    // [out] Handle to logical device opaque object
-
-        if (result != VK_SUCCESS)
-        {
-            std::cerr << __FUNCTION__
-                      << ": failed to create logical device"
-                      << std::endl;
-        }
-    }
-
-   /* ----------------------------------------------------------------------- *
-       Destroys the logical device.
-    * ----------------------------------------------------------------------- */
-    void destroy()
-    {
-        vkDestroyDevice(
-            logicalDevice, // [in] Logical device
-            NULL);         // [in] Allocator
-
-        logicalDevice = VK_NULL_HANDLE;
-    }
-
     VkInstance instance = VK_NULL_HANDLE;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-    VkDevice logicalDevice = VK_NULL_HANDLE;
-    std::vector<QueueFamilyParams> queueFamilyParams;
-    std::vector<std::string> extensions;
-    std::vector<std::string> layers;
     PhysicalDeviceInfo info;
     VkPhysicalDeviceFeatures features;
 };
@@ -425,110 +339,6 @@ PhysicalDevice::PhysicalDevice(const VkPhysicalDevice& physicalDevice,
 {}
 
 /* -------------------------------------------------------------------------- *
-   Sets the logical device extensions.
- * -------------------------------------------------------------------------- */
-PhysicalDevice& PhysicalDevice::setExtensions(
-    const std::vector<std::string>& extensions)
-{
-    impl->extensions = extensions;
-    return *this;
-}
-
-/* -------------------------------------------------------------------------- *
-   Returns the logical device extensions.
- * -------------------------------------------------------------------------- */
-std::vector<std::string> PhysicalDevice::extensions() const
-{ return impl->extensions; }
-
-/* -------------------------------------------------------------------------- *
-   Sets the logical device layers.
- * -------------------------------------------------------------------------- */
-PhysicalDevice& PhysicalDevice::setLayers(
-    const std::vector<std::string>& layers)
-{
-    impl->layers = layers;
-    return *this;
-}
-
-/* -------------------------------------------------------------------------- *
-   Returns the logical device layers.
- * -------------------------------------------------------------------------- */
-std::vector<std::string> PhysicalDevice::layers() const
-{ return impl->layers; }
-
-/* -------------------------------------------------------------------------- *
-   Sets the device features.
- * -------------------------------------------------------------------------- */
-PhysicalDevice& PhysicalDevice::setFeatures(
-    const VkPhysicalDeviceFeatures& features)
-{ 
-    impl->features = features; 
-    return *this;
-}
-
-/* -------------------------------------------------------------------------- *
-   Returns the device features.
- * -------------------------------------------------------------------------- */
-VkPhysicalDeviceFeatures PhysicalDevice::features() const
-{ return impl->features; }
-
-/* -------------------------------------------------------------------------- *
-   Adds a queue family to be created.
- * -------------------------------------------------------------------------- */
-PhysicalDevice& PhysicalDevice::addQueueFamily(
-        const QueueFamilyParams& queue)
-{
-    impl->queueFamilyParams.push_back(queue);
-    return *this;
-}
-
-/* -------------------------------------------------------------------------- *
-   Adds a queue family to be created.
- * -------------------------------------------------------------------------- */
-PhysicalDevice& PhysicalDevice::addQueueFamily(
-    uint32_t queueFamilyIndex,
-    uint32_t queueCount,
-    float priority)
-{
-    return addQueueFamily(
-        QueueFamilyParams({
-            queueFamilyIndex, 
-            queueCount, 
-            priority}));
-}
-
-/* -------------------------------------------------------------------------- *
-   Returns the queue family parameters.
- * -------------------------------------------------------------------------- */
-std::vector<PhysicalDevice::QueueFamilyParams>
-    PhysicalDevice::queueFamilyParams() const
-{ return impl->queueFamilyParams; }
-
-/* -------------------------------------------------------------------------- *
-   Creates the logical device.
- * -------------------------------------------------------------------------- */
-void PhysicalDevice::create()
-{
-    if (!isValid()) 
-        impl->create();
-}
-
-/* -------------------------------------------------------------------------- *
-   Destroys the logical device.
- * -------------------------------------------------------------------------- */
-void PhysicalDevice::destroy()
-{
-    if (isValid()) 
-        impl->destroy(); 
-}
-
-/* -------------------------------------------------------------------------- *
-   Returns the physical device handle.
- * -------------------------------------------------------------------------- */
-bool PhysicalDevice::isValid() const
-{ return impl->logicalDevice != VK_NULL_HANDLE; }
-
-/* -------------------------------------------------------------------------- *
    Returns the info of physical device.
  * -------------------------------------------------------------------------- */
 PhysicalDeviceInfo PhysicalDevice::info() const
@@ -537,14 +347,8 @@ PhysicalDeviceInfo PhysicalDevice::info() const
 /* -------------------------------------------------------------------------- *
    Returns the physical device handle.
  * -------------------------------------------------------------------------- */
-VkPhysicalDevice PhysicalDevice::physicalDeviceHandle() const
+VkPhysicalDevice PhysicalDevice::handle() const
 { return impl->physicalDevice; }
-
-/* -------------------------------------------------------------------------- *
-   Returns the logical device handle.
- * -------------------------------------------------------------------------- */
-VkDevice PhysicalDevice::logicalDeviceHandle() const
-{ return impl->logicalDevice; }
 
 } // namespace vk
 } // namespace kuu

@@ -22,18 +22,20 @@
 
 #include "vk/vk_buffer.h"
 #include "vk/vk_command.h"
-#include "vk/vk_sync.h"
+#include "vk/vk_descriptor_set.h"
 #include "vk/vk_helper.h"
 #include "vk/vk_instance.h"
+#include "vk/vk_logical_device.h"
 #include "vk/vk_mesh.h"
 #include "vk/vk_pipeline.h"
 #include "vk/vk_render_pass.h"
+#include "vk/vk_renderer.h"
 #include "vk/vk_shader_module.h"
 #include "vk/vk_stringify.h"
 #include "vk/vk_surface_properties.h"
 #include "vk/vk_surface_widget.h"
+#include "vk/vk_sync.h"
 #include "vk/vk_swapchain.h"
-#include "vk/vk_descriptor_set.h"
 #include "vk_capabilities_data_creator.h"
 #include "vk_capabilities_main_window.h"
 
@@ -96,6 +98,7 @@ void Controller::start()
                 extensions.push_back("VK_KHR_win32_surface");
 #endif
         }
+
         impl->instance = std::make_shared<vk::Instance>();
         impl->instance->setApplicationName("V-Caps");
         impl->instance->setEngineName("V-CAPS-ENGINE");
@@ -121,7 +124,7 @@ void Controller::start()
             impl->surfaceProperties.push_back(
                 vk::SurfaceProperties(
                     impl->instance->handle(),
-                    device.physicalDeviceHandle(),
+                    device.handle(),
                     impl->surfaceWidget->handle()));
         }
         impl->capabilitiesData = DataCreator(*impl->instance, *impl->surfaceWidget, impl->surfaceProperties).data();
@@ -150,24 +153,32 @@ void Controller::runDeviceTest(int deviceIndex)
     vk::PhysicalDevice physicalDevice =
         impl->instance->physicalDevice(deviceIndex);
 
+    VkPhysicalDevice pd = physicalDevice.handle();
+    VkSurfaceKHR surface = impl->surfaceWidget->handle();
+
+    vk::Renderer renderer(pd, surface);
+    if (!renderer.create())
+        return;
+
     const vk::PhysicalDeviceInfo info = physicalDevice.info();
 
     const int graphics     = vk::helper::findQueueFamilyIndex(VK_QUEUE_GRAPHICS_BIT, info.queueFamilies);
     const int presentation = vk::helper::findPresentationQueueFamilyIndex(
-        physicalDevice.physicalDeviceHandle(),
-        impl->surfaceWidget->handle(),
+        pd,
+        surface,
         info.queueFamilies,
         { graphics });
 
-    physicalDevice.setExtensions( { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
-    physicalDevice.addQueueFamily(graphics,     1, 1.0f);
-    physicalDevice.addQueueFamily(presentation, 1, 1.0f);
-    physicalDevice.create();
-    if (!physicalDevice.isValid())
+    vk::LogicalDevice logicalDevice(physicalDevice.handle());
+    logicalDevice.setExtensions( { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
+    logicalDevice.addQueueFamily(graphics,     1, 1.0f);
+    logicalDevice.addQueueFamily(presentation, 1, 1.0f);
+    logicalDevice.create();
+    if (!logicalDevice.isValid())
         return;
 
-    VkPhysicalDevice pd = physicalDevice.physicalDeviceHandle();
-    VkDevice ld         = physicalDevice.logicalDeviceHandle();
+    //VkPhysicalDevice pd = physicalDevice.handle();
+    VkDevice ld         = logicalDevice.handle();
 
     const VkExtent2D widgetExtent = { uint32_t(impl->surfaceWidget->width()), uint32_t(impl->surfaceWidget->height()) };
     const vk::SurfaceProperties surfaceInfo = impl->surfaceProperties[deviceIndex];
@@ -238,7 +249,7 @@ void Controller::runDeviceTest(int deviceIndex)
                                  VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     dependency.dependencyFlags = 0;
 
-    impl->renderPass = std::make_shared<vk::RenderPass>(physicalDevice.logicalDeviceHandle());
+    impl->renderPass = std::make_shared<vk::RenderPass>(ld);
     impl->renderPass->setAttachmentDescriptions( { colorAttachment, depthStencilAttachment } );
     impl->renderPass->setSubpassDescriptions( { subpass } );
     impl->renderPass->setSubpassDependencies( { dependency } );
@@ -247,8 +258,8 @@ void Controller::runDeviceTest(int deviceIndex)
         return;
 
     impl->swapchain = std::make_shared<vk::Swapchain>(impl->surfaceWidget->handle(),
-                                                      physicalDevice.physicalDeviceHandle(),
-                                                      physicalDevice.logicalDeviceHandle(),
+                                                      pd,
+                                                      ld,
                                                       impl->renderPass->handle());
     impl->swapchain->setSurfaceFormat(surfaceFormat)
                     .setPresentMode(presentMode)
@@ -306,6 +317,7 @@ void Controller::runDeviceTest(int deviceIndex)
         glm::mat4 view;
         glm::mat4 projection;
     } matrices;
+
     const float aspect = extent.width / float(extent.height);
     matrices.model      = glm::mat4(1.0f);
     matrices.view       = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -10.0f));
@@ -353,7 +365,7 @@ void Controller::runDeviceTest(int deviceIndex)
         mesh.vertexAttributeDescriptions() );
     pipeline.setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_FALSE);
     pipeline.setViewportState(
-        { { 0, 0, extent.width, extent.height, 0, 1 } },
+        { { 0, 0, float(extent.width), float(extent.height), 0, 1 } },
         { { { 0, 0 }, extent }  } );
     pipeline.setRasterizerState(
         VK_POLYGON_MODE_FILL,
@@ -482,8 +494,17 @@ void Controller::runDeviceTest(int deviceIndex)
     if (!imageAvailable.isValid())
         return;
 
-    //for (;;)
+    glm::quat q;
+
+    for (;;)
     {
+        q *= glm::angleAxis(glm::radians(0.5f), glm::vec3(0.0f, 1.0f, 0.0f));
+        matrices.model = glm::mat4_cast(q);
+
+        void* uniformDst = uniformBuffer.map();
+        memcpy(uniformDst, &matrices, size_t(uniformBuffer.size()));
+        uniformBuffer.unmap();
+
         uint32_t imageIndex;
         VkResult result = vkAcquireNextImageKHR(
             ld,

@@ -269,8 +269,6 @@ struct Instance::Impl
      * ---------------------------------------------------------------------- */
     void destroy()
     {
-        for (PhysicalDevice& physicalDevice : physicalDevices)
-            physicalDevice.destroy();
         physicalDevices.clear();
 
         if (callback)
