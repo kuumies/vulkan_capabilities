@@ -132,5 +132,10 @@ VkSurfaceKHR SurfaceWidget::handle() const
 void SurfaceWidget::paintEvent(QPaintEvent* /*e*/)
 {}
 
+void SurfaceWidget::timerEvent(QTimerEvent* e)
+{
+    emit interval();
+}
+
 } // namespace vk
 } // namespace kuu

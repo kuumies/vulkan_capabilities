@@ -24,6 +24,8 @@ namespace vk
  * -------------------------------------------------------------------------- */
 class SurfaceWidget : public QWidget
 {
+    Q_OBJECT
+
 public:
     // Constructs the widget and creates the Vulkan surface. Use
     // isValid() to know whether the surface creation succeeded.
@@ -45,9 +47,13 @@ public:
     // if the surface creation has failed.
     VkSurfaceKHR handle() const;
 
+signals:
+    void interval();
+
 protected:
     // Paint event needs to be disabled.
     void paintEvent(QPaintEvent* e);
+    void timerEvent(QTimerEvent* e);
 
 private:
     struct Impl;

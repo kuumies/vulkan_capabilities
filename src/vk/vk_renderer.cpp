@@ -228,6 +228,16 @@ struct Renderer::Impl
         renderPass->addSubpassDescription(subpass);
         renderPass->addSubpassDependency(dependency);
         return renderPass->create();
+
+        // Attachment usage dependency. Only this subpass is using the attachment...
+    //    srcSubpass – Index of a first (previous) subpass or VK_SUBPASS_EXTERNAL if we want to indicate dependency between subpass and operations outside of a render pass.
+    //    dstSubpass – Index of a second (later) subpass (or VK_SUBPASS_EXTERNAL).
+    //    srcStageMask – Pipeline stage during which a given attachment was used before (in a src subpass).
+    //    dstStageMask – Pipeline stage during which a given attachment will be used later (in a dst subpass).
+    //    srcAccessMask – Types of memory operations that occurred in a src subpass or before a render pass.
+    //    dstAccessMask – Types of memory operations that occurred in a dst subpass or after a render pass.
+    //    dependencyFlags – Flag describing the type (region) of dependency.
+
     }
 
     bool createSwapchain()
