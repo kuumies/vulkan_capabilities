@@ -30,7 +30,7 @@ public:
     uint32_t queueFamilyIndex() const;
 
     // Creates and destroys the command pool.
-    void create();
+    bool create();
     void destroy();
 
     // Returns true if the handle is not a VK_NULL_HANDLE.

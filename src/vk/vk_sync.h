@@ -26,7 +26,7 @@ public:
     Semaphore(const VkDevice& logicalDevice);
 
     // Creates and destroys the semaphore.
-    void create();
+    bool create();
     void destroy();
 
     // Returns true if the handle is not a VK_NULL_HANDLE.

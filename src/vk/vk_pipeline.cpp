@@ -21,7 +21,7 @@ struct Pipeline::Impl
         destroy();
     }
 
-    void create()
+    bool create()
     {
         VkResult result = vkCreatePipelineLayout(
             logicalDevice,
@@ -36,7 +36,7 @@ struct Pipeline::Impl
                       << vk::stringify::resultDesc(result)
                       << std::endl;
 
-            return;
+            return false;
         }
 
         VkGraphicsPipelineCreateInfo info;
@@ -76,8 +76,10 @@ struct Pipeline::Impl
                       << vk::stringify::resultDesc(result)
                       << std::endl;
 
-            return;
+            return false;
         }
+
+        return true;
     }
 
     void destroy()
@@ -430,10 +432,11 @@ Pipeline& Pipeline::setRenderPass(const VkRenderPass& renderPass)
 VkRenderPass Pipeline::renderPass() const
 { return impl->renderPass; }
 
-void Pipeline::create()
+bool Pipeline::create()
 {
     if (!isValid())
-        impl->create();
+        return impl->create();
+    return true;
 }
 
 void Pipeline::destroy()

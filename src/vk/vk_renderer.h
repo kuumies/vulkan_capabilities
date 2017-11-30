@@ -29,16 +29,21 @@ class Renderer
 {
 public:
     // Constructs the renderer.
-    Renderer(const VkPhysicalDevice& physicalDevice,
-             const VkSurfaceKHR& surface);
+    Renderer(const VkInstance& instance,
+             const VkPhysicalDevice& physicalDevice,
+             const VkSurfaceKHR& surface,
+             const VkExtent2D& extent);
 
     // Creates and destroys the renderer.
     bool create();
-    bool destroy();
+    void destroy();
 
     // Returns true if the renderer is created and all Vulkan objects.
     // were created without issues.
     bool isValid() const;
+
+    // Renders a frame
+    bool renderFrame();
 
 private:
     struct Impl;

@@ -21,7 +21,7 @@ struct DescriptorPool::Impl
         destroy();
     }
 
-    void create()
+    bool create()
     {
         VkDescriptorPoolCreateInfo poolInfo;
         poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -45,8 +45,10 @@ struct DescriptorPool::Impl
                       << vk::stringify::resultDesc(result)
                       << std::endl;
 
-            return;
+            return false;
         }
+
+        return true;
     }
 
     void destroy()
@@ -101,10 +103,11 @@ DescriptorPool& DescriptorPool::setMaxCount(uint32_t count)
 uint32_t DescriptorPool::maxCount() const
 { return impl->maxCount; }
 
-void DescriptorPool::create()
+bool DescriptorPool::create()
 {
     if (!isValid())
-        impl->create();
+        return impl->create();
+    return true;
 }
 
 void DescriptorPool::destroy()
@@ -134,7 +137,7 @@ struct DescriptorSets::Impl
         destroy();
     }
 
-    void create()
+    bool create()
     {
         VkDescriptorSetLayoutCreateInfo layoutInfo;
         layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -156,8 +159,7 @@ struct DescriptorSets::Impl
                       << ": descriptor set layout creation failed as "
                       << vk::stringify::resultDesc(result)
                       << std::endl;
-
-            return;
+            return false;
         }
 
         VkDescriptorSetAllocateInfo allocInfo = {};
@@ -178,8 +180,10 @@ struct DescriptorSets::Impl
                       << vk::stringify::resultDesc(result)
                       << std::endl;
 
-            return;
+            return false;
         }
+
+        return true;
     }
 
     void destroy()
@@ -263,10 +267,11 @@ DescriptorSets& DescriptorSets::addLayoutBinding(
 std::vector<VkDescriptorSetLayoutBinding> DescriptorSets::layoutBindings() const
 { return impl->layoutBindings; }
 
-void DescriptorSets::create()
+bool DescriptorSets::create()
 {
     if (!isValid())
-        impl->create();
+        return impl->create();
+    return true;
 }
 
 void DescriptorSets::destroy()

@@ -4,14 +4,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "vk_render_pass.h"
-
-/* -------------------------------------------------------------------------- */
-
 #include <algorithm>
 #include <iostream>
-
-/* -------------------------------------------------------------------------- */
-
 #include "vk_stringify.h"
 
 /* -------------------------------------------------------------------------- */
@@ -21,23 +15,14 @@ namespace kuu
 namespace vk
 {
 
-/* -------------------------------------------------------------------------- *
-   Implementation of the render pass.
- * -------------------------------------------------------------------------- */
 struct RenderPass::Impl
 {
-    /* ----------------------------------------------------------------------- *
-        Destroys the render pass.
-     * ----------------------------------------------------------------------- */
     ~Impl()
     {
         destroy();
     }
 
-    /* ----------------------------------------------------------------------- *
-        Creates the render pass.
-     * ----------------------------------------------------------------------- */
-    void create()
+    bool create()
     {
         VkStructureType type = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
         VkRenderPassCreateInfo info;
@@ -64,112 +49,92 @@ struct RenderPass::Impl
                       << ": render pass creation failed as "
                       << vk::stringify::result(result)
                       << std::endl;
-            return;
+            return false;
         }
+
+        return true;
     }
 
-    /* ----------------------------------------------------------------------- *
-        Destroys the render pass.
-     * ----------------------------------------------------------------------- */
     void destroy()
     {
         vkDestroyRenderPass(
             logicalDevice, // [in] logical device
             renderPass,    // [in] render pass
             NULL);         // [in] allocator callback
+
+        renderPass = VK_NULL_HANDLE;
     }
 
+    // Parent
     VkDevice logicalDevice;
+
+    // Child
     VkRenderPass renderPass = VK_NULL_HANDLE;
+
+    // From user
     std::vector<VkAttachmentDescription> attachmentDescriptions;
     std::vector<VkSubpassDescription> subpassDescriptions;
     std::vector<VkSubpassDependency> subpassDependencies;
 };
 
-/* -------------------------------------------------------------------------- *
-   Constructs the render pass.
- * -------------------------------------------------------------------------- */
 RenderPass::RenderPass(const VkDevice& logicalDevice)
     : impl(std::make_shared<Impl>())
 {
     impl->logicalDevice = logicalDevice;
 }
 
-/* -------------------------------------------------------------------------- *
-   Sets the attachment descriptions.
- * -------------------------------------------------------------------------- */
-RenderPass& RenderPass::setAttachmentDescriptions(
-    const std::vector<VkAttachmentDescription>& descriptions)
+RenderPass& RenderPass::setLogicalDevice(const VkDevice& logicalDevice)
 {
-    impl->attachmentDescriptions =  descriptions;
+    impl->logicalDevice = logicalDevice;
     return *this;
 }
 
-/* -------------------------------------------------------------------------- *
-   Returns the attachment descriptions.
- * -------------------------------------------------------------------------- */
+RenderPass& RenderPass::addAttachmentDescription(
+    const VkAttachmentDescription& description)
+{
+    impl->attachmentDescriptions.push_back(description);
+    return *this;
+}
+
 std::vector<VkAttachmentDescription> RenderPass::attachmentDescriptions() const
 { return impl->attachmentDescriptions; }
 
-/* -------------------------------------------------------------------------- *
-   Sets the subpass descriptions.
- * -------------------------------------------------------------------------- */
-RenderPass& RenderPass::setSubpassDescriptions(
-    const std::vector<VkSubpassDescription>& descriptions)
+RenderPass& RenderPass::addSubpassDescription(
+    const VkSubpassDescription& description)
 {
-    impl->subpassDescriptions = descriptions;
+    impl->subpassDescriptions.push_back(description);
     return *this;
 }
 
-/* -------------------------------------------------------------------------- *
-   Returns the subpass descriptions.
- * -------------------------------------------------------------------------- */
 std::vector<VkSubpassDescription> RenderPass::subpassDescriptions() const
 { return impl->subpassDescriptions; }
 
-/* -------------------------------------------------------------------------- *
-   Sets the subpass dependencies;
- * -------------------------------------------------------------------------- */
-RenderPass &RenderPass::setSubpassDependencies(
-    const std::vector<VkSubpassDependency>& dependencies)
+RenderPass& RenderPass::addSubpassDependency(
+    const VkSubpassDependency& dependency)
 {
-    impl->subpassDependencies = dependencies;
+    impl->subpassDependencies.push_back(dependency);
     return *this;
 }
 
-/* -------------------------------------------------------------------------- *
-   Returns the subpass dependencies;
- * -------------------------------------------------------------------------- */
 std::vector<VkSubpassDependency> RenderPass::subpassDependencies() const
 { return impl->subpassDependencies; }
 
-/* -------------------------------------------------------------------------- *
-   Creates the render pass.
- * -------------------------------------------------------------------------- */
-void RenderPass::create()
+bool RenderPass::create()
 {
     if (!isValid())
-        impl->create();
+        return impl->create();
+    return true;
 }
 
-/* -------------------------------------------------------------------------- *
-   Destroys the render pass.
- * -------------------------------------------------------------------------- */
 void RenderPass::destroy()
 {
     if (isValid())
         impl->destroy();
 }
 
-/* -------------------------------------------------------------------------- *
-   Returns true if the swap chain is not a null handle.
- * -------------------------------------------------------------------------- */
 bool RenderPass::isValid() const
 { return impl->renderPass != VK_NULL_HANDLE; }
 
-/* -------------------------------------------------------------------------- *
-   Returns the render pass handle.
- * -------------------------------------------------------------------------- */
 VkRenderPass RenderPass::handle() const
 { return impl->renderPass; }
 

@@ -153,12 +153,17 @@ void Controller::runDeviceTest(int deviceIndex)
     vk::PhysicalDevice physicalDevice =
         impl->instance->physicalDevice(deviceIndex);
 
+    VkInstance i = impl->instance->handle();
     VkPhysicalDevice pd = physicalDevice.handle();
     VkSurfaceKHR surface = impl->surfaceWidget->handle();
 
-    vk::Renderer renderer(pd, surface);
+    const VkExtent2D widgetExtent = { uint32_t(impl->surfaceWidget->width()), uint32_t(impl->surfaceWidget->height()) };
+    vk::Renderer renderer(i, pd, surface, widgetExtent);
     if (!renderer.create())
         return;
+
+    for (;;)
+        renderer.renderFrame();
 
     const vk::PhysicalDeviceInfo info = physicalDevice.info();
 
@@ -180,7 +185,6 @@ void Controller::runDeviceTest(int deviceIndex)
     //VkPhysicalDevice pd = physicalDevice.handle();
     VkDevice ld         = logicalDevice.handle();
 
-    const VkExtent2D widgetExtent = { uint32_t(impl->surfaceWidget->width()), uint32_t(impl->surfaceWidget->height()) };
     const vk::SurfaceProperties surfaceInfo = impl->surfaceProperties[deviceIndex];
     const VkSurfaceFormatKHR surfaceFormat = vk::helper::findSwapchainSurfaceFormat(surfaceInfo.surfaceFormats);
     const VkPresentModeKHR presentMode     = vk::helper::findSwapchainPresentMode(surfaceInfo.presentModes);
@@ -250,16 +254,17 @@ void Controller::runDeviceTest(int deviceIndex)
     dependency.dependencyFlags = 0;
 
     impl->renderPass = std::make_shared<vk::RenderPass>(ld);
-    impl->renderPass->setAttachmentDescriptions( { colorAttachment, depthStencilAttachment } );
-    impl->renderPass->setSubpassDescriptions( { subpass } );
-    impl->renderPass->setSubpassDependencies( { dependency } );
+    impl->renderPass->addAttachmentDescription(colorAttachment);
+    impl->renderPass->addAttachmentDescription(depthStencilAttachment);
+    impl->renderPass->addSubpassDescription(subpass);
+    impl->renderPass->addSubpassDependency(dependency);
     impl->renderPass->create();
     if (!impl->renderPass->isValid())
         return;
 
-    impl->swapchain = std::make_shared<vk::Swapchain>(impl->surfaceWidget->handle(),
-                                                      pd,
+    impl->swapchain = std::make_shared<vk::Swapchain>(pd,
                                                       ld,
+                                                      impl->surfaceWidget->handle(),
                                                       impl->renderPass->handle());
     impl->swapchain->setSurfaceFormat(surfaceFormat)
                     .setPresentMode(presentMode)

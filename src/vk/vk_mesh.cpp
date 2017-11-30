@@ -29,7 +29,7 @@ struct Mesh::Impl
         destroy();
     }
 
-    void create()
+    bool create()
     {
         vertexBuffer.setSize(vertices.size() * sizeof(float));
         vertexBuffer.setUsage(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
@@ -38,7 +38,7 @@ struct Mesh::Impl
             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         vertexBuffer.create();
         if (!vertexBuffer.isValid())
-            return;
+            return false;
 
         void* vertexDst = vertexBuffer.map();
         memcpy(vertexDst, vertices.data(), size_t(vertexBuffer.size()));
@@ -51,11 +51,12 @@ struct Mesh::Impl
             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         indexBuffer.create();
         if (!indexBuffer.isValid())
-            return;
+            return false;
 
         void* indexDst = indexBuffer.map();
         memcpy(indexDst, indices.data(), size_t(indexBuffer.size()));
         indexBuffer.unmap();
+        return true;
     }
 
     void destroy()
@@ -134,10 +135,11 @@ Mesh& Mesh::setVertexBindingDescription(
 VkVertexInputBindingDescription Mesh::vertexBindingDescription() const
 { return impl->vertexBindingDescription; }
 
-void Mesh::create()
+bool Mesh::create()
 {
     if (!isValid())
-        impl->create();
+        return impl->create();
+    return true;
 }
 
 void Mesh::destroy()

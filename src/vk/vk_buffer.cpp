@@ -22,7 +22,7 @@ struct Buffer::Impl
         destroy();
     }
 
-    void create()
+    bool create()
     {
         VkBufferCreateInfo bufferInfo;
         bufferInfo.sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -47,7 +47,7 @@ struct Buffer::Impl
                       << ": failed to create buffer - "
                       << vk::stringify::result(result)
                       << std::endl;
-            return;
+            return false;
         }
 
         VkPhysicalDeviceMemoryProperties memoryProperties;
@@ -83,7 +83,7 @@ struct Buffer::Impl
                       << ": failed to allocate memory for buffer - "
                       << vk::stringify::result(result)
                       << std::endl;
-            return;
+            return false;
         }
 
         result = vkBindBufferMemory(
@@ -98,8 +98,10 @@ struct Buffer::Impl
                       << ": failed to bind memory for buffer - "
                       << vk::stringify::result(result)
                       << std::endl;
-            return;
+            return false;
         }
+
+        return true;
     }
 
     void destroy()
@@ -193,10 +195,11 @@ VkMemoryPropertyFlags Buffer::memoryProperties() const
 VkBuffer Buffer::handle() const
 { return impl->buffer; }
 
-void Buffer::create()
+bool Buffer::create()
 {
     if (!isValid())
-        impl->create();
+        return impl->create();
+    return true;
 }
 
 void Buffer::destroy()

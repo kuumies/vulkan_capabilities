@@ -116,7 +116,7 @@ public:
     VkRenderPass renderPass() const;
 
     // Creates and destroys the pipeline.
-    void create();
+    bool create();
     void destroy();
 
     // Returns true if the pipeline handle is not a VK_NULL_HANDLE.

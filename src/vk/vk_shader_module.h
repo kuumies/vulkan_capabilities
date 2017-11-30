@@ -39,7 +39,7 @@ public:
     std::vector<char> sourceCode() const;
 
     // Creates and destroys the shader module.
-    void create();
+    bool create();
     void destroy();
 
     // Returns true if the shader module handle is not a VK_NULL_HANDLE.

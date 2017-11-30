@@ -21,9 +21,9 @@ class Swapchain
 {
 public:
     // Constructs the swap chain.
-    Swapchain(const VkSurfaceKHR& surface,
-              const VkPhysicalDevice& physicalDevice,
+    Swapchain(const VkPhysicalDevice& physicalDevice,
               const VkDevice& logicalDevice,
+              const VkSurfaceKHR& surface,
               const VkRenderPass& renderPass);
 
     // Sets and gets the surface format.
@@ -55,7 +55,7 @@ public:
     bool isCreateDepthStencilBuffer() const;
 
     // Creates and destroys the swap chain
-    void create();
+    bool create();
     void destroy();
 
     // Returns true if the swap chain handle is not a VK_NULL_HANDLE.

@@ -52,7 +52,7 @@ public:
     VkMemoryPropertyFlags memoryProperties() const;
 
     // Creates and destroys the buffer
-    void create();
+    bool create();
     void destroy();
 
     // Returns true if the buffer handle is not a VK_NULL_HANDLE.

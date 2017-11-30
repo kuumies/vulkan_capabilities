@@ -181,14 +181,10 @@ bool LogicalDevice::create()
     return isValid();
 }
 
-bool LogicalDevice::destroy()
+void LogicalDevice::destroy()
 {
     if (isValid())
-    {
         impl->destroy(); 
-        return true;
-    }
-    return false;
 }
 
 bool LogicalDevice::isValid() const

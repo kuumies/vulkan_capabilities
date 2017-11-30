@@ -63,7 +63,7 @@ struct ShaderModule::Impl
         destroy();
     }
 
-    void create()
+    bool create()
     {
         VkShaderModuleCreateInfo info;
         info.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -88,8 +88,10 @@ struct ShaderModule::Impl
                       << ": shader module creation failed as "
                       << vk::stringify::result(result)
                       << std::endl;
-            return;
+            return false;
         }
+
+        return true;
     }
 
     void destroy()
@@ -98,6 +100,8 @@ struct ShaderModule::Impl
             logicalDevice,
             shaderModule,
             NULL);
+
+        shaderModule = VK_NULL_HANDLE;
     }
 
     // Parent
@@ -151,10 +155,11 @@ ShaderModule& ShaderModule::setSourceCode(const std::vector<char>& source)
 std::vector<char> ShaderModule::sourceCode() const
 { return impl->source; }
 
-void ShaderModule::create()
+bool ShaderModule::create()
 {
     if (!isValid())
-        impl->create();
+        return impl->create();
+    return true;
 }
 
 void ShaderModule::destroy()

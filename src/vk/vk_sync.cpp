@@ -21,7 +21,7 @@ struct Semaphore::Impl
         destroy();
     }
 
-    void create()
+    bool create()
     {
         VkSemaphoreCreateInfo info;
         info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -39,8 +39,10 @@ struct Semaphore::Impl
                       << ": semaphore creation failed as "
                       << vk::stringify::resultDesc(result)
                       << std::endl;
-            return;
+            return false;
         }
+
+        return true;
     }
 
     void destroy()
@@ -68,10 +70,11 @@ Semaphore::Semaphore(const VkDevice& logicalDevice)
     impl->logicalDevice = logicalDevice;
 }
 
-void Semaphore::create()
+bool Semaphore::create()
 {
     if (!isValid())
-        impl->create();
+        return impl->create();
+    return true;
 }
 
 void Semaphore::destroy()

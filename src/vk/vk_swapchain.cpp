@@ -16,36 +16,24 @@ namespace kuu
 namespace vk
 {
 
-/* -------------------------------------------------------------------------- *
-   Implementation of the swap chain.
- * -------------------------------------------------------------------------- */
 struct Swapchain::Impl
 {
-    /* ----------------------------------------------------------------------- *
-       Constructs the swapchain.
-     * ----------------------------------------------------------------------- */
-    Impl(const VkSurfaceKHR& surface,
-         const VkPhysicalDevice& physicalDevice,
+    Impl(const VkPhysicalDevice& physicalDevice,
          const VkDevice& logicalDevice,
+         const VkSurfaceKHR& surface,
          const VkRenderPass& renderPass)
         : surface(surface)
         , logicalDevice(logicalDevice)
-        , renderPass(renderPass)
         , depthStencilImage(physicalDevice, logicalDevice)
+        , renderPass(renderPass)
     {}
 
-    /* ----------------------------------------------------------------------- *
-        Destroys the swapchain.
-     * ----------------------------------------------------------------------- */
     ~Impl()
     {
         destroy();
     }
 
-    /* ----------------------------------------------------------------------- *
-        Creates the swapchain.
-     * ----------------------------------------------------------------------- */
-    void create()
+    bool create()
     {
         auto queueIndicesUnique = queueIndices;
         std::sort(queueIndicesUnique.begin(), queueIndicesUnique.end());
@@ -95,7 +83,7 @@ struct Swapchain::Impl
                       << ": swap chain creation failed as "
                       << vk::stringify::result(result)
                       << std::endl;
-            return;
+            return false;
         }
 
         // Get swapchain image count
@@ -155,7 +143,7 @@ struct Swapchain::Impl
                           << ": swap chain image view creation failed as "
                           << vk::stringify::result(result)
                           << std::endl;
-                return;
+                return false;
             }
         }
 
@@ -172,7 +160,7 @@ struct Swapchain::Impl
             depthStencilImage.setMemoryProperty(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
             depthStencilImage.create();
             if (!depthStencilImage.isValid())
-                return;
+                return false;
         }
 
         // Create swapchain framebuffers
@@ -208,13 +196,13 @@ struct Swapchain::Impl
                           << ": swap chain framebuffer creation failed as "
                           << vk::stringify::result(result)
                           << std::endl;
-                return;
+                return false;
             }
         }
+
+        return true;
     }
-    /* ----------------------------------------------------------------------- *
-        Destroys the swapchain.
-     * ----------------------------------------------------------------------- */
+
     void destroy()
     {
         depthStencilImage.destroy();
@@ -235,6 +223,10 @@ struct Swapchain::Impl
             logicalDevice,      // [in] logical device handle
             swapchain,          // [in] swapchain handle
             nullptr);           // [in] allocator
+
+        swapchainFramebuffers.clear();
+        swapchainImageViews.clear();
+        swapchain = VK_NULL_HANDLE;
     }
 
     VkSurfaceKHR surface;
@@ -255,142 +247,89 @@ struct Swapchain::Impl
     Image depthStencilImage;
 };
 
-/* -------------------------------------------------------------------------- *
-   Constructs the swap chain instance.
- * -------------------------------------------------------------------------- */
-Swapchain::Swapchain(const VkSurfaceKHR& surface,
-                     const VkPhysicalDevice& physicalDevice,
+Swapchain::Swapchain(const VkPhysicalDevice& physicalDevice,
                      const VkDevice& logicalDevice,
+                     const VkSurfaceKHR& surface,
                      const VkRenderPass& renderPass)
-    : impl(std::make_shared<Impl>(surface, physicalDevice, logicalDevice, renderPass))
+    : impl(std::make_shared<Impl>(physicalDevice, logicalDevice, surface, renderPass))
 {}
 
-/* -------------------------------------------------------------------------- *
-   Sets the swap chain format.
- * -------------------------------------------------------------------------- */
 Swapchain& Swapchain::setSurfaceFormat(const VkSurfaceFormatKHR& surfaceFormat)
 {
     impl->surfaceFormat = surfaceFormat;
     return *this;
 }
 
-/* -------------------------------------------------------------------------- *
-   Returns the swap chain format.
- * -------------------------------------------------------------------------- */
 VkSurfaceFormatKHR Swapchain::surfaceFormat() const
 { return impl->surfaceFormat; }
 
-/* -------------------------------------------------------------------------- *
-   Sets the present mode.
- * -------------------------------------------------------------------------- */
 Swapchain& Swapchain::setPresentMode(const VkPresentModeKHR& presentMode)
 {
     impl->presentMode = presentMode;
     return *this;
 }
 
-/* -------------------------------------------------------------------------- *
-   Returns the present mode.
- * -------------------------------------------------------------------------- */
 VkPresentModeKHR Swapchain::presentMode() const
 { return impl->presentMode; }
 
-/* -------------------------------------------------------------------------- *
-   Sets the image extent.
- * -------------------------------------------------------------------------- */
 Swapchain& Swapchain::setImageExtent(const VkExtent2D& extent)
 {
     impl->imageExtent = extent;
     return *this;
 }
 
-/* -------------------------------------------------------------------------- *
-   Returns the image extent.
- * -------------------------------------------------------------------------- */
 VkExtent2D Swapchain::imageExtent() const
 { return impl->imageExtent; }
 
-/* -------------------------------------------------------------------------- *
-   Sets the image count.
- * -------------------------------------------------------------------------- */
 Swapchain& Swapchain::setImageCount(const uint32_t imageCount)
 {
     impl->imageCount = imageCount;
     return *this;
 }
 
-/* -------------------------------------------------------------------------- *
-   Returns the image count.
- * -------------------------------------------------------------------------- */
 uint32_t Swapchain::imageCount() const
 { return impl->imageCount; }
 
-/* -------------------------------------------------------------------------- *
-   Sets the pre-transform.
- * -------------------------------------------------------------------------- */
 Swapchain& Swapchain::setPreTransform(VkSurfaceTransformFlagBitsKHR preTransform)
 {
     impl->preTransform = preTransform;
     return *this;
 }
 
-/* -------------------------------------------------------------------------- *
-   Returns the pre-transform.
- * -------------------------------------------------------------------------- */
 VkSurfaceTransformFlagBitsKHR Swapchain::preTransform() const
 { return impl->preTransform; }
 
-/* -------------------------------------------------------------------------- *
-   Sets the queue indices.
- * -------------------------------------------------------------------------- */
 Swapchain& Swapchain::setQueueIndicies(const std::vector<uint32_t>& indices)
 {
     impl->queueIndices = indices;
     return *this;
 }
 
-/* -------------------------------------------------------------------------- *
-   Returns the queue indices.
- * -------------------------------------------------------------------------- */
 std::vector<uint32_t> Swapchain::queueIndices() const
 { return impl->queueIndices; }
 
-/* -------------------------------------------------------------------------- *
-   Sets the depth/stencil buffer creation enabled or disabled.
- * -------------------------------------------------------------------------- */
 Swapchain& Swapchain::setCreateDepthStencilBuffer(bool create)
 {
     impl->createDepthStencilImage = create;
     return *this;
 }
 
-/* -------------------------------------------------------------------------- *
-   Returns true if the depth/stencil buffer is created.
- * -------------------------------------------------------------------------- */
 bool Swapchain::isCreateDepthStencilBuffer() const
 { return impl->createDepthStencilImage; }
 
-/* -------------------------------------------------------------------------- *
-   Creates the swap chain.
- * -------------------------------------------------------------------------- */
-void Swapchain::create()
+bool Swapchain::create()
 {
     if (!isValid())
-        impl->create();
+        return impl->create();
+    return true;
 }
 
-/* -------------------------------------------------------------------------- *
-   Destroys the swap chain.
- * -------------------------------------------------------------------------- */
 void Swapchain::destroy()
 {
     if (isValid())
         impl->destroy();
 }
 
-/* -------------------------------------------------------------------------- *
-   Returns true if the swap chain is not a null handle.
- * -------------------------------------------------------------------------- */
 bool Swapchain::isValid() const
 { return impl->swapchain != VK_NULL_HANDLE; }
 

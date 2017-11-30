@@ -56,7 +56,7 @@ public:
     // Creates the logical device with the give in queue families.
     bool create();
     // Destroys the logical device.
-    bool destroy();
+    void destroy();
 
     // Returns true if the device is valid. Device is valid if the
     // logical device handle is not a VK_NULL_HANDLE.

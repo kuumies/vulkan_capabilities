@@ -21,7 +21,7 @@ struct CommandPool::Impl
         destroy();
     }
 
-    void create()
+    bool create()
     {
         VkCommandPoolCreateInfo info;
         info.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -42,8 +42,10 @@ struct CommandPool::Impl
                       << ": command pool creation failed as "
                       << vk::stringify::resultDesc(result)
                       << std::endl;
-            return;
+            return false;
         }
+
+        return true;
     }
 
     void destroy()
@@ -83,10 +85,11 @@ CommandPool& CommandPool::setQueueFamilyIndex(uint32_t queueFamilyIndex)
 uint32_t CommandPool::queueFamilyIndex() const
 { return impl->queueFamilyIndex; }
 
-void CommandPool::create()
+bool CommandPool::create()
 {
     if (!isValid())
-        impl->create();
+        return impl->create();
+    return true;
 }
 
 void CommandPool::destroy()

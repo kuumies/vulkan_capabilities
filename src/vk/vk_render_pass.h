@@ -21,25 +21,25 @@ class RenderPass
 {
 public:
     // Constructs the render pass.
-    RenderPass(const VkDevice& logicalDevice);
+    RenderPass(const VkDevice& logicalDevice = VK_NULL_HANDLE);
 
-    // Sets and gets the attachment descriptions.
-    RenderPass& setAttachmentDescriptions(
-        const std::vector<VkAttachmentDescription>& descriptions);
+    // Sets the logical device if not set during construction.
+    RenderPass& RenderPass::setLogicalDevice(const VkDevice& logicalDevice);
+
+    // Sets the logical device if not set during construction.
+    RenderPass& addAttachmentDescription(const VkAttachmentDescription& description);
     std::vector<VkAttachmentDescription> attachmentDescriptions() const;
 
     // Sets and gets the subpass descriptions.
-    RenderPass& setSubpassDescriptions(
-        const std::vector<VkSubpassDescription>& descriptions);
+    RenderPass& addSubpassDescription(const VkSubpassDescription& description);
     std::vector<VkSubpassDescription> subpassDescriptions() const;
 
     // Sets and gets the subpass dependencies.
-    RenderPass& setSubpassDependencies(
-        const std::vector<VkSubpassDependency>& dependencies);
+    RenderPass& addSubpassDependency(const VkSubpassDependency& dependency);
     std::vector<VkSubpassDependency> subpassDependencies() const;
 
     // Creates and destroys the render pass
-    void create();
+    bool create();
     void destroy();
 
     // Returns true if the render pass handle is not a VK_NULL_HANDLE.

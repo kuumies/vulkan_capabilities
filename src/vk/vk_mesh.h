@@ -53,7 +53,7 @@ public:
     VkVertexInputBindingDescription vertexBindingDescription() const;
 
     // Creates and destroys the mesh.
-    void create();
+    bool create();
     void destroy();
 
     // Returns true if the vertex and index buffer handles are not a VK_NULL_HANDLE.

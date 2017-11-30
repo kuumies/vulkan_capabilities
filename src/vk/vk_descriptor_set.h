@@ -37,7 +37,7 @@ public:
     uint32_t maxCount() const;
 
     // Creates and destroys the pool.
-    void create();
+    bool create();
     void destroy();
 
     // Returns true if the descriptor pool handle is not a VK_NULL_HANDLE.
@@ -84,7 +84,7 @@ public:
     uint32_t bindingPoint() const;
 
     // Creates and destroys the descriptor set.
-    void create();
+    bool create();
     void destroy();
 
     // Returns true if the descriptor set and layout handles are not a VK_NULL_HANDLE.
