@@ -49,11 +49,13 @@ public:
 
 signals:
     void interval();
+    void resized();
 
 protected:
     // Paint event needs to be disabled.
     void paintEvent(QPaintEvent* e);
     void timerEvent(QTimerEvent* e);
+    void resizeEvent(QResizeEvent* e);
 
 private:
     struct Impl;

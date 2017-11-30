@@ -42,6 +42,9 @@ public:
     // were created without issues.
     bool isValid() const;
 
+    // Surface size has changed.
+    bool resized(const VkExtent2D& extent);
+
     // Renders a frame
     bool renderFrame();
 

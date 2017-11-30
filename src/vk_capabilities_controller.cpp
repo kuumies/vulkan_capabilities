@@ -166,9 +166,20 @@ void Controller::runDeviceTest(int deviceIndex)
     if (!renderer->create())
         return;
 
+    impl->surfaceWidget;
+
     connect(impl->surfaceWidget.get(), &vk::SurfaceWidget::interval, [renderer]()
     {
         renderer->renderFrame();
+    });
+
+    vk::SurfaceWidget* w = impl->surfaceWidget.get();
+    connect(impl->surfaceWidget.get(), &vk::SurfaceWidget::resized, [renderer, w]()
+    {
+        VkExtent2D extent;
+        extent.width  = uint32_t(w->width());
+        extent.height = uint32_t(w->height());
+        renderer->resized(extent);
     });
 
     //vkDeviceWaitIdle(ld);

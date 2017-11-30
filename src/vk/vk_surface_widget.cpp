@@ -137,5 +137,10 @@ void SurfaceWidget::timerEvent(QTimerEvent* e)
     emit interval();
 }
 
+void SurfaceWidget::resizeEvent(QResizeEvent *e)
+{
+    emit resized();
+}
+
 } // namespace vk
 } // namespace kuu

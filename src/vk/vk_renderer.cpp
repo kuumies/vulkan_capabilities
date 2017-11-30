@@ -498,6 +498,10 @@ struct Renderer::Impl
 
     bool renderFrame()
     {
+        const float aspect = extent.width / float(extent.height);
+        matrices.view       = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -10.0f));
+        matrices.projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 150.0f);
+        matrices.projection[1][1] *= -1;
         q *= glm::angleAxis(glm::radians(0.5f), glm::vec3(0.0f, 1.0f, 0.0f));
         matrices.model = glm::mat4_cast(q);
 
@@ -572,6 +576,29 @@ struct Renderer::Impl
         VkQueue presentQueue;
         vkGetDeviceQueue(device->handle(), presentationFamilyIndex, 0, &presentQueue);
         vkQueuePresentKHR(presentQueue, &presentInfo);
+
+        return true;
+    }
+
+    bool resized(const VkExtent2D& extent)
+    {
+        vkDeviceWaitIdle(device->handle());
+        this->extent = extent;
+
+        commandPool.reset();
+        commandBuffers.clear();
+        pipeline.reset();
+        renderPass.reset();
+        swapchain.reset();
+
+        if (!createRenderPass())
+            return false;
+        if (!createSwapchain())
+            return false;
+        if (!createPipeline())
+            return false;
+        if (!createCommandBuffers())
+            return false;
 
         return true;
     }
@@ -670,6 +697,9 @@ void Renderer::destroy()
 
 bool Renderer::isValid() const
 { return impl->commandBuffers.size() > 0; }
+
+bool Renderer::resized(const VkExtent2D& extent)
+{ return impl->resized(extent); }
 
 bool Renderer::renderFrame()
 {
