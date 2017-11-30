@@ -59,6 +59,10 @@ public:
     // Returns true if the vertex and index buffer handles are not a VK_NULL_HANDLE.
     bool isValid() const;
 
+    // Returns the vertex and index buffer handles.
+    VkBuffer vertexBufferHandle() const;
+    VkBuffer indexBufferHandle() const;
+
 private:
     struct Impl;
     std::shared_ptr<Impl> impl;

@@ -1,18 +1,12 @@
 /* -------------------------------------------------------------------------- *
    Antti Jumpponen <kuumies@gmail.com>
-   The implementation of kuu::Widget class
+   The implementation of kuu::SurfaceWidget class
  * -------------------------------------------------------------------------- */
 
 #include "vk_surface_widget.h"
-
-/* -------------------------------------------------------------------------- */
-
 #include <assert.h>
 #include <iostream>
 #include <vulkan/vulkan.h>
-
-/* -------------------------------------------------------------------------- */
-
 #include "vk_windows.h"
 
 namespace kuu
@@ -67,53 +61,73 @@ VkSurfaceKHR createWindowsSurface(
 
 /* -------------------------------------------------------------------------- */
 
-struct SurfaceWidget::Data
+struct SurfaceWidget::Impl
 {
-    Data(const VkInstance& instance, const HWND& winId)
-        : instance(instance)
+    ~Impl()
     {
-        // Instance handle needs to be valid.
-        assert(instance !=  VK_NULL_HANDLE);
+        destroy();
+    }
 
+    void create(const HWND& winId)
+    {
         // Creates the surface
     #ifdef _WIN32
         surface = createWindowsSurface(instance, winId);
     #endif
     }
 
-    ~Data()
+    void destroy()
     {
-        // Destroys the surface.
-        vkDestroySurfaceKHR(instance, surface, nullptr);
+        vkDestroySurfaceKHR(
+            instance,
+            surface,
+            NULL);
+
+        surface = VK_NULL_HANDLE;
     }
 
     // Instance handle.
-    VkInstance instance = VK_NULL_HANDLE;
+    VkInstance instance;
     // Surface handle.
     VkSurfaceKHR surface = VK_NULL_HANDLE;
 };
 
 /* -------------------------------------------------------------------------- */
 
-SurfaceWidget::SurfaceWidget(const VkInstance& instance, QWidget* parent)
+SurfaceWidget::SurfaceWidget(QWidget* parent)
     : QWidget(parent)
-    , d(std::make_shared<Data>(instance, (HWND) winId()))
+    , impl(std::make_shared<Impl>())
 {
     // Disable over-painting the Vulkan surface
     setUpdatesEnabled(false);
 }
 
-/* -------------------------------------------------------------------------- */
+SurfaceWidget& SurfaceWidget::setInstance(const VkInstance& instance)
+{
+    impl->instance = instance;
+    return *this;
+}
+
+VkInstance SurfaceWidget::instance() const
+{ return impl->instance; }
+
+void SurfaceWidget::createSurface()
+{
+    if (!isValid())
+        impl->create((HWND) winId());
+}
+
+void SurfaceWidget::destroySurface()
+{
+    if (isValid())
+        impl->destroy();
+}
 
 bool SurfaceWidget::isValid() const
-{ return d->surface == VK_NULL_HANDLE; }
+{ return impl->surface != VK_NULL_HANDLE; }
 
-/* -------------------------------------------------------------------------- */
-
-VkSurfaceKHR SurfaceWidget::surface() const
-{ return d->surface; }
-
-/* -------------------------------------------------------------------------- */
+VkSurfaceKHR SurfaceWidget::handle() const
+{ return impl->surface; }
 
 void SurfaceWidget::paintEvent(QPaintEvent* /*e*/)
 {}

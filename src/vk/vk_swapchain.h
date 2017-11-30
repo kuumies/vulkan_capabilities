@@ -61,6 +61,13 @@ public:
     // Returns true if the swap chain handle is not a VK_NULL_HANDLE.
     bool isValid() const;
 
+    // Returns the handle.
+    VkSwapchainKHR handle() const;
+
+    // Returns a framebuffer by index. If the index is not valid then
+    // the output handle is a VK_NULL_HANDLE.
+    VkFramebuffer framebuffer(uint32_t index) const;
+
 private:
     struct Impl;
     std::shared_ptr<Impl> impl;

@@ -150,6 +150,16 @@ struct DescriptorSets::Impl
                 NULL,
                 &layout);
 
+        if (result != VK_SUCCESS)
+        {
+            std::cerr << __FUNCTION__
+                      << ": descriptor set layout creation failed as "
+                      << vk::stringify::resultDesc(result)
+                      << std::endl;
+
+            return;
+        }
+
         VkDescriptorSetAllocateInfo allocInfo = {};
         allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool     = pool;
@@ -160,6 +170,16 @@ struct DescriptorSets::Impl
             logicalDevice,
             &allocInfo,
             &descriptorSets);
+
+        if (result != VK_SUCCESS)
+        {
+            std::cerr << __FUNCTION__
+                      << ": descriptor set allocate failed as "
+                      << vk::stringify::resultDesc(result)
+                      << std::endl;
+
+            return;
+        }
     }
 
     void destroy()
@@ -169,7 +189,7 @@ struct DescriptorSets::Impl
             layout,
             NULL);
 
-        layout        = VK_NULL_HANDLE;
+        layout         = VK_NULL_HANDLE;
         descriptorSets = VK_NULL_HANDLE;
     }
 
@@ -256,7 +276,10 @@ void DescriptorSets::destroy()
 }
 
 bool DescriptorSets::isValid() const
-{ return impl->descriptorSets != VK_NULL_HANDLE; }
+{
+    return impl->descriptorSets != VK_NULL_HANDLE &&
+           impl->layout         != VK_NULL_HANDLE;
+}
 
 VkDescriptorSet DescriptorSets::handle() const
 { return impl->descriptorSets; }

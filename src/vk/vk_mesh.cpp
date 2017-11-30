@@ -149,5 +149,11 @@ void Mesh::destroy()
 bool Mesh::isValid() const
 { return impl->vertexBuffer.isValid() && impl->indexBuffer.isValid(); }
 
+VkBuffer Mesh::vertexBufferHandle() const
+{ return impl->vertexBuffer.handle(); }
+
+VkBuffer Mesh::indexBufferHandle() const
+{ return impl->indexBuffer.handle(); }
+
 } // namespace vk
 } // namespace kuu

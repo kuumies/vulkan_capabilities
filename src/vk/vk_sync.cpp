@@ -23,7 +23,15 @@ struct Semaphore::Impl
 
     void create()
     {
-        VkResult result;
+        VkSemaphoreCreateInfo info;
+        info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        info.pNext = NULL;
+        info.flags = 0;
+
+        const VkResult result = vkCreateSemaphore(
+            logicalDevice,
+            &info, NULL,
+            &semaphore);
 
         if (result != VK_SUCCESS)
         {
@@ -31,13 +39,17 @@ struct Semaphore::Impl
                       << ": semaphore creation failed as "
                       << vk::stringify::resultDesc(result)
                       << std::endl;
-
             return;
         }
     }
 
     void destroy()
     {
+        vkDestroySemaphore(
+            logicalDevice,
+            semaphore,
+            NULL);
+
         semaphore = VK_NULL_HANDLE;
     }
 

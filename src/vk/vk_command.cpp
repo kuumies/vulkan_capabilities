@@ -23,7 +23,18 @@ struct CommandPool::Impl
 
     void create()
     {
-        VkResult result;
+        VkCommandPoolCreateInfo info;
+        info.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        info.pNext            = NULL;
+        info.flags            = 0;
+        info.queueFamilyIndex = queueFamilyIndex;
+
+        const VkResult result =
+            vkCreateCommandPool(
+                logicalDevice,
+                &info,
+                NULL,
+                &commandPool);
 
         if (result != VK_SUCCESS)
         {
@@ -31,13 +42,17 @@ struct CommandPool::Impl
                       << ": command pool creation failed as "
                       << vk::stringify::resultDesc(result)
                       << std::endl;
-
             return;
         }
     }
 
     void destroy()
     {
+        vkDestroyCommandPool(
+            logicalDevice,
+            commandPool,
+            NULL);
+
         commandPool = VK_NULL_HANDLE;
     }
 
@@ -46,6 +61,9 @@ struct CommandPool::Impl
 
     // Child
     VkCommandPool  commandPool = VK_NULL_HANDLE;
+
+    // From user.
+    uint32_t queueFamilyIndex;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -55,6 +73,15 @@ CommandPool::CommandPool(const VkDevice& logicalDevice)
 {
     impl->logicalDevice = logicalDevice;
 }
+
+CommandPool& CommandPool::setQueueFamilyIndex(uint32_t queueFamilyIndex)
+{
+    impl->queueFamilyIndex = queueFamilyIndex;
+    return *this;
+}
+
+uint32_t CommandPool::queueFamilyIndex() const
+{ return impl->queueFamilyIndex; }
 
 void CommandPool::create()
 {
@@ -73,6 +100,34 @@ bool CommandPool::isValid() const
 
 VkCommandPool  CommandPool::handle() const
 { return impl->commandPool; }
+
+std::vector<VkCommandBuffer> CommandPool::allocate(
+        VkCommandBufferLevel level,
+        uint32_t count)
+{
+    VkCommandBufferAllocateInfo info;
+    info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    info.pNext              = NULL;
+    info.commandPool        = impl->commandPool;
+    info.level              = level;
+    info.commandBufferCount = count;
+
+    std::vector<VkCommandBuffer> buffers(count);
+    const VkResult result =
+        vkAllocateCommandBuffers(
+            impl->logicalDevice,
+            &info, buffers.data());
+
+    if (result != VK_SUCCESS)
+    {
+        std::cerr << __FUNCTION__
+                  << ": command pool allocation failed as "
+                  << vk::stringify::resultDesc(result)
+                  << std::endl;
+    }
+
+    return buffers;
+}
 
 } // namespace vk
 } // namespace kuu

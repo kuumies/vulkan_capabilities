@@ -394,5 +394,15 @@ void Swapchain::destroy()
 bool Swapchain::isValid() const
 { return impl->swapchain != VK_NULL_HANDLE; }
 
+VkSwapchainKHR Swapchain::handle() const
+{ return impl->swapchain; }
+
+VkFramebuffer Swapchain::framebuffer(uint32_t index) const
+{
+    if (index >= impl->swapchainFramebuffers.size())
+        return VK_NULL_HANDLE;
+    return impl->swapchainFramebuffers[index];
+}
+
 } // namespace vk_capabilities
 } // namespace kuu

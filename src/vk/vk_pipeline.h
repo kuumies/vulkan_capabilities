@@ -59,7 +59,7 @@ public:
         VkFrontFace frontFace,
         VkBool32 depthClampEnable = VK_FALSE,
         VkBool32 rasterizerDiscardEnable = VK_FALSE,
-        VkBool32 depthBiasEnable = VK_FALSE;,
+        VkBool32 depthBiasEnable = VK_FALSE,
         float depthBiasConstantFactor = 0.0f,
         float depthBiasClamp = 0.0f,
         float depthBiasSlopeFactor = 0.0f,
@@ -72,7 +72,7 @@ public:
         VkBool32 sampleShadingEnable,
         VkSampleCountFlagBits rasterizationSamples,
         float minSampleShading = 1.0f,
-        const VkSampleMask* pSampleMask = NULL,
+        const VkSampleMask* sampleMask = NULL,
         VkBool32 alphaToCoverageEnable = VK_FALSE,
         VkBool32 alphaToOneEnable = VK_FALSE);
     VkPipelineMultisampleStateCreateInfo multisampleState() const;
@@ -82,7 +82,7 @@ public:
     Pipeline& setDepthStencilState(
         VkBool32 depthTestEnable,
         VkBool32 depthWriteEnable = VK_TRUE,
-        VkCompareOp depthCompareOpm = VK_COMPARE_OP_LESS_OR_EQUAL,
+        VkCompareOp depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
         VkBool32 depthBoundsTestEnable = VK_FALSE,
         VkBool32 stencilTestEnable = VK_FALSE,
         VkStencilOpState front = {},
@@ -107,10 +107,13 @@ public:
 
     // Sets and gets the pipeline layout.
     Pipeline& setPipelineLayout(const VkPipelineLayoutCreateInfo& layout);
-    Pipeline& setPipelineLayout(std::vector<VkDescriptorSetLayout>& layouts,
-                                std::vector<VkPushConstantRange>& pushConstantRanges);
+    Pipeline& setPipelineLayout(const std::vector<VkDescriptorSetLayout>& layouts,
+                                const std::vector<VkPushConstantRange>& pushConstantRanges);
     VkPipelineLayoutCreateInfo pipelineLayout() const;
 
+    // Sets and gets the render pass.
+    Pipeline& setRenderPass(const VkRenderPass& renderPass);
+    VkRenderPass renderPass() const;
 
     // Creates and destroys the pipeline.
     void create();

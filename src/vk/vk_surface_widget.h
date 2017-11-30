@@ -1,6 +1,6 @@
 /* -------------------------------------------------------------------------- *
    Antti Jumpponen <kuumies@gmail.com>
-   The definition of kuu::vk::Widget class
+   The definition of kuu::vk::SurfaceWidget class
  * -------------------------------------------------------------------------- */
 
 #pragma once
@@ -28,22 +28,30 @@ public:
     // Constructs the widget and creates the Vulkan surface. Use
     // isValid() to know whether the surface creation succeeded.
     // The given in instance needs to be valid.
-    SurfaceWidget(const VkInstance& instance, QWidget* parent = nullptr);
+    SurfaceWidget(QWidget* parent = nullptr);
+
+    // Sets the Vulkan instance.
+    SurfaceWidget& setInstance(const VkInstance& instance);
+    VkInstance instance() const;
+
+    // Creates and distroys the Vulkan surface.
+    void createSurface();
+    void destroySurface();
 
     // Returns true if the surface handle is not a null handle.
     bool isValid() const;
 
     // Returns the surface handle. Handle is a VK_NULL_HANDLE
     // if the surface creation has failed.
-    VkSurfaceKHR surface() const;
+    VkSurfaceKHR handle() const;
 
 protected:
     // Paint event needs to be disabled.
     void paintEvent(QPaintEvent* e);
 
 private:
-    struct Data;
-    std::shared_ptr<Data> d;
+    struct Impl;
+    std::shared_ptr<Impl> impl;
 };
 
 } // namespace vk

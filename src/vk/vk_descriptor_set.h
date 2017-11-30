@@ -87,7 +87,7 @@ public:
     void create();
     void destroy();
 
-    // Returns true if the descriptor set handle is not a VK_NULL_HANDLE.
+    // Returns true if the descriptor set and layout handles are not a VK_NULL_HANDLE.
     bool isValid() const;
 
     // Returns the descriptor set handle.
