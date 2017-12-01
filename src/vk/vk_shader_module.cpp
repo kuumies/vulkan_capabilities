@@ -60,7 +60,8 @@ struct ShaderModule::Impl
 
     ~Impl()
     {
-        destroy();
+        if (isValid())
+            destroy();
     }
 
     bool create()
@@ -102,6 +103,11 @@ struct ShaderModule::Impl
             NULL);
 
         shaderModule = VK_NULL_HANDLE;
+    }
+
+    bool isValid() const
+    {
+        return shaderModule != VK_NULL_HANDLE;
     }
 
     // Parent
@@ -169,7 +175,7 @@ void ShaderModule::destroy()
 }
 
 bool ShaderModule::isValid() const
-{ return impl->shaderModule != VK_NULL_HANDLE; }
+{ return impl->isValid(); }
 
 VkPipelineShaderStageCreateInfo ShaderModule::createInfo() const
 {

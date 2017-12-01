@@ -19,7 +19,8 @@ struct Buffer::Impl
 {
     ~Impl()
     {
-        destroy();
+        if (isValid())
+            destroy();
     }
 
     bool create()
@@ -120,6 +121,12 @@ struct Buffer::Impl
         bufferMemory = VK_NULL_HANDLE;
     }
 
+    bool isValid() const
+    {
+        return buffer       != VK_NULL_HANDLE &&
+               bufferMemory != VK_NULL_HANDLE;
+    }
+
     // Parent
     VkPhysicalDevice physicalDevice;
     // Child
@@ -209,7 +216,7 @@ void Buffer::destroy()
 }
 
 bool Buffer::isValid() const
-{ return impl->buffer != VK_NULL_HANDLE; }
+{ return impl->isValid(); }
 
 void* Buffer::map()
 {

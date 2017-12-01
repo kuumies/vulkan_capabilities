@@ -19,7 +19,8 @@ struct RenderPass::Impl
 {
     ~Impl()
     {
-        destroy();
+        if (isValid())
+            destroy();
     }
 
     bool create()
@@ -63,6 +64,11 @@ struct RenderPass::Impl
             NULL);         // [in] allocator callback
 
         renderPass = VK_NULL_HANDLE;
+    }
+
+    bool isValid()
+    {
+        return renderPass != VK_NULL_HANDLE;
     }
 
     // Parent
@@ -133,7 +139,7 @@ void RenderPass::destroy()
 }
 
 bool RenderPass::isValid() const
-{ return impl->renderPass != VK_NULL_HANDLE; }
+{ return impl->isValid(); }
 
 VkRenderPass RenderPass::handle() const
 { return impl->renderPass; }

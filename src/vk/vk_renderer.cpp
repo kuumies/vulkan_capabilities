@@ -80,7 +80,8 @@ struct Renderer::Impl
 
     ~Impl()
     {
-        destroy();
+        if (isValid())
+            destroy();
     }
 
     bool create()
@@ -605,6 +606,15 @@ struct Renderer::Impl
 
     void destroy()
     {
+        if (device->handle() == VK_NULL_HANDLE)
+            return;
+
+        vkDeviceWaitIdle(device->handle());
+
+        commandPool->destroy();
+        commandBuffers.clear();
+        renderingFinished->destroy();
+        imageAvailable->destroy();
         pipeline->destroy();
         descriptorPool->destroy();
         descriptorSets->destroy();
@@ -615,6 +625,24 @@ struct Renderer::Impl
         swapchain->destroy();
         renderPass->destroy();
         device->destroy();
+    }
+
+    bool isValid() const
+    {
+        return commandBuffers.size() > 0                         &&
+               commandPool       && commandPool->isValid()       &&
+               renderingFinished && renderingFinished->isValid() &&
+               imageAvailable    && imageAvailable->isValid()    &&
+               pipeline          && pipeline->isValid()          &&
+               descriptorPool    && descriptorPool->isValid()    &&
+               descriptorSets    && descriptorSets->isValid()    &&
+               uniformBuffer     && uniformBuffer->isValid()     &&
+               mesh              && mesh->isValid()              &&
+               fshModule         && fshModule->isValid()         &&
+               vshModule         && vshModule->isValid()         &&
+               swapchain         && swapchain->isValid()         &&
+               renderPass        && renderPass->isValid()        &&
+               device            && device->isValid();
     }
 
     // From user.
@@ -696,16 +724,13 @@ void Renderer::destroy()
 }
 
 bool Renderer::isValid() const
-{ return impl->commandBuffers.size() > 0; }
+{ return impl->isValid(); }
 
 bool Renderer::resized(const VkExtent2D& extent)
 { return impl->resized(extent); }
 
 bool Renderer::renderFrame()
-{
-    return impl->renderFrame();
-}
-
+{ return impl->renderFrame(); }
 
 } // namespace vk
 } // namespace kuu

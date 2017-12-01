@@ -18,7 +18,8 @@ struct CommandPool::Impl
 {
     ~Impl()
     {
-        destroy();
+        if (isValid())
+            destroy();
     }
 
     bool create()
@@ -56,6 +57,11 @@ struct CommandPool::Impl
             NULL);
 
         commandPool = VK_NULL_HANDLE;
+    }
+
+    bool isValid() const
+    {
+        return commandPool != VK_NULL_HANDLE;
     }
 
     // Parent
@@ -99,7 +105,7 @@ void CommandPool::destroy()
 }
 
 bool CommandPool::isValid() const
-{ return impl->commandPool != VK_NULL_HANDLE; }
+{ return impl->isValid(); }
 
 VkCommandPool  CommandPool::handle() const
 { return impl->commandPool; }

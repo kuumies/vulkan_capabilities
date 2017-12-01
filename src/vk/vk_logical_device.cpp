@@ -34,7 +34,8 @@ struct LogicalDevice::Impl
 
     ~Impl()
     {
-        destroy();
+        if (isValid())
+            destroy();
     }
 
     void create()
@@ -102,6 +103,11 @@ struct LogicalDevice::Impl
             NULL);         // [in] allocator
 
         logicalDevice = VK_NULL_HANDLE;
+    }
+
+    bool isValid() const
+    {
+        return logicalDevice != VK_NULL_HANDLE;
     }
 
     // Parent
@@ -188,7 +194,7 @@ void LogicalDevice::destroy()
 }
 
 bool LogicalDevice::isValid() const
-{ return impl->logicalDevice != VK_NULL_HANDLE; }
+{ return impl->isValid(); }
 
 VkDevice LogicalDevice::handle() const
 { return impl->logicalDevice; }

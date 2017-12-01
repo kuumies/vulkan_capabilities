@@ -30,7 +30,8 @@ struct Swapchain::Impl
 
     ~Impl()
     {
-        destroy();
+        if (isValid())
+            destroy();
     }
 
     bool create()
@@ -229,6 +230,11 @@ struct Swapchain::Impl
         swapchain = VK_NULL_HANDLE;
     }
 
+    bool isValid() const
+    {
+        return swapchain != VK_NULL_HANDLE;
+    }
+
     VkSurfaceKHR surface;
     VkDevice logicalDevice;
     VkRenderPass renderPass;
@@ -331,7 +337,7 @@ void Swapchain::destroy()
 }
 
 bool Swapchain::isValid() const
-{ return impl->swapchain != VK_NULL_HANDLE; }
+{ return impl->isValid(); }
 
 VkSwapchainKHR Swapchain::handle() const
 { return impl->swapchain; }

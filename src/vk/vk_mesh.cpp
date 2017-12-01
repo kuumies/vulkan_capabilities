@@ -26,7 +26,8 @@ struct Mesh::Impl
 
     ~Impl()
     {
-        destroy();
+        if (isValid())
+            destroy();
     }
 
     bool create()
@@ -63,6 +64,11 @@ struct Mesh::Impl
     {
         indexBuffer.destroy();
         vertexBuffer.destroy();
+    }
+
+    bool isValid() const
+    {
+        return vertexBuffer.isValid() && indexBuffer.isValid();
     }
 
     // Parent
@@ -149,7 +155,7 @@ void Mesh::destroy()
 }
 
 bool Mesh::isValid() const
-{ return impl->vertexBuffer.isValid() && impl->indexBuffer.isValid(); }
+{ return impl->isValid(); }
 
 VkBuffer Mesh::vertexBufferHandle() const
 { return impl->vertexBuffer.handle(); }

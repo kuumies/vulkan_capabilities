@@ -48,20 +48,25 @@ namespace vk_capabilities
 
 struct Controller::Impl
 {
+    ~Impl()
+    {
+        if (renderer)
+            renderer->destroy();
+        surfaceWidget->destroySurface();
+    }
+
     // Main window
     std::unique_ptr<MainWindow> mainWindow;
 
     // Vulkan objects
     std::shared_ptr<vk::Instance> instance;
-    std::unique_ptr<vk::SurfaceWidget> surfaceWidget;
+    std::shared_ptr<vk::SurfaceWidget> surfaceWidget;
     std::vector<vk::SurfaceProperties> surfaceProperties;
 
     // Capabilities data created from vulkan objects.
     std::shared_ptr<Data> capabilitiesData;
 
     // Test data.
-    std::shared_ptr<vk::RenderPass> renderPass;
-    std::shared_ptr<vk::Swapchain> swapchain;
     std::shared_ptr<vk::Renderer> renderer;
 };
 
@@ -111,7 +116,7 @@ void Controller::start()
     while (vulkanInstanceTask.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
         QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
 
-    impl->surfaceWidget = std::unique_ptr<vk::SurfaceWidget>(new vk::SurfaceWidget());
+    impl->surfaceWidget = std::make_shared<vk::SurfaceWidget>();
     impl->surfaceWidget->resize(720, 576);
     QApplication::processEvents();
     impl->surfaceWidget->setInstance(impl->instance->handle());
@@ -161,12 +166,10 @@ void Controller::runDeviceTest(int deviceIndex)
     widgetExtent.height = uint32_t(impl->surfaceWidget->height());
 
     std::shared_ptr<vk::Renderer> renderer = impl->renderer;
-    renderer.reset();
     renderer = std::make_shared<vk::Renderer>(instance, physicalDevice, surface, widgetExtent);
     if (!renderer->create())
         return;
-
-    impl->surfaceWidget;
+    impl->renderer = renderer;;
 
     connect(impl->surfaceWidget.get(), &vk::SurfaceWidget::interval, [renderer]()
     {

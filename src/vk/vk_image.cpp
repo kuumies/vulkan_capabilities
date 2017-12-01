@@ -18,7 +18,8 @@ struct Image::Impl
 {
     ~Impl()
     {
-        destroy();
+        if (isValid())
+            destroy();
     }
 
     void create()
@@ -176,6 +177,11 @@ struct Image::Impl
         memory    = VK_NULL_HANDLE;
     }
 
+    bool isValid() const
+    {
+        return image != VK_NULL_HANDLE;
+    }
+
     // Parent
     VkDevice logicalDevice;
     VkPhysicalDevice physicalDevice;
@@ -293,7 +299,7 @@ void Image::destroy()
 }
 
 bool Image::isValid() const
-{ return impl->image != VK_NULL_HANDLE; }
+{ return impl->isValid(); }
 
 VkImage Image::imageHandle() const
 { return impl->image; }

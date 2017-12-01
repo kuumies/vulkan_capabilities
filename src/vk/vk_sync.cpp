@@ -18,7 +18,8 @@ struct Semaphore::Impl
 {
     ~Impl()
     {
-        destroy();
+        if (isValid())
+            destroy();
     }
 
     bool create()
@@ -52,7 +53,13 @@ struct Semaphore::Impl
             semaphore,
             NULL);
 
-        semaphore = VK_NULL_HANDLE;
+        semaphore     = VK_NULL_HANDLE;
+        logicalDevice = VK_NULL_HANDLE;
+    }
+
+    bool isValid() const
+    {
+        return semaphore != VK_NULL_HANDLE;
     }
 
     // Parent
@@ -84,7 +91,7 @@ void Semaphore::destroy()
 }
 
 bool Semaphore::isValid() const
-{ return impl->semaphore != VK_NULL_HANDLE; }
+{ return impl->isValid(); }
 
 VkSemaphore Semaphore::handle() const
 { return impl->semaphore; }

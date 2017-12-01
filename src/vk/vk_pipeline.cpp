@@ -18,7 +18,8 @@ struct Pipeline::Impl
 {
     ~Impl()
     {
-        destroy();
+        if (isValid())
+            destroy();
     }
 
     bool create()
@@ -96,6 +97,12 @@ struct Pipeline::Impl
 
         pipeline       = VK_NULL_HANDLE;
         pipelineLayout = VK_NULL_HANDLE;
+    }
+
+    bool isValid() const
+    {
+        return pipelineLayout != VK_NULL_HANDLE &&
+               pipeline       != VK_NULL_HANDLE;
     }
 
     // Parent
@@ -447,8 +454,7 @@ void Pipeline::destroy()
 
 bool Pipeline::isValid() const
 {
-    return impl->pipelineLayout != VK_NULL_HANDLE &&
-           impl->pipeline       != VK_NULL_HANDLE;
+    return impl->isValid();
 }
 
 VkPipeline Pipeline::handle() const

@@ -18,7 +18,8 @@ struct DescriptorPool::Impl
 {
     ~Impl()
     {
-        destroy();
+        if (isValid())
+            destroy();
     }
 
     bool create()
@@ -59,6 +60,11 @@ struct DescriptorPool::Impl
             NULL);
 
         pool = VK_NULL_HANDLE;
+    }
+
+    bool isValid() const
+    {
+        return pool != VK_NULL_HANDLE;
     }
 
     // Parent
@@ -134,7 +140,8 @@ struct DescriptorSets::Impl
 
     ~Impl()
     {
-        destroy();
+        if (isValid())
+            destroy();
     }
 
     bool create()
@@ -195,6 +202,14 @@ struct DescriptorSets::Impl
 
         layout         = VK_NULL_HANDLE;
         descriptorSets = VK_NULL_HANDLE;
+        logicalDevice  = VK_NULL_HANDLE;
+    }
+
+    bool isValid() const
+    {
+        return descriptorSets != VK_NULL_HANDLE &&
+               layout         != VK_NULL_HANDLE &&
+               logicalDevice  != VK_NULL_HANDLE;
     }
 
     // Parent
@@ -282,8 +297,7 @@ void DescriptorSets::destroy()
 
 bool DescriptorSets::isValid() const
 {
-    return impl->descriptorSets != VK_NULL_HANDLE &&
-           impl->layout         != VK_NULL_HANDLE;
+    return impl->isValid();
 }
 
 VkDescriptorSet DescriptorSets::handle() const
