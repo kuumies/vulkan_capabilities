@@ -66,6 +66,11 @@ public:
     void* map(VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags);
     void unmap();
 
+    // Copies data into host visible buffer. This requires that buffer memory
+    // properties has a host visible flag set. Data is copied immediately if
+    // the memory properties has host coherent flag set.
+    void copyHostVisible(void* data, size_t size);
+
 private:
     struct Impl;
     std::shared_ptr<Impl> impl;

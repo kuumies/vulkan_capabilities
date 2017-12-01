@@ -30,7 +30,9 @@ struct LogicalDevice::Impl
 {
     Impl(const VkPhysicalDevice& physicalDevice)
         : physicalDevice(physicalDevice)
-    {}
+    {
+        features.samplerAnisotropy    = VK_TRUE;
+    }
 
     ~Impl()
     {

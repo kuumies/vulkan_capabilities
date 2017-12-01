@@ -95,8 +95,19 @@ public:
     // Returns the  descriptor set layout handles
     VkDescriptorSetLayout layoutHandle() const;
 
-    // Updates the buffer descriptor sets.
-    void writeUniformBuffer(const std::vector<VkDescriptorBufferInfo>& bufferInfos);
+    // Updates the uniform buffer descriptor set.
+    void writeUniformBuffer(
+        uint32_t binding,
+        VkBuffer buffer,
+        VkDeviceSize offset,
+        VkDeviceSize range);
+
+    // Updates the combined image sampler descriptor set.
+    void writeImage(
+        uint32_t binding,
+        VkSampler sampler,
+        VkImageView imageView,
+        VkImageLayout imageLayout);
 
 private:
     struct Impl;

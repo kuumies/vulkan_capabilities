@@ -16,6 +16,10 @@ namespace kuu
 namespace vk
 {
 
+class Buffer;
+class CommandPool;
+class Queue;
+
 /* -------------------------------------------------------------------------- *
    A vulkan command pool class
  * -------------------------------------------------------------------------- */
@@ -40,9 +44,14 @@ public:
     VkCommandPool  handle() const;
 
     // Allocates N command buffers from the pool.
-    std::vector<VkCommandBuffer> allocate(
+    std::vector<VkCommandBuffer> allocateBuffers(
         VkCommandBufferLevel level,
         uint32_t count);
+    // Allocates a single command buffer from the pool.
+    VkCommandBuffer allocateBuffer(VkCommandBufferLevel level);
+
+    // Frees N command buffers.
+    void freeBuffers(const std::vector<VkCommandBuffer>& buffers);
 
 private:
     struct Impl;

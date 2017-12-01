@@ -10,9 +10,11 @@ project(vulkan_capabilities)
 set (EXTERNAL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external)
 set(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH}
+    ${EXTERNAL_DIR}/assimp
     ${EXTERNAL_DIR}/glm
 )
 
+include(add_assimp)
 include(add_glm)
 
 #-------------------------------------------------------------------------------
@@ -69,6 +71,7 @@ file(GLOB_RECURSE CPP_SOURCES src/*.cpp)
 file(GLOB_RECURSE UI_SOURCES  src/*.ui)
 file(GLOB_RECURSE QRC_SOURCES src/*.qrc)
 file(GLOB_RECURSE GLSL_SOURCES src/*.vert src/*.frag)
+file(GLOB_RECURSE TEXTURE_SOURCES src/textures/*.png)
 
 add_executable(${PROJECT_NAME}
     ${CPP_SOURCES}
@@ -84,6 +87,7 @@ target_link_libraries(
 )
 
 install(TARGETS ${PROJECT_NAME}   RUNTIME DESTINATION bin)
+install(FILES ${TEXTURE_SOURCES}          DESTINATION bin/textures)
 
 #-------------------------------------------------------------------------------
 # GLSL to SPIR-V

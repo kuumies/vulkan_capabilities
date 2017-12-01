@@ -11,13 +11,16 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
+#include <QtGui/QImage>
 #include "vk_buffer.h"
 #include "vk_command.h"
 #include "vk_descriptor_set.h"
 #include "vk_helper.h"
+#include "vk_image.h"
 #include "vk_logical_device.h"
 #include "vk_mesh.h"
 #include "vk_pipeline.h"
+#include "vk_queue.h"
 #include "vk_render_pass.h"
 #include "vk_shader_module.h"
 #include "vk_stringify.h"
@@ -98,6 +101,9 @@ struct Renderer::Impl
         if (!createSwapchain())
             return false;
 
+        if (!createCommandPool())
+            return false;
+
         if (!createShaders())
             return false;
 
@@ -105,6 +111,9 @@ struct Renderer::Impl
             return false;
 
         if (!createUniformBuffer())
+            return false;
+
+        if (!createTexture())
             return false;
 
         if (!createDescriptorSets())
@@ -118,6 +127,7 @@ struct Renderer::Impl
 
         if (!createSync())
             return false;
+
 
         return true;
     }
@@ -278,15 +288,60 @@ struct Renderer::Impl
         return true;
     }
 
+    bool createTexture()
+    {
+        QImage img("textures/blocksrough_basecolor.png");
+        if (img.isNull())
+            return false;
+        img = img.convertToFormat(QImage::Format_RGBA8888);
+
+        texSampler = std::make_shared<Sampler>(device->handle());
+        if (!texSampler->create())
+            return false;
+
+        tex = std::make_shared<Image>(physicalDevice, device->handle());
+        tex->setExtent( { img.width(), img.height(), 1 } );
+        tex->setFormat(VK_FORMAT_R8G8B8A8_UNORM);
+        tex->setUsage(VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+        tex->setImageViewAspect(VK_IMAGE_ASPECT_COLOR_BIT);
+        tex->setMemoryProperty(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        tex->setSampler(*texSampler);
+        if (!tex->create())
+            return false;
+
+        const VkDeviceSize imageSize = img.byteCount();
+
+        Buffer texBuffer(physicalDevice, device->handle());
+        texBuffer.setSize(imageSize);
+        texBuffer.setUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+        texBuffer.setMemoryProperties(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        if (!texBuffer.create())
+            return false;
+
+        texBuffer.copyHostVisible(img.bits(), imageSize);
+
+        Queue queue(device->handle(), graphicsFamilyIndex, 0);
+        queue.create();
+
+        if (!tex->transitionLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, queue, *commandPool))
+            return false;
+        if (!tex->copyFromBuffer(texBuffer, queue, *commandPool))
+            return false;
+        if (!tex->transitionLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, queue, *commandPool))
+            return false;
+
+        return true;
+    }
+
     bool createMesh()
     {
         const float size = 2.0f;
         const std::vector<float> vertices =
         {
-             size, -size,  0.0f, 1.0f, 0.0f, 0.0f,
-             size,  size,  0.0f, 0.0f, 1.0f, 0.0f,
-            -size,  size,  0.0f, 0.0f, 0.0f, 1.0f,
-            -size, -size,  0.0f, 1.0f, 1.0f, 1.0f,
+             size, -size,  0.0f, 1.0f, 0.0f, 0.0f, 1.0, 0.0,
+             size,  size,  0.0f, 0.0f, 1.0f, 0.0f, 1.0, 1.0,
+            -size,  size,  0.0f, 0.0f, 0.0f, 1.0f, 0.0, 1.0,
+            -size, -size,  0.0f, 1.0f, 1.0f, 1.0f, 0,0, 0.0
         };
 
         const std::vector<uint32_t> indices =
@@ -302,7 +357,8 @@ struct Renderer::Impl
         mesh->setIndices(indices);
         mesh->addVertexAttributeDescription(0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0);
         mesh->addVertexAttributeDescription(1, 0, VK_FORMAT_R32G32B32_SFLOAT, 3 * sizeof(float));
-        mesh->setVertexBindingDescription(0, 6 * sizeof(float), VK_VERTEX_INPUT_RATE_VERTEX);
+        mesh->addVertexAttributeDescription(2, 0, VK_FORMAT_R32G32_SFLOAT,    6 * sizeof(float));
+        mesh->setVertexBindingDescription(0, 8 * sizeof(float), VK_VERTEX_INPUT_RATE_VERTEX);
         return mesh->create();
     }
 
@@ -323,24 +379,35 @@ struct Renderer::Impl
         if (!uniformBuffer->create())
             return false;
 
-        void* uniformDst = uniformBuffer->map();
-        memcpy(uniformDst, &matrices, size_t(uniformBuffer->size()));
-        uniformBuffer->unmap();
+        uniformBuffer->copyHostVisible(&matrices, uniformBuffer->size());
         return true;
     }
 
     bool createDescriptorSets()
     {
         descriptorPool = std::make_shared<DescriptorPool>(device->handle());
-        descriptorPool->addTypeSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1);
+        descriptorPool->addTypeSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,          1);
+        descriptorPool->addTypeSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  1);
         if (!descriptorPool->create())
             return false;
 
         descriptorSets = std::make_shared<DescriptorSets>(device->handle(), descriptorPool->handle());
-        descriptorSets->addLayoutBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT);
+        descriptorSets->addLayoutBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         1, VK_SHADER_STAGE_VERTEX_BIT);
+        descriptorSets->addLayoutBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
         if (!descriptorSets->create())
             return false;
-        descriptorSets->writeUniformBuffer( { { uniformBuffer->handle(), 0, uniformBuffer->size() } } );
+        descriptorSets->writeUniformBuffer(
+            0,
+            uniformBuffer->handle(),
+            0,
+            uniformBuffer->size());
+
+        descriptorSets->writeImage(
+            1,
+            texSampler->handle(),
+            tex->imageViewHandle(),
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
         return true;
     }
 
@@ -383,15 +450,17 @@ struct Renderer::Impl
         return pipeline->create();
     }
 
-    bool createCommandBuffers()
+    bool createCommandPool()
     {
         commandPool = std::make_shared<CommandPool>(device->handle());
         commandPool->setQueueFamilyIndex(graphicsFamilyIndex);
-        if (!commandPool->create())
-            return false;
+        return commandPool->create();
+    }
 
+    bool createCommandBuffers()
+    {
         commandBuffers =
-            commandPool->allocate(
+            commandPool->allocateBuffers(
                 VK_COMMAND_BUFFER_LEVEL_PRIMARY,
                 swapchainImageCount);
 
@@ -506,9 +575,7 @@ struct Renderer::Impl
         q *= glm::angleAxis(glm::radians(0.5f), glm::vec3(0.0f, 1.0f, 0.0f));
         matrices.model = glm::mat4_cast(q);
 
-        void* uniformDst = uniformBuffer->map();
-        memcpy(uniformDst, &matrices, size_t(uniformBuffer->size()));
-        uniformBuffer->unmap();
+        uniformBuffer->copyHostVisible(&matrices, uniformBuffer->size());
 
         uint32_t imageIndex;
         VkResult result = vkAcquireNextImageKHR(
@@ -528,55 +595,20 @@ struct Renderer::Impl
             return false;
         }
 
-        VkSemaphore waitSemaphores[]   = { imageAvailable->handle() };
-        VkSemaphore signalSemaphores[] = { renderingFinished->handle() };
-        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+        // Render
+        Queue graphicsQueue(device->handle(), graphicsFamilyIndex, 0);
+        graphicsQueue.create();
+        graphicsQueue.submit(commandBuffers[imageIndex],
+                             renderingFinished->handle(),
+                             imageAvailable->handle(),
+                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
-        VkSubmitInfo submitInfo;
-        submitInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.pNext                = NULL;
-        submitInfo.waitSemaphoreCount   = 1;
-        submitInfo.pWaitSemaphores      = waitSemaphores;
-        submitInfo.pWaitDstStageMask    = waitStages;
-        submitInfo.commandBufferCount   = 1;
-        submitInfo.pCommandBuffers      = &commandBuffers[imageIndex];
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores    = signalSemaphores;
-
-        VkQueue graphicsQueue;
-        vkGetDeviceQueue(device->handle(), graphicsFamilyIndex, 0, &graphicsQueue);
-
-        result =
-            vkQueueSubmit(
-                graphicsQueue,
-                1,
-                &submitInfo,
-                VK_NULL_HANDLE);
-
-        if (result != VK_SUCCESS)
-        {
-            std::cerr << __FUNCTION__
-                      << ": graphics queue submit failed as "
-                      << vk::stringify::resultDesc(result)
-                      << std::endl;
-            return false;
-        }
-
-        VkSwapchainKHR swapChains[] = { swapchain->handle() };
-
-        VkPresentInfoKHR presentInfo;
-        presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        presentInfo.pNext              = NULL;
-        presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores    = signalSemaphores;
-        presentInfo.swapchainCount     = 1;
-        presentInfo.pSwapchains        = swapChains;
-        presentInfo.pImageIndices      = &imageIndex;
-        presentInfo.pResults           = NULL;
-
-        VkQueue presentQueue;
-        vkGetDeviceQueue(device->handle(), presentationFamilyIndex, 0, &presentQueue);
-        vkQueuePresentKHR(presentQueue, &presentInfo);
+        // Present
+        Queue presentQueue(device->handle(), presentationFamilyIndex, 0);
+        presentQueue.create();
+        presentQueue.present(swapchain->handle(),
+                             renderingFinished->handle(),
+                             imageIndex);
 
         return true;
     }
@@ -597,6 +629,8 @@ struct Renderer::Impl
         if (!createSwapchain())
             return false;
         if (!createPipeline())
+            return false;
+        if (!createCommandPool())
             return false;
         if (!createCommandBuffers())
             return false;
@@ -619,6 +653,8 @@ struct Renderer::Impl
         descriptorPool->destroy();
         descriptorSets->destroy();
         uniformBuffer->destroy();
+        tex->destroy();
+        texSampler->destroy();
         mesh->destroy();
         fshModule->destroy();
         vshModule->destroy();
@@ -680,6 +716,10 @@ struct Renderer::Impl
 
     // Uniform buffer
     std::shared_ptr<Buffer> uniformBuffer;
+
+    // Texture
+    std::shared_ptr<Image> tex;
+    std::shared_ptr<Sampler> texSampler;
 
     // Descriptor sets
     std::shared_ptr<DescriptorPool> descriptorPool;

@@ -307,27 +307,54 @@ VkDescriptorSetLayout DescriptorSets::layoutHandle() const
 { return impl->layout; }
 
 void DescriptorSets::writeUniformBuffer(
-    const std::vector<VkDescriptorBufferInfo>& bufferInfos)
+        uint32_t binding,
+        VkBuffer buffer,
+        VkDeviceSize offset,
+        VkDeviceSize range)
 {
-    std::vector<VkWriteDescriptorSet> writeDescriptorSets;
-    for (size_t i = 0; i < bufferInfos.size(); ++i)
-    {
-        VkDescriptorBufferInfo info = bufferInfos[i];
-        VkDescriptorSetLayoutBinding binding = impl->layoutBindings[i];
-        VkWriteDescriptorSet writeDescriptorSet = {};
-        writeDescriptorSet.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writeDescriptorSet.dstSet          = impl->descriptorSets;
-        writeDescriptorSet.descriptorCount = 1;
-        writeDescriptorSet.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        writeDescriptorSet.pBufferInfo     = &info;
-        writeDescriptorSet.dstBinding      = binding.binding;
-        writeDescriptorSets.push_back(writeDescriptorSet);
-    }
+    VkDescriptorBufferInfo info;
+    info.buffer = buffer;
+    info.offset = offset;
+    info.range  = range;
+
+    VkWriteDescriptorSet writeDescriptorSet = {};
+    writeDescriptorSet.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writeDescriptorSet.dstSet          = impl->descriptorSets;
+    writeDescriptorSet.descriptorCount = 1;
+    writeDescriptorSet.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    writeDescriptorSet.pBufferInfo     = &info;
+    writeDescriptorSet.dstBinding      = binding;
 
     vkUpdateDescriptorSets(
         impl->logicalDevice,
-        uint32_t(writeDescriptorSets.size()),
-        writeDescriptorSets.data(),
+        1,
+        &writeDescriptorSet,
+        0, NULL);
+}
+
+void DescriptorSets::writeImage(
+    uint32_t binding,
+    VkSampler sampler,
+    VkImageView imageView,
+    VkImageLayout imageLayout)
+{
+    VkDescriptorImageInfo info;
+    info.sampler     = sampler;
+    info.imageView   = imageView;
+    info.imageLayout = imageLayout;
+
+    VkWriteDescriptorSet writeDescriptorSet = {};
+    writeDescriptorSet.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writeDescriptorSet.dstSet          = impl->descriptorSets;
+    writeDescriptorSet.descriptorCount = 1;
+    writeDescriptorSet.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    writeDescriptorSet.pImageInfo      = &info;
+    writeDescriptorSet.dstBinding      = binding;
+
+    vkUpdateDescriptorSets(
+        impl->logicalDevice,
+        1,
+        &writeDescriptorSet,
         0, NULL);
 }
 } // namespace vk

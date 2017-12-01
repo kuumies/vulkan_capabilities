@@ -15,6 +15,34 @@ namespace vk
 {
 
 /* -------------------------------------------------------------------------- *
+   A Vulkan sampler wrapper class.
+ * -------------------------------------------------------------------------- */
+class Sampler
+{
+public:
+    // Constructs the sampler.
+    Sampler(const VkDevice& logicalDevice = VK_NULL_HANDLE);
+
+    // Sets and gets the logical device.
+    Sampler& setDevice(const VkDevice& logicalDevice);
+    VkDevice device() const;
+
+    // Creates and destroys the sampler.
+    bool create();
+    void destroy();
+
+    // Returns true if the sampler handle is not a VK_NULL_HANDLE.
+    bool isValid() const;
+
+    // Returns the handle.
+    VkSampler handle() const;
+
+private:
+    struct Impl;
+    std::shared_ptr<Impl> impl;
+};
+
+/* -------------------------------------------------------------------------- *
    A Vulkan image and image view wrapper class. This will also manage the
    memory of the image.
  * -------------------------------------------------------------------------- */
@@ -57,8 +85,12 @@ public:
     Image& setMemoryProperty(VkMemoryPropertyFlags property);
     VkMemoryPropertyFlags memoryProperty() const;
 
+    // Sets and gets the image sampler.
+    Image& setSampler(const Sampler& sampler);
+    Sampler sampler() const;
+
     // Creates and destroys the image.
-    void create();
+    bool create();
     void destroy();
 
     // Returns true if the image handles are valid.
@@ -68,6 +100,21 @@ public:
     VkImage imageHandle() const;
     // Returns the image view handle.
     VkImageView imageViewHandle() const;
+
+    // Transition image layout. This is a queue operation.
+    bool transitionLayout(
+        const VkImageLayout& newLayout,
+        class Queue& queue,
+        class CommandPool& commandPool);
+
+    // Copy image data from buffer. This is a queue operation. If the regions
+    // vector is empty then whole image is set as the region.
+    bool copyFromBuffer(
+        const class Buffer& buffer,
+        class Queue& queue,
+        class CommandPool& commandPool,
+        const std::vector<VkBufferImageCopy>& regions =
+            std::vector<VkBufferImageCopy>());
 
 private:
     struct Impl;

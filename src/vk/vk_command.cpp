@@ -110,7 +110,7 @@ bool CommandPool::isValid() const
 VkCommandPool  CommandPool::handle() const
 { return impl->commandPool; }
 
-std::vector<VkCommandBuffer> CommandPool::allocate(
+std::vector<VkCommandBuffer> CommandPool::allocateBuffers(
         VkCommandBufferLevel level,
         uint32_t count)
 {
@@ -136,6 +136,21 @@ std::vector<VkCommandBuffer> CommandPool::allocate(
     }
 
     return buffers;
+}
+
+VkCommandBuffer CommandPool::allocateBuffer(VkCommandBufferLevel level)
+{
+    std::vector<VkCommandBuffer> out = allocateBuffers(level, 1);
+    return out.size() > 0 ? out[0] : VK_NULL_HANDLE;
+}
+
+void CommandPool::freeBuffers(const std::vector<VkCommandBuffer> &buffers)
+{
+    vkFreeCommandBuffers(
+        impl->logicalDevice,
+        impl->commandPool,
+        uint32_t(buffers.size()),
+        buffers.data());
 }
 
 } // namespace vk
