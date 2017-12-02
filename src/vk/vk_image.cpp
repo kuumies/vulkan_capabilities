@@ -45,7 +45,7 @@ struct Sampler::Impl
         samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
         samplerInfo.mipLodBias = 0.0f;
         samplerInfo.minLod = 0.0f;
-        samplerInfo.maxLod = 0.0f;
+        samplerInfo.maxLod = 12.0f;
 
         // Create image
         const VkResult result =
@@ -137,6 +137,13 @@ struct Image::Impl
 
     bool create()
     {
+        uint32_t mipLevels = 1;
+        if (generateMipmaps)
+            mipLevels = uint32_t(std::floor(std::log2(std::max(extent.width, extent.height)))) + 1;
+        mipLevelCount = mipLevels;
+
+        std::cout << mipLevelCount << std::endl;
+
         // Fill create info
         VkStructureType structType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         VkImageCreateInfo info;
@@ -146,7 +153,7 @@ struct Image::Impl
         info.imageType             = type;                      // Image type
         info.format                = format;                    // Image format
         info.extent                = extent;                    // Image extent
-        info.mipLevels             = 1;                         // No mipmap levels, TODO: get from user
+        info.mipLevels             = mipLevels;                 // Mipmap levels
         info.arrayLayers           = 1;                         // No array layers, TODO: get from user
         info.samples               = VK_SAMPLE_COUNT_1_BIT;     // No multisampling, TODO: get from user
         info.tiling                = tiling;                    // Image tiling
@@ -243,7 +250,7 @@ struct Image::Impl
         viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
         viewInfo.subresourceRange.aspectMask     = viewAspectMask;
         viewInfo.subresourceRange.baseMipLevel   = 0;
-        viewInfo.subresourceRange.levelCount     = 1;
+        viewInfo.subresourceRange.levelCount     = mipLevels;
         viewInfo.subresourceRange.baseArrayLayer = 0;
         viewInfo.subresourceRange.layerCount     = 1;
 
@@ -261,6 +268,11 @@ struct Image::Impl
                       << vk::stringify::result(result)
                       << std::endl;
             return false;
+        }
+
+        if (generateMipmaps)
+        {
+
         }
 
         return true;
@@ -317,6 +329,10 @@ struct Image::Impl
 
     // User sampler
     Sampler sampler;
+
+    // Generate mip maps
+    bool generateMipmaps = false;
+    uint32_t mipLevelCount = 1;
 
     // Handles
     VkImage image         = VK_NULL_HANDLE;
@@ -415,6 +431,12 @@ Image& Image::setSampler(const Sampler& sampler)
 Sampler Image::sampler() const
 { return impl->sampler; }
 
+Image& Image::setGenerateMipLevels(bool generate)
+{
+    impl->generateMipmaps = generate;
+    return *this;
+}
+
 bool  Image::create()
 {
     if (!isValid())
@@ -438,36 +460,110 @@ VkImageView Image::imageViewHandle() const
 { return impl->imageView; }
 
 bool Image::transitionLayout(
+    const VkImageLayout& oldLayout,
     const VkImageLayout& newLayout,
+    const VkPipelineStageFlags srcStageMask,
+    const VkPipelineStageFlags dstStageMask,
     Queue& queue,
-    CommandPool& commandPool)
+    CommandPool& commandPool,
+    const VkImageAspectFlagBits imageAspect,
+    const uint32_t mipLevel)
 {
-    VkPipelineStageFlags sourceStage;
-    VkPipelineStageFlags destinationStage;
-
     VkAccessFlags srcAccessMask;
     VkAccessFlags dstAccessMask;
 
-    if (impl->initialLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
-        newLayout           == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+    // Source layouts (old)
+    // Source access mask controls actions that have to be finished on the old layout
+    // before it will be transitioned to the new layout
+    switch (oldLayout)
     {
+    case VK_IMAGE_LAYOUT_UNDEFINED:
+        // Image layout is undefined (or does not matter)
+        // Only valid as initial layout
+        // No flags required, listed only for completeness
         srcAccessMask = 0;
-        dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        break;
 
-        sourceStage      = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    }
-    else if (impl->initialLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
-             newLayout           == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-    {
+    case VK_IMAGE_LAYOUT_PREINITIALIZED:
+        // Image is preinitialized
+        // Only valid as initial layout for linear images, preserves memory contents
+        // Make sure host writes have been finished
+        srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+        break;
+
+    case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+        // Image is a color attachment
+        // Make sure any writes to the color buffer have been finished
+        srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        break;
+
+    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+        // Image is a depth/stencil attachment
+        // Make sure any writes to the depth/stencil buffer have been finished
+        srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        break;
+
+    case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+        // Image is a transfer source
+        // Make sure any reads from the image have been finished
+        srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        break;
+
+    case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+        // Image is a transfer destination
+        // Make sure any writes to the image have been finished
         srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        break;
 
-        sourceStage      = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+        // Image is read by a shader
+        // Make sure any shader reads from the image have been finished
+        srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        break;
+    default:
+        // Other source layouts aren't handled (yet)
+        break;
     }
-    else
+
+    // Target layouts (new)
+    // Destination access mask controls the dependency for the new image layout
+    switch (newLayout)
     {
+    case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+        // Image will be used as a transfer destination
+        // Make sure any writes to the image have been finished
+        dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        break;
+
+    case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+        // Image will be used as a transfer source
+        // Make sure any reads from the image have been finished
+        dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        break;
+
+    case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+        // Image will be used as a color attachment
+        // Make sure any writes to the color buffer have been finished
+        dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        break;
+
+    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+        // Image layout will be used as a depth/stencil attachment
+        // Make sure any writes to depth/stencil buffer have been finished
+        dstAccessMask = dstAccessMask | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        break;
+
+    case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+        // Image will be read in a shader (sampler, input attachment)
+        // Make sure any writes to the image have been finished
+        if (srcAccessMask == 0)
+        {
+            srcAccessMask = VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
+        }
+        dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        break;
+    default:
+        // Other source layouts aren't handled (yet)
         std::cerr << __FUNCTION__
                   << ": image layout transition is not supported"
                   << std::endl;
@@ -486,21 +582,21 @@ bool Image::transitionLayout(
     barrier.pNext                           = NULL;
     barrier.srcAccessMask                   = srcAccessMask;
     barrier.dstAccessMask                   = dstAccessMask;
-    barrier.oldLayout                       = impl->initialLayout;
+    barrier.oldLayout                       = oldLayout;
     barrier.newLayout                       = newLayout;
     barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
     barrier.image                           = impl->image;
-    barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseMipLevel   = 0;
+    barrier.subresourceRange.aspectMask     = imageAspect;
+    barrier.subresourceRange.baseMipLevel   = mipLevel;
     barrier.subresourceRange.levelCount     = 1;
     barrier.subresourceRange.baseArrayLayer = 0;
     barrier.subresourceRange.layerCount     = 1;
 
     vkCmdPipelineBarrier(
         cmdBuf,
-        sourceStage,
-        destinationStage,
+        srcStageMask,
+        dstStageMask,
         0,
         0, NULL,
         0, NULL,
@@ -582,6 +678,85 @@ bool Image::copyFromBuffer(
         return false;
     if (!queue.waitIdle())
         return false;
+
+    return true;
+}
+
+bool Image::generateMipLevels(Queue& queue, CommandPool& commandPool)
+{
+    for (uint32_t i = 1 ; i <impl->mipLevelCount; ++i)
+    {
+        VkImageBlit imageBlit = {};
+
+        std::cout << i << ", " << impl->extent.width << ", " << (impl->extent.width >> i) << std::endl;
+
+        // Source
+        imageBlit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imageBlit.srcSubresource.layerCount = 1;
+        imageBlit.srcSubresource.mipLevel = i-1;
+        imageBlit.srcOffsets[1].x = int32_t(impl->extent.width >> (i - 1));
+        imageBlit.srcOffsets[1].y = int32_t(impl->extent.height >> (i - 1));
+        imageBlit.srcOffsets[1].z = 1;
+
+        imageBlit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imageBlit.dstSubresource.layerCount = 1;
+        imageBlit.dstSubresource.mipLevel = i;
+        imageBlit.dstOffsets[1].x = int32_t(impl->extent.width >> i);
+        imageBlit.dstOffsets[1].y = int32_t(impl->extent.height >> i);
+        imageBlit.dstOffsets[1].z = 1;
+
+        transitionLayout(VK_IMAGE_LAYOUT_UNDEFINED,
+                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         queue,
+                         commandPool,
+                         VK_IMAGE_ASPECT_COLOR_BIT,
+                         i);
+
+        VkCommandBuffer cmdBuf =
+            commandPool.allocateBuffer(
+                VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+
+        VkCommandBufferBeginInfo beginInfo = {};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        vkBeginCommandBuffer(cmdBuf, &beginInfo);
+        vkCmdBlitImage(
+          cmdBuf,
+          impl->image,
+          VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+          impl->image,
+          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+          1,
+          &imageBlit,
+          VK_FILTER_LINEAR);
+
+        const VkResult result = vkEndCommandBuffer(cmdBuf);
+        if (result != VK_SUCCESS)
+        {
+            std::cerr << __FUNCTION__
+                      << ": image copy from buffer failed as "
+                      << vk::stringify::result(result)
+                      << std::endl;
+            return false;
+        }
+
+        if (!queue.submit(cmdBuf))
+            return false;
+        if (!queue.waitIdle())
+            return false;
+
+        transitionLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         queue,
+                         commandPool,
+                         VK_IMAGE_ASPECT_COLOR_BIT,
+                         i);
+    }
 
     return true;
 }

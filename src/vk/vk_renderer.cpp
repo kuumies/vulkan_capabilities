@@ -300,12 +300,13 @@ struct Renderer::Impl
             return false;
 
         tex = std::make_shared<Image>(physicalDevice, device->handle());
-        tex->setExtent( { img.width(), img.height(), 1 } );
+        tex->setExtent( { uint32_t(img.width()), uint32_t(img.height()), 1 } );
         tex->setFormat(VK_FORMAT_R8G8B8A8_UNORM);
-        tex->setUsage(VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+        tex->setUsage(VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
         tex->setImageViewAspect(VK_IMAGE_ASPECT_COLOR_BIT);
         tex->setMemoryProperty(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         tex->setSampler(*texSampler);
+        tex->setGenerateMipLevels(true);
         if (!tex->create())
             return false;
 
@@ -323,12 +324,38 @@ struct Renderer::Impl
         Queue queue(device->handle(), graphicsFamilyIndex, 0);
         queue.create();
 
-        if (!tex->transitionLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, queue, *commandPool))
+        if (!tex->transitionLayout(tex->initialLayout(),
+                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                   VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                                   VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                                   queue, *commandPool))
+        {
             return false;
+        }
+
         if (!tex->copyFromBuffer(texBuffer, queue, *commandPool))
             return false;
-        if (!tex->transitionLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, queue, *commandPool))
+
+        if (!tex->transitionLayout(tex->initialLayout(),
+                                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                   VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                                   VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                                   queue, *commandPool))
+        {
             return false;
+        }
+
+        tex->generateMipLevels(queue, *commandPool);
+
+        if (!tex->transitionLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                   VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                                   queue,
+                                   *commandPool))
+        {
+            return false;
+        }
 
         return true;
     }

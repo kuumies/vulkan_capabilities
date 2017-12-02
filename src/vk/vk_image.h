@@ -89,6 +89,8 @@ public:
     Image& setSampler(const Sampler& sampler);
     Sampler sampler() const;
 
+    Image& setGenerateMipLevels(bool generate);
+
     // Creates and destroys the image.
     bool create();
     void destroy();
@@ -103,9 +105,14 @@ public:
 
     // Transition image layout. This is a queue operation.
     bool transitionLayout(
+        const VkImageLayout& oldLayout,
         const VkImageLayout& newLayout,
+        const VkPipelineStageFlags srcStageMask,
+        const VkPipelineStageFlags dstStageMask,
         class Queue& queue,
-        class CommandPool& commandPool);
+        class CommandPool& commandPool,
+        const VkImageAspectFlagBits imageAspect = VK_IMAGE_ASPECT_COLOR_BIT,
+        const uint32_t mipLevel = 0);
 
     // Copy image data from buffer. This is a queue operation. If the regions
     // vector is empty then whole image is set as the region.
@@ -116,6 +123,10 @@ public:
         const std::vector<VkBufferImageCopy>& regions =
             std::vector<VkBufferImageCopy>());
 
+    // Generates the mip levels
+    bool generateMipLevels(
+        class Queue& queue,
+        class CommandPool& commandPool);
 private:
     struct Impl;
     std::shared_ptr<Impl> impl;
