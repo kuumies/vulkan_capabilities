@@ -41,7 +41,7 @@ public:
     bool isValid() const;
 
     // Returns the handle.
-    VkCommandPool  handle() const;
+    VkCommandPool handle() const;
 
     // Allocates N command buffers from the pool.
     std::vector<VkCommandBuffer> allocateBuffers(

@@ -27,6 +27,7 @@
 #include "vk_surface_properties.h"
 #include "vk_sync.h"
 #include "vk_swapchain.h"
+#include "vk_texture.h"
 
 namespace kuu
 {
@@ -290,73 +291,20 @@ struct Renderer::Impl
 
     bool createTexture()
     {
-        QImage img("textures/blocksrough_basecolor.png");
-        if (img.isNull())
-            return false;
-        img = img.convertToFormat(QImage::Format_RGBA8888);
-
-        texSampler = std::make_shared<Sampler>(device->handle());
-        if (!texSampler->create())
-            return false;
-
-        tex = std::make_shared<Image>(physicalDevice, device->handle());
-        tex->setExtent( { uint32_t(img.width()), uint32_t(img.height()), 1 } );
-        tex->setFormat(VK_FORMAT_R8G8B8A8_UNORM);
-        tex->setUsage(VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-        tex->setImageViewAspect(VK_IMAGE_ASPECT_COLOR_BIT);
-        tex->setMemoryProperty(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        tex->setSampler(*texSampler);
-        tex->setGenerateMipLevels(true);
-        if (!tex->create())
-            return false;
-
-        const VkDeviceSize imageSize = img.byteCount();
-
-        Buffer texBuffer(physicalDevice, device->handle());
-        texBuffer.setSize(imageSize);
-        texBuffer.setUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-        texBuffer.setMemoryProperties(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        if (!texBuffer.create())
-            return false;
-
-        texBuffer.copyHostVisible(img.bits(), imageSize);
-
         Queue queue(device->handle(), graphicsFamilyIndex, 0);
         queue.create();
 
-        if (!tex->transitionLayout(tex->initialLayout(),
-                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                   VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                                   VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                                   queue, *commandPool))
-        {
-            return false;
-        }
-
-        if (!tex->copyFromBuffer(texBuffer, queue, *commandPool))
-            return false;
-
-        if (!tex->transitionLayout(tex->initialLayout(),
-                                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                                   VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                                   VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                                   queue, *commandPool))
-        {
-            return false;
-        }
-
-        tex->generateMipLevels(queue, *commandPool);
-
-        if (!tex->transitionLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                                   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                   VK_PIPELINE_STAGE_TRANSFER_BIT,
-                                   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                                   queue,
-                                   *commandPool))
-        {
-            return false;
-        }
-
+        tex = std::make_shared<Texture2D>(
+            physicalDevice,
+            device->handle(),
+            queue,
+            *commandPool,
+            "textures/blocksrough_basecolor.png",
+            VK_FILTER_LINEAR,
+            VK_FILTER_LINEAR,
+            VK_SAMPLER_ADDRESS_MODE_REPEAT,
+            VK_SAMPLER_ADDRESS_MODE_REPEAT,
+            true);
         return true;
     }
 
@@ -431,8 +379,8 @@ struct Renderer::Impl
 
         descriptorSets->writeImage(
             1,
-            texSampler->handle(),
-            tex->imageViewHandle(),
+            tex->sampler,
+            tex->imageView,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
         return true;
@@ -680,8 +628,7 @@ struct Renderer::Impl
         descriptorPool->destroy();
         descriptorSets->destroy();
         uniformBuffer->destroy();
-        tex->destroy();
-        texSampler->destroy();
+        tex.reset();
         mesh->destroy();
         fshModule->destroy();
         vshModule->destroy();
@@ -745,8 +692,7 @@ struct Renderer::Impl
     std::shared_ptr<Buffer> uniformBuffer;
 
     // Texture
-    std::shared_ptr<Image> tex;
-    std::shared_ptr<Sampler> texSampler;
+    std::shared_ptr<Texture2D> tex;
 
     // Descriptor sets
     std::shared_ptr<DescriptorPool> descriptorPool;

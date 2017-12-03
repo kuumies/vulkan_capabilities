@@ -142,8 +142,6 @@ struct Image::Impl
             mipLevels = uint32_t(std::floor(std::log2(std::max(extent.width, extent.height)))) + 1;
         mipLevelCount = mipLevels;
 
-        std::cout << mipLevelCount << std::endl;
-
         // Fill create info
         VkStructureType structType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         VkImageCreateInfo info;

@@ -127,6 +127,7 @@ public:
     bool generateMipLevels(
         class Queue& queue,
         class CommandPool& commandPool);
+
 private:
     struct Impl;
     std::shared_ptr<Impl> impl;
