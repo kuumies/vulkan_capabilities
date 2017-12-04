@@ -21,10 +21,8 @@ class Swapchain
 {
 public:
     // Constructs the swap chain.
-    Swapchain(const VkPhysicalDevice& physicalDevice,
-              const VkDevice& logicalDevice,
-              const VkSurfaceKHR& surface,
-              const VkRenderPass& renderPass);
+    Swapchain(const VkDevice& logicalDevice,
+              const VkSurfaceKHR& surface);
 
     // Sets and gets the surface format.
     Swapchain& setSurfaceFormat(const VkSurfaceFormatKHR& surfaceFormat);
@@ -50,10 +48,6 @@ public:
     Swapchain& setQueueIndicies(const std::vector<uint32_t>& indices);
     std::vector<uint32_t> queueIndices() const;
 
-    // Sets the depth/stencil buffer to be created.
-    Swapchain& setCreateDepthStencilBuffer(bool create);
-    bool isCreateDepthStencilBuffer() const;
-
     // Creates and destroys the swap chain
     bool create();
     void destroy();
@@ -64,9 +58,8 @@ public:
     // Returns the handle.
     VkSwapchainKHR handle() const;
 
-    // Returns a framebuffer by index. If the index is not valid then
-    // the output handle is a VK_NULL_HANDLE.
-    VkFramebuffer framebuffer(uint32_t index) const;
+    // Returns image views of the swapchain images.
+    std::vector<VkImageView> imageViews() const;
 
 private:
     struct Impl;

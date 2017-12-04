@@ -18,14 +18,10 @@ namespace vk
 
 struct Swapchain::Impl
 {
-    Impl(const VkPhysicalDevice& physicalDevice,
-         const VkDevice& logicalDevice,
-         const VkSurfaceKHR& surface,
-         const VkRenderPass& renderPass)
+    Impl(const VkDevice& logicalDevice,
+         const VkSurfaceKHR& surface)
         : surface(surface)
         , logicalDevice(logicalDevice)
-        , depthStencilImage(physicalDevice, logicalDevice)
-        , renderPass(renderPass)
     {}
 
     ~Impl()
@@ -148,72 +144,11 @@ struct Swapchain::Impl
             }
         }
 
-        // Create depth/stencil attachment
-        if (createDepthStencilImage)
-        {
-            depthStencilImage.setType(VK_IMAGE_TYPE_2D);
-            depthStencilImage.setFormat(VK_FORMAT_D32_SFLOAT_S8_UINT);
-            depthStencilImage.setExtent( { imageExtent.width, imageExtent.height, 1 } );
-            depthStencilImage.setTiling(VK_IMAGE_TILING_OPTIMAL);
-            depthStencilImage.setUsage(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
-            depthStencilImage.setInitialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
-            depthStencilImage.setImageViewAspect(VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
-            depthStencilImage.setMemoryProperty(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-            depthStencilImage.create();
-            if (!depthStencilImage.isValid())
-                return false;
-        }
-
-        // Create swapchain framebuffers
-        swapchainFramebuffers.resize(swapchainImageCount);
-        for (size_t i = 0; i < swapchainImageCount; ++i)
-        {
-            std::vector<VkImageView> attachments =
-            { swapchainImageViews[i],
-              depthStencilImage.imageViewHandle() };
-
-            VkStructureType type = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            VkFramebufferCreateInfo info;
-            info.sType           = type;                         // Must be this type.
-            info.pNext           = NULL;                         // Must be null
-            info.flags           = 0;                            // Must be 0
-            info.renderPass      = renderPass;                   // Render pass handle.
-            info.attachmentCount = uint32_t(attachments.size()); // Attachment count
-            info.pAttachments    = attachments.data();           // Attachments
-            info.width           = imageExtent.width;            // Width of framebuffer
-            info.height          = imageExtent.height;           // Height of framebuffer
-            info.layers          = 1;                            // Single layer
-
-            const VkResult result =
-                vkCreateFramebuffer(
-                    logicalDevice,
-                    &info,
-                    NULL,
-                    &swapchainFramebuffers[i]);
-
-            if (result != VK_SUCCESS)
-            {
-                std::cerr << __FUNCTION__
-                          << ": swap chain framebuffer creation failed as "
-                          << vk::stringify::result(result)
-                          << std::endl;
-                return false;
-            }
-        }
-
         return true;
     }
 
     void destroy()
     {
-        depthStencilImage.destroy();
-
-        for (size_t i = 0; i < swapchainFramebuffers.size(); i++)
-            vkDestroyFramebuffer(
-                logicalDevice,            // [in] logical device handle
-                swapchainFramebuffers[i], // [in] framebuffer handle
-                NULL);                    // [in] allocator
-
         for (size_t i = 0; i < swapchainImageViews.size(); i++)
             vkDestroyImageView(
                 logicalDevice,          // [in] logical device handle
@@ -225,7 +160,6 @@ struct Swapchain::Impl
             swapchain,          // [in] swapchain handle
             nullptr);           // [in] allocator
 
-        swapchainFramebuffers.clear();
         swapchainImageViews.clear();
         swapchain = VK_NULL_HANDLE;
     }
@@ -247,17 +181,11 @@ struct Swapchain::Impl
     VkSwapchainKHR swapchain = VK_NULL_HANDLE;
     std::vector<VkImage> swapchainImages;
     std::vector<VkImageView> swapchainImageViews;
-    std::vector<VkFramebuffer> swapchainFramebuffers;
-
-    bool createDepthStencilImage = false;
-    Image depthStencilImage;
 };
 
-Swapchain::Swapchain(const VkPhysicalDevice& physicalDevice,
-                     const VkDevice& logicalDevice,
-                     const VkSurfaceKHR& surface,
-                     const VkRenderPass& renderPass)
-    : impl(std::make_shared<Impl>(physicalDevice, logicalDevice, surface, renderPass))
+Swapchain::Swapchain(const VkDevice& logicalDevice,
+                     const VkSurfaceKHR& surface)
+    : impl(std::make_shared<Impl>(logicalDevice, surface))
 {}
 
 Swapchain& Swapchain::setSurfaceFormat(const VkSurfaceFormatKHR& surfaceFormat)
@@ -314,15 +242,6 @@ Swapchain& Swapchain::setQueueIndicies(const std::vector<uint32_t>& indices)
 std::vector<uint32_t> Swapchain::queueIndices() const
 { return impl->queueIndices; }
 
-Swapchain& Swapchain::setCreateDepthStencilBuffer(bool create)
-{
-    impl->createDepthStencilImage = create;
-    return *this;
-}
-
-bool Swapchain::isCreateDepthStencilBuffer() const
-{ return impl->createDepthStencilImage; }
-
 bool Swapchain::create()
 {
     if (!isValid())
@@ -342,12 +261,8 @@ bool Swapchain::isValid() const
 VkSwapchainKHR Swapchain::handle() const
 { return impl->swapchain; }
 
-VkFramebuffer Swapchain::framebuffer(uint32_t index) const
-{
-    if (index >= impl->swapchainFramebuffers.size())
-        return VK_NULL_HANDLE;
-    return impl->swapchainFramebuffers[index];
-}
+std::vector<VkImageView> Swapchain::imageViews() const
+{ return impl->swapchainImageViews; }
 
 } // namespace vk_capabilities
 } // namespace kuu

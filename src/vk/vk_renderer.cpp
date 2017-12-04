@@ -223,9 +223,6 @@ struct Renderer::Impl
         if (!createLogicalDevice())
             return false;
 
-        if (!createRenderPass())
-            return false;
-
         if (!createSwapchain())
             return false;
 
@@ -239,6 +236,9 @@ struct Renderer::Impl
             return false;
 
         if (!createModels())
+            return false;
+
+        if (!createRenderPass())
             return false;
 
         if (!createPipeline())
@@ -354,11 +354,12 @@ struct Renderer::Impl
                                      VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         dependency.dependencyFlags = 0;
 
-        renderPass = std::make_shared<RenderPass>(device->handle());
+        renderPass = std::make_shared<RenderPass>(physicalDevice, device->handle());
         renderPass->addAttachmentDescription(colorAttachment);
         renderPass->addAttachmentDescription(depthStencilAttachment);
         renderPass->addSubpassDescription(subpass);
         renderPass->addSubpassDependency(dependency);
+        renderPass->setSwapchainImageViews(swapchain->imageViews(), extent);
         return renderPass->create();
 
         // Attachment usage dependency. Only this subpass is using the attachment...
@@ -376,19 +377,13 @@ struct Renderer::Impl
     {
         swapchainImageCount = vk::helper::findSwapchainImageCount(surfaceInfo.surfaceCapabilities);
 
-        swapchain = std::make_shared<vk::Swapchain>(
-            physicalDevice,
-            device->handle(),
-            surface,
-            renderPass->handle());
-
+        swapchain = std::make_shared<vk::Swapchain>(device->handle(), surface);
         swapchain->setSurfaceFormat(surfaceFormat);
         swapchain->setPresentMode(presentMode);
         swapchain->setImageExtent(extent);
         swapchain->setImageCount(swapchainImageCount);
         swapchain->setPreTransform(surfaceInfo.surfaceCapabilities.currentTransform);
         swapchain->setQueueIndicies( { graphicsFamilyIndex, presentationFamilyIndex } );
-        swapchain->setCreateDepthStencilBuffer(true);
         return swapchain->create();
     }
 
@@ -512,7 +507,7 @@ struct Renderer::Impl
             renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
             renderPassInfo.pNext           = NULL;
             renderPassInfo.renderPass      = renderPass->handle();
-            renderPassInfo.framebuffer     = swapchain->framebuffer(uint32_t(i));
+            renderPassInfo.framebuffer     = renderPass->framebuffer(uint32_t(i));
             renderPassInfo.renderArea.offset = { 0, 0 };
             renderPassInfo.renderArea.extent = extent;
             renderPassInfo.clearValueCount = uint32_t(clearValues.size());
@@ -661,9 +656,9 @@ struct Renderer::Impl
         renderPass.reset();
         swapchain.reset();
 
-        if (!createRenderPass())
-            return false;
         if (!createSwapchain())
+            return false;
+        if (!createRenderPass())
             return false;
         if (!createCommandPool())
             return false;
