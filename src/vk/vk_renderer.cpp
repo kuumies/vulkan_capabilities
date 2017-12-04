@@ -70,13 +70,137 @@ struct Matrices
 
 /* -------------------------------------------------------------------------- */
 
+struct VulkanModel
+{
+    bool create(
+        const VkPhysicalDevice& physicalDevice,
+        const VkDevice& device,
+        const VkDescriptorPool& descriptorPool,
+        const uint32_t& queueFamilyIndex,
+        CommandPool& commandPool,
+        const Model& m)
+    {
+        if (!createMesh(physicalDevice, device, m.mesh))
+            return false;
+
+        if (!createUniformBuffer(physicalDevice, device))
+            return false;
+
+        if (!createTexture(physicalDevice, device, queueFamilyIndex,
+                           commandPool, m.material.diffuseMap))
+            return false;
+
+        if (!createDescriptorSets(device, descriptorPool))
+            return false;
+
+        return true;
+    }
+
+    bool createMesh(const VkPhysicalDevice& physicalDevice,
+                    const VkDevice& device,
+                    const kuu::Mesh& m)
+    {
+        indexCount = uint32_t(m.indices.size());
+
+        mesh = std::make_shared<vk::Mesh>(physicalDevice, device);
+        mesh->setVertices(m.vertices);
+        mesh->setIndices(m.indices);
+        mesh->addVertexAttributeDescription(0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0);
+        mesh->addVertexAttributeDescription(1, 0, VK_FORMAT_R32G32B32_SFLOAT, 3 * sizeof(float));
+        mesh->addVertexAttributeDescription(2, 0, VK_FORMAT_R32G32_SFLOAT,    6 * sizeof(float));
+        mesh->setVertexBindingDescription(0, 8 * sizeof(float), VK_VERTEX_INPUT_RATE_VERTEX);
+        return mesh->create();
+    }
+
+    bool createUniformBuffer(const VkPhysicalDevice& physicalDevice,
+                             const VkDevice& device)
+    {
+        uniformBuffer = std::make_shared<Buffer>(physicalDevice, device);
+        uniformBuffer->setSize(sizeof(Matrices));
+        uniformBuffer->setUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+        uniformBuffer->setMemoryProperties(
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        return uniformBuffer->create();
+    }
+
+    bool createDescriptorSets(const VkDevice& device,
+                              const VkDescriptorPool& descriptorPool)
+    {
+        descriptorSets = std::make_shared<DescriptorSets>(device, descriptorPool);
+        descriptorSets->addLayoutBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         1, VK_SHADER_STAGE_VERTEX_BIT);
+        descriptorSets->addLayoutBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
+        if (!descriptorSets->create())
+            return false;
+        descriptorSets->writeUniformBuffer(
+            0,
+            uniformBuffer->handle(),
+            0,
+            uniformBuffer->size());
+
+        descriptorSets->writeImage(
+            1,
+            tex->sampler,
+            tex->imageView,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+        return true;
+    }
+
+    bool createTexture(const VkPhysicalDevice& physicalDevice,
+                       const VkDevice& device,
+                       const uint32_t& queueFamilyIndex,
+                       CommandPool& commandPool,
+                       const std::string& filePath)
+    {
+        Queue queue(device, queueFamilyIndex, 0);
+        queue.create();
+
+        tex = std::make_shared<Texture2D>(
+            physicalDevice,
+            device,
+            queue,
+            commandPool,
+            filePath,
+            VK_FILTER_LINEAR,
+            VK_FILTER_LINEAR,
+            VK_SAMPLER_ADDRESS_MODE_REPEAT,
+            VK_SAMPLER_ADDRESS_MODE_REPEAT,
+            true);
+        return true;
+    }
+
+    void destroy()
+    {
+        mesh->destroy();
+        uniformBuffer->destroy();
+        descriptorSets->destroy();
+        tex.reset();
+    }
+
+    // Mesh
+    std::shared_ptr<Mesh> mesh;
+    uint32_t indexCount;
+
+    // Uniform buffer
+    std::shared_ptr<Buffer> uniformBuffer;
+
+    // Descriptor sets
+    std::shared_ptr<DescriptorSets> descriptorSets;
+
+    // Texture
+    std::shared_ptr<Texture2D> tex;
+};
+
+/* -------------------------------------------------------------------------- */
+
 struct Renderer::Impl
 {
     Impl(const VkInstance& instance,
          const VkPhysicalDevice& physicalDevice,
          const VkSurfaceKHR& surface,
          const VkExtent2D& extent,
-         const Scene& scene)
+         const std::shared_ptr<Scene>& scene)
         : instance(instance)
         , physicalDevice(physicalDevice)
         , surface(surface)
@@ -108,19 +232,13 @@ struct Renderer::Impl
         if (!createCommandPool())
             return false;
 
+        if (!createDescriptorPool())
+            return false;
+
         if (!createShaders())
             return false;
 
-        if (!createMesh())
-            return false;
-
-        if (!createUniformBuffer())
-            return false;
-
-        if (!createTexture())
-            return false;
-
-        if (!createDescriptorSets())
+        if (!createModels())
             return false;
 
         if (!createPipeline())
@@ -131,7 +249,6 @@ struct Renderer::Impl
 
         if (!createSync())
             return false;
-
 
         return true;
     }
@@ -292,100 +409,33 @@ struct Renderer::Impl
         return true;
     }
 
-    bool createTexture()
+    bool createDescriptorPool()
     {
-        Queue queue(device->handle(), graphicsFamilyIndex, 0);
-        queue.create();
-
-        tex = std::make_shared<Texture2D>(
-            physicalDevice,
-            device->handle(),
-            queue,
-            *commandPool,
-            "textures/blocksrough_basecolor.png",
-            VK_FILTER_LINEAR,
-            VK_FILTER_LINEAR,
-            VK_SAMPLER_ADDRESS_MODE_REPEAT,
-            VK_SAMPLER_ADDRESS_MODE_REPEAT,
-            true);
-        return true;
-    }
-
-    bool createMesh()
-    {
-        const float size = 2.0f;
-        const std::vector<float> vertices =
-        {
-             size, -size,  0.0f, 1.0f, 0.0f, 0.0f, 1.0, 0.0,
-             size,  size,  0.0f, 0.0f, 1.0f, 0.0f, 1.0, 1.0,
-            -size,  size,  0.0f, 0.0f, 0.0f, 1.0f, 0.0, 1.0,
-            -size, -size,  0.0f, 1.0f, 1.0f, 1.0f, 0,0, 0.0
-        };
-
-        const std::vector<uint32_t> indices =
-        {
-            0, 1, 2,
-            3, 0, 2
-        };
-
-        indexCount = uint32_t(indices.size());
-
-        mesh = std::make_shared<Mesh>(physicalDevice, device->handle());
-        mesh->setVertices(vertices);
-        mesh->setIndices(indices);
-        mesh->addVertexAttributeDescription(0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0);
-        mesh->addVertexAttributeDescription(1, 0, VK_FORMAT_R32G32B32_SFLOAT, 3 * sizeof(float));
-        mesh->addVertexAttributeDescription(2, 0, VK_FORMAT_R32G32_SFLOAT,    6 * sizeof(float));
-        mesh->setVertexBindingDescription(0, 8 * sizeof(float), VK_VERTEX_INPUT_RATE_VERTEX);
-        return mesh->create();
-    }
-
-    bool createUniformBuffer()
-    {
-        const float aspect = extent.width / float(extent.height);
-        matrices.model      = glm::mat4(1.0f);
-        matrices.view       = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -10.0f));
-        matrices.projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 150.0f);
-        matrices.projection[1][1] *= -1;
-
-        uniformBuffer = std::make_shared<Buffer>(physicalDevice, device->handle());
-        uniformBuffer->setSize(sizeof(matrices));
-        uniformBuffer->setUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-        uniformBuffer->setMemoryProperties(
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        if (!uniformBuffer->create())
-            return false;
-
-        uniformBuffer->copyHostVisible(&matrices, uniformBuffer->size());
-        return true;
-    }
-
-    bool createDescriptorSets()
-    {
+        const uint32_t count = uint32_t(scene->models.size());
         descriptorPool = std::make_shared<DescriptorPool>(device->handle());
-        descriptorPool->addTypeSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,          1);
-        descriptorPool->addTypeSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  1);
-        if (!descriptorPool->create())
-            return false;
+        descriptorPool->addTypeSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,          count);
+        descriptorPool->addTypeSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  count);
+        descriptorPool->setMaxCount(count);
+        return descriptorPool->create();
+    }
 
-        descriptorSets = std::make_shared<DescriptorSets>(device->handle(), descriptorPool->handle());
-        descriptorSets->addLayoutBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         1, VK_SHADER_STAGE_VERTEX_BIT);
-        descriptorSets->addLayoutBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
-        if (!descriptorSets->create())
-            return false;
-        descriptorSets->writeUniformBuffer(
-            0,
-            uniformBuffer->handle(),
-            0,
-            uniformBuffer->size());
+    bool createModels()
+    {
+        for (const Model& model : scene->models)
+        {
+            VulkanModel m;
+            if (!m.create(physicalDevice,
+                          device->handle(),
+                          descriptorPool->handle(),
+                          graphicsFamilyIndex,
+                          *commandPool,
+                          model))
+            {
+                return false;
+            }
 
-        descriptorSets->writeImage(
-            1,
-            tex->sampler,
-            tex->imageView,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
+            vulkanModels.push_back(m);
+        }
         return true;
     }
 
@@ -401,8 +451,8 @@ struct Renderer::Impl
         pipeline->addShaderStage(vshModule->createInfo());
         pipeline->addShaderStage(fshModule->createInfo());
         pipeline->setVertexInputState(
-            { mesh->vertexBindingDescription() },
-              mesh->vertexAttributeDescriptions() );
+            { vulkanModels[0].mesh->vertexBindingDescription() },
+              vulkanModels[0].mesh->vertexAttributeDescriptions() );
         pipeline->setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_FALSE);
         pipeline->setViewportState(
             { { 0, 0, float(extent.width), float(extent.height), 0, 1 } },
@@ -419,8 +469,10 @@ struct Renderer::Impl
                 { colorBlend },
                 blendConstants);
 
-        const std::vector<VkDescriptorSetLayout> descriptorSetLayouts =
-        { descriptorSets->layoutHandle() };
+        std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
+        for (const VulkanModel& m : vulkanModels)
+            descriptorSetLayouts.push_back(m.descriptorSets->layoutHandle());
+
         const std::vector<VkPushConstantRange> pushConstantRanges;
         pipeline->setPipelineLayout(descriptorSetLayouts, pushConstantRanges);
         pipeline->setDynamicState( { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR } );
@@ -453,7 +505,7 @@ struct Renderer::Impl
             vkBeginCommandBuffer(commandBuffers[i], &beginInfo);
 
             std::vector<VkClearValue> clearValues(2);
-            clearValues[0].color        = { 0.0f, 0.0f, 0.0f, 1.0f };
+            clearValues[0].color        = { 0.1f, 0.1f, 0.1f, 1.0f };
             clearValues[1].depthStencil = { 1.0f, 0 };
 
             VkRenderPassBeginInfo renderPassInfo;
@@ -485,35 +537,38 @@ struct Renderer::Impl
             scissor.extent = extent;
             vkCmdSetScissor(commandBuffers[i], 0, 1, &scissor);
 
-            VkDescriptorSet descriptorHandle = descriptorSets->handle();
-            vkCmdBindDescriptorSets(
-                commandBuffers[i],
-                VK_PIPELINE_BIND_POINT_GRAPHICS,
-                pipeline->pipelineLayoutHandle(), 0, 1,
-                &descriptorHandle, 0, NULL);
+            for (const VulkanModel& m : vulkanModels)
+            {
+                VkDescriptorSet descriptorHandle = m.descriptorSets->handle();
+                vkCmdBindDescriptorSets(
+                    commandBuffers[i],
+                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    pipeline->pipelineLayoutHandle(), 0, 1,
+                    &descriptorHandle, 0, NULL);
 
-            vkCmdBindPipeline(
-                commandBuffers[i],
-                VK_PIPELINE_BIND_POINT_GRAPHICS,
-                pipeline->handle());
+                vkCmdBindPipeline(
+                    commandBuffers[i],
+                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    pipeline->handle());
 
-            const VkBuffer vertexBuffer = mesh->vertexBufferHandle();
-            const VkDeviceSize offsets[1] = { 0 };
-            vkCmdBindVertexBuffers(
-                commandBuffers[i], 0, 1,
-                &vertexBuffer,
-                offsets);
+                const VkBuffer vertexBuffer = m.mesh->vertexBufferHandle();
+                const VkDeviceSize offsets[1] = { 0 };
+                vkCmdBindVertexBuffers(
+                    commandBuffers[i], 0, 1,
+                    &vertexBuffer,
+                    offsets);
 
-            const VkBuffer indexBuffer = mesh->indexBufferHandle();
-            vkCmdBindIndexBuffer(
-                commandBuffers[i],
-                indexBuffer,
-                0, VK_INDEX_TYPE_UINT32);
+                const VkBuffer indexBuffer = m.mesh->indexBufferHandle();
+                vkCmdBindIndexBuffer(
+                    commandBuffers[i],
+                    indexBuffer,
+                    0, VK_INDEX_TYPE_UINT32);
 
-            vkCmdDrawIndexed(
-                commandBuffers[i],
-                indexCount,
-                1, 0, 0, 1);
+                vkCmdDrawIndexed(
+                    commandBuffers[i],
+                    m.indexCount,
+                    1, 0, 0, 1);
+            }
 
             vkCmdEndRenderPass(commandBuffers[i]);
 
@@ -546,14 +601,18 @@ struct Renderer::Impl
 
     bool renderFrame()
     {
-        const float aspect = extent.width / float(extent.height);
-        matrices.view       = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -10.0f));
-        matrices.projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 150.0f);
-        matrices.projection[1][1] *= -1;
-        q *= glm::angleAxis(glm::radians(0.5f), glm::vec3(0.0f, 1.0f, 0.0f));
-        matrices.model = glm::mat4_cast(q);
+        for (size_t i = 0; i < vulkanModels.size(); ++i)
+        {
+            VulkanModel& m = vulkanModels[i];
+            const float aspect = extent.width / float(extent.height);
+            scene->camera.aspectRatio = aspect;
+            Matrices matrices;
+            matrices.view       = scene->camera.viewMatrix();
+            matrices.projection = scene->camera.projectionMatrix();
+            matrices.model      = scene->models[i].worldTransform;
 
-        uniformBuffer->copyHostVisible(&matrices, uniformBuffer->size());
+            m.uniformBuffer->copyHostVisible(&matrices, m.uniformBuffer->size());
+        }
 
         uint32_t imageIndex;
         VkResult result = vkAcquireNextImageKHR(
@@ -606,9 +665,9 @@ struct Renderer::Impl
             return false;
         if (!createSwapchain())
             return false;
-        if (!createPipeline())
-            return false;
         if (!createCommandPool())
+            return false;
+        if (!createPipeline())
             return false;
         if (!createCommandBuffers())
             return false;
@@ -629,10 +688,11 @@ struct Renderer::Impl
         imageAvailable->destroy();
         pipeline->destroy();
         descriptorPool->destroy();
-        descriptorSets->destroy();
-        uniformBuffer->destroy();
-        tex.reset();
-        mesh->destroy();
+
+        for (VulkanModel& m : vulkanModels)
+            m.destroy();
+        vulkanModels.clear();
+
         fshModule->destroy();
         vshModule->destroy();
         swapchain->destroy();
@@ -648,9 +708,6 @@ struct Renderer::Impl
                imageAvailable    && imageAvailable->isValid()    &&
                pipeline          && pipeline->isValid()          &&
                descriptorPool    && descriptorPool->isValid()    &&
-               descriptorSets    && descriptorSets->isValid()    &&
-               uniformBuffer     && uniformBuffer->isValid()     &&
-               mesh              && mesh->isValid()              &&
                fshModule         && fshModule->isValid()         &&
                vshModule         && vshModule->isValid()         &&
                swapchain         && swapchain->isValid()         &&
@@ -687,19 +744,11 @@ struct Renderer::Impl
     std::shared_ptr<ShaderModule> vshModule;
     std::shared_ptr<ShaderModule> fshModule;
 
-    // Mesh
-    std::shared_ptr<Mesh> mesh;
-    uint32_t indexCount;
-
-    // Uniform buffer
-    std::shared_ptr<Buffer> uniformBuffer;
-
     // Texture
     std::shared_ptr<Texture2D> tex;
 
     // Descriptor sets
     std::shared_ptr<DescriptorPool> descriptorPool;
-    std::shared_ptr<DescriptorSets> descriptorSets;
 
     // Pipeline
     std::shared_ptr<Pipeline> pipeline;
@@ -713,11 +762,10 @@ struct Renderer::Impl
     std::shared_ptr<Semaphore> imageAvailable;
 
     // Scene
-    Scene scene;
+    const std::shared_ptr<Scene> scene;
 
-    // Runtime
-    Matrices matrices;
-    glm::quat q;
+    // Vulkan models.
+    std::vector<VulkanModel> vulkanModels;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -726,8 +774,12 @@ Renderer::Renderer(const VkInstance& instance,
                    const VkPhysicalDevice& physicalDevice,
                    const VkSurfaceKHR& surface,
                    const VkExtent2D& extent,
-                   const Scene& scene)
-    : impl(std::make_shared<Impl>(instance, physicalDevice, surface, extent, scene))
+                   const std::shared_ptr<Scene>& scene)
+    : impl(std::make_shared<Impl>(instance,
+                                  physicalDevice,
+                                  surface,
+                                  extent,
+                                  scene))
 {}
 
 bool Renderer::create()

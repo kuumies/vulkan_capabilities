@@ -30,7 +30,7 @@ public:
              const VkPhysicalDevice& physicalDevice,
              const VkSurfaceKHR& surface,
              const VkExtent2D& extent,
-             const Scene& scene);
+             const std::shared_ptr<Scene>& scene);
 
     // Creates and destroys the renderer.
     bool create();

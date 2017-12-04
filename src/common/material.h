@@ -6,7 +6,7 @@
 #pragma once
 
 #include <glm/vec3.hpp>
-#include <QtGui/QImage>
+#include <string>
 
 namespace kuu
 {
@@ -17,7 +17,7 @@ namespace kuu
 struct Material
 {
     glm::vec3 diffuse = glm::vec3(0.5f, 0.5f, 0.5f);
-    QImage diffuseMap;
+    std::string diffuseMap;
 };
 
 } // namespace kuu

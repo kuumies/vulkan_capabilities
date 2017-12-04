@@ -50,12 +50,19 @@ public:
 signals:
     void interval();
     void resized();
+    void wheel(int delta);
+    void mouseMove(const QPoint& pos);
 
 protected:
     // Paint event needs to be disabled.
-    void paintEvent(QPaintEvent* e);
-    void timerEvent(QTimerEvent* e);
-    void resizeEvent(QResizeEvent* e);
+    void paintEvent(QPaintEvent* e) override;
+    void timerEvent(QTimerEvent* e) override;
+    void resizeEvent(QResizeEvent* e) override;
+    void wheelEvent(QWheelEvent* e) override;
+    void mousePressEvent(QMouseEvent* e) override;
+    void mouseMoveEvent(QMouseEvent* e) override;
+    void mouseReleaseEvent(QMouseEvent* e) override;
+    void keyPressEvent(QKeyEvent* e) override;
 
 private:
     struct Impl;

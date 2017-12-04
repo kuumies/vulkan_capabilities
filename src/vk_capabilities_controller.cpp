@@ -69,6 +69,7 @@ struct Controller::Impl
 
     // Test data.
     std::shared_ptr<vk::Renderer> renderer;
+    std::shared_ptr<Scene> scene;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -159,47 +160,80 @@ void Controller::runDeviceTest(int deviceIndex)
     VkPhysicalDevice physicalDevice = impl->instance->physicalDevice(deviceIndex).handle();
     VkSurfaceKHR surface            = impl->surfaceWidget->handle();
 
-    impl->surfaceWidget->startTimer(16, Qt::PreciseTimer);
-    impl->surfaceWidget->show();
+    vk::SurfaceWidget* w = impl->surfaceWidget.get();
+    w->startTimer(16, Qt::PreciseTimer);
+    w->setWindowTitle("Device test");
+    w->show();
 
     VkExtent2D widgetExtent;
-    widgetExtent.width  = uint32_t(impl->surfaceWidget->width());
-    widgetExtent.height = uint32_t(impl->surfaceWidget->height());
+    widgetExtent.width  = uint32_t(w->width());
+    widgetExtent.height = uint32_t(w->height());
 
-    Model quad;
-    quad.name = "quad";
-    quad.material.diffuseMap = QImage("textures/blocksrough_basecolor.png");
-    const float size = 2.0f;
-    quad.mesh.vertices =
+    std::vector<std::string> maps =
     {
-         size, -size,  0.0f, 1.0f, 0.0f, 0.0f, 1.0, 0.0,
-         size,  size,  0.0f, 0.0f, 1.0f, 0.0f, 1.0, 1.0,
-        -size,  size,  0.0f, 0.0f, 0.0f, 1.0f, 0.0, 1.0,
-        -size, -size,  0.0f, 1.0f, 1.0f, 1.0f, 0,0, 0.0
+        "textures/blocksrough_ambientocclusion.png",
+        "textures/blocksrough_basecolor.png",
+        "textures/blocksrough_height.png",
+        "textures/blocksrough_metallic.png",
+        "textures/blocksrough_normal.png",
+        "textures/blocksrough_roughness.png"
     };
-    quad.mesh.indices =
+
+    const float quadRadius = 1.5f;
+    const float mapOffset = quadRadius * 2.0f;
+    std::vector<glm::vec3> positions =
+    {
+        glm::vec3(-mapOffset, -quadRadius, 2.0f),
+        glm::vec3( 0.0f,      -quadRadius, 2.0f),
+        glm::vec3( mapOffset, -quadRadius, 2.0f),
+        glm::vec3(-mapOffset,  quadRadius, 2.0f),
+        glm::vec3( 0.0f,       quadRadius, 2.0f),
+        glm::vec3( mapOffset,  quadRadius, 2.0f)
+    };
+
+    std::vector<float> vertices =
+    {
+         quadRadius, -quadRadius,  0.0f, 1.0f, 0.0f, 0.0f, 1.0, 0.0,
+         quadRadius,  quadRadius,  0.0f, 0.0f, 1.0f, 0.0f, 1.0, 1.0,
+        -quadRadius,  quadRadius,  0.0f, 0.0f, 0.0f, 1.0f, 0.0, 1.0,
+        -quadRadius, -quadRadius,  0.0f, 1.0f, 1.0f, 1.0f, 0,0, 0.0
+    };
+    std::vector<unsigned int> indices =
     {
         0, 1, 2,
         3, 0, 2
     };
 
-    Scene scene;
-    scene.name = "quad_scene";
-    scene.models.push_back(quad);
+    impl->scene = std::make_shared<Scene>();
+    impl->scene->name = "pbr_maps_scene";
+    for (int i = 0; i < 6; ++i)
+    {
+        Model quad;
+        quad.material.diffuseMap = maps[i];
+        quad.mesh.vertices = vertices;
+        quad.mesh.indices = indices;
+        quad.worldTransform = glm::translate(glm::mat4(1.0f), positions[i]);
+
+        impl->scene->models.push_back(quad);
+    }
 
     std::shared_ptr<vk::Renderer> renderer = impl->renderer;
-    renderer = std::make_shared<vk::Renderer>(instance, physicalDevice, surface, widgetExtent, scene);
+    renderer = std::make_shared<vk::Renderer>(instance, physicalDevice, surface, widgetExtent, impl->scene);
     if (!renderer->create())
         return;
-    impl->renderer = renderer;;
+    impl->renderer = renderer;
 
-    connect(impl->surfaceWidget.get(), &vk::SurfaceWidget::interval, [renderer]()
+    connect(w, &vk::SurfaceWidget::interval, [renderer]()
     {
-        renderer->renderFrame();
+//        q *= glm::angleAxis(glm::radians(0.5f), glm::vec3(0.0f, 1.0f, 0.0f));
+//        matrices.model = glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 2.0f));
+//        matrices.model *= glm::mat4_cast(q);
+
+        if (renderer->isValid())
+            renderer->renderFrame();
     });
 
-    vk::SurfaceWidget* w = impl->surfaceWidget.get();
-    connect(impl->surfaceWidget.get(), &vk::SurfaceWidget::resized, [renderer, w]()
+    connect(w, &vk::SurfaceWidget::resized, [renderer, w]()
     {
         VkExtent2D extent;
         extent.width  = uint32_t(w->width());
@@ -207,7 +241,18 @@ void Controller::runDeviceTest(int deviceIndex)
         renderer->resized(extent);
     });
 
-    //vkDeviceWaitIdle(ld);
+    connect(w, &vk::SurfaceWidget::wheel, [&](int delta)
+    {
+        const float amount = 1.0f;
+        impl->scene->camera.pos.z += (delta > 0 ? -amount : amount);
+    });
+
+    connect(w, &vk::SurfaceWidget::mouseMove, [&](const QPoint& offset)
+    {
+        const float scale = 0.01f;
+        impl->scene->camera.pos.x -= float(offset.x()) * scale;
+        impl->scene->camera.pos.y += float(offset.y()) * scale;
+    });
 }
 
 } // namespace vk_capabilities

@@ -5,6 +5,7 @@
 
 #include "vk_surface_widget.h"
 #include <assert.h>
+#include <QtGui/QWheelEvent>
 #include <iostream>
 #include <vulkan/vulkan.h>
 #include "vk_windows.h"
@@ -90,6 +91,9 @@ struct SurfaceWidget::Impl
     VkInstance instance;
     // Surface handle.
     VkSurfaceKHR surface = VK_NULL_HANDLE;
+
+    // Start dragging pos
+    QPoint startPos;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -137,9 +141,36 @@ void SurfaceWidget::timerEvent(QTimerEvent* e)
     emit interval();
 }
 
-void SurfaceWidget::resizeEvent(QResizeEvent *e)
+void SurfaceWidget::resizeEvent(QResizeEvent* e)
 {
     emit resized();
+}
+
+void SurfaceWidget::wheelEvent(QWheelEvent* e)
+{
+    emit wheel(e->delta());
+}
+
+void SurfaceWidget::mousePressEvent(QMouseEvent* e)
+{
+    impl->startPos = e->pos();
+}
+
+void SurfaceWidget::mouseMoveEvent(QMouseEvent* e)
+{
+    emit mouseMove(e->pos() - impl->startPos);
+    impl->startPos = e->pos();
+}
+
+void SurfaceWidget::mouseReleaseEvent(QMouseEvent* e)
+{
+    impl->startPos = QPoint();
+}
+
+void SurfaceWidget::keyPressEvent(QKeyEvent *e)
+{
+    if (e->key() == Qt::Key_Escape)
+        close();
 }
 
 } // namespace vk

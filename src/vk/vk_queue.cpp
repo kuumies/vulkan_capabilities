@@ -208,7 +208,7 @@ bool Queue::present(
     {
         std::cerr << __FUNCTION__
                   << ": queue present failed as "
-                  << vk::stringify::resultDesc(result)
+//                  << vk::stringify::resultDesc(result)
                   << std::endl;
         return false;
     }
@@ -223,7 +223,7 @@ bool Queue::waitIdle()
     {
         std::cerr << __FUNCTION__
                   << ": queue idle wait failed as "
-                  << vk::stringify::resultDesc(result)
+//                  << vk::stringify::resultDesc(result)
                   << std::endl;
         return false;
     }
