@@ -232,9 +232,6 @@ struct Renderer::Impl
         if (!createDescriptorPool())
             return false;
 
-        if (!createShaders())
-            return false;
-
         if (!createModels())
             return false;
 
@@ -387,23 +384,6 @@ struct Renderer::Impl
         return swapchain->create();
     }
 
-    bool createShaders()
-    {
-        vshModule = std::make_shared<ShaderModule>(device->handle(), "shaders/test.vert.spv");
-        vshModule->setStageName("main");
-        vshModule->setStage(VK_SHADER_STAGE_VERTEX_BIT);
-        if (!vshModule->create())
-            return false;
-
-        fshModule = std::make_shared<ShaderModule>(device->handle(), "shaders/test.frag.spv");
-        fshModule->setStageName("main");
-        fshModule->setStage(VK_SHADER_STAGE_FRAGMENT_BIT);
-        if (!fshModule->create())
-            return false;
-
-        return true;
-    }
-
     bool createDescriptorPool()
     {
         const uint32_t count = uint32_t(scene->models.size());
@@ -436,6 +416,18 @@ struct Renderer::Impl
 
     bool createPipeline()
     {
+        vshModule = std::make_shared<ShaderModule>(device->handle(), "shaders/test.vert.spv");
+        vshModule->setStageName("main");
+        vshModule->setStage(VK_SHADER_STAGE_VERTEX_BIT);
+        if (!vshModule->create())
+            return false;
+
+        fshModule = std::make_shared<ShaderModule>(device->handle(), "shaders/test.frag.spv");
+        fshModule->setStageName("main");
+        fshModule->setStage(VK_SHADER_STAGE_FRAGMENT_BIT);
+        if (!fshModule->create())
+            return false;
+
         VkPipelineColorBlendAttachmentState colorBlend = {};
         colorBlend.blendEnable    = VK_FALSE;
         colorBlend.colorWriteMask = 0xf;
@@ -504,14 +496,14 @@ struct Renderer::Impl
             clearValues[1].depthStencil = { 1.0f, 0 };
 
             VkRenderPassBeginInfo renderPassInfo;
-            renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            renderPassInfo.pNext           = NULL;
-            renderPassInfo.renderPass      = renderPass->handle();
-            renderPassInfo.framebuffer     = renderPass->framebuffer(uint32_t(i));
+            renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+            renderPassInfo.pNext             = NULL;
+            renderPassInfo.renderPass        = renderPass->handle();
+            renderPassInfo.framebuffer       = renderPass->framebuffer(uint32_t(i));
             renderPassInfo.renderArea.offset = { 0, 0 };
             renderPassInfo.renderArea.extent = extent;
-            renderPassInfo.clearValueCount = uint32_t(clearValues.size());
-            renderPassInfo.pClearValues    = clearValues.data();
+            renderPassInfo.clearValueCount   = uint32_t(clearValues.size());
+            renderPassInfo.pClearValues      = clearValues.data();
 
             vkCmdBeginRenderPass(
                 commandBuffers[i],
@@ -566,7 +558,6 @@ struct Renderer::Impl
             }
 
             vkCmdEndRenderPass(commandBuffers[i]);
-
             const VkResult result = vkEndCommandBuffer(commandBuffers[i]);
             if (result != VK_SUCCESS)
             {

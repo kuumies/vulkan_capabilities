@@ -32,6 +32,7 @@ struct LogicalDevice::Impl
         : physicalDevice(physicalDevice)
     {
         features.samplerAnisotropy    = VK_TRUE;
+        features.fillModeNonSolid     = VK_TRUE;
     }
 
     ~Impl()
