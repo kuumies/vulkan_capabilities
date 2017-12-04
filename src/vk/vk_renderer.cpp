@@ -28,6 +28,7 @@
 #include "vk_sync.h"
 #include "vk_swapchain.h"
 #include "vk_texture.h"
+#include "../common/scene.h"
 
 namespace kuu
 {
@@ -74,12 +75,14 @@ struct Renderer::Impl
     Impl(const VkInstance& instance,
          const VkPhysicalDevice& physicalDevice,
          const VkSurfaceKHR& surface,
-         const VkExtent2D& extent)
+         const VkExtent2D& extent,
+         const Scene& scene)
         : instance(instance)
         , physicalDevice(physicalDevice)
         , surface(surface)
         , surfaceInfo(instance, physicalDevice, surface)
         , extent(extent)
+        , scene(scene)
     {}
 
     ~Impl()
@@ -709,6 +712,9 @@ struct Renderer::Impl
     std::shared_ptr<Semaphore> renderingFinished;
     std::shared_ptr<Semaphore> imageAvailable;
 
+    // Scene
+    Scene scene;
+
     // Runtime
     Matrices matrices;
     glm::quat q;
@@ -719,8 +725,9 @@ struct Renderer::Impl
 Renderer::Renderer(const VkInstance& instance,
                    const VkPhysicalDevice& physicalDevice,
                    const VkSurfaceKHR& surface,
-                   const VkExtent2D& extent)
-    : impl(std::make_shared<Impl>(instance, physicalDevice, surface, extent))
+                   const VkExtent2D& extent,
+                   const Scene& scene)
+    : impl(std::make_shared<Impl>(instance, physicalDevice, surface, extent, scene))
 {}
 
 bool Renderer::create()

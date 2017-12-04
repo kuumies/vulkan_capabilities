@@ -13,14 +13,11 @@
 
 namespace kuu
 {
+
+struct Scene;
+
 namespace vk
 {
-
-/* -------------------------------------------------------------------------- *
-   A vulkan renderer scene struct.
- * -------------------------------------------------------------------------- */
-struct RendererScene
-{};
 
 /* -------------------------------------------------------------------------- *
    A vulkan renderer class.
@@ -32,7 +29,8 @@ public:
     Renderer(const VkInstance& instance,
              const VkPhysicalDevice& physicalDevice,
              const VkSurfaceKHR& surface,
-             const VkExtent2D& extent);
+             const VkExtent2D& extent,
+             const Scene& scene);
 
     // Creates and destroys the renderer.
     bool create();

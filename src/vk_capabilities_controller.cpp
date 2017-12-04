@@ -38,6 +38,7 @@
 #include "vk/vk_swapchain.h"
 #include "vk_capabilities_data_creator.h"
 #include "vk_capabilities_main_window.h"
+#include "common/scene.h"
 
 namespace kuu
 {
@@ -165,8 +166,29 @@ void Controller::runDeviceTest(int deviceIndex)
     widgetExtent.width  = uint32_t(impl->surfaceWidget->width());
     widgetExtent.height = uint32_t(impl->surfaceWidget->height());
 
+    Model quad;
+    quad.name = "quad";
+    quad.material.diffuseMap = QImage("textures/blocksrough_basecolor.png");
+    const float size = 2.0f;
+    quad.mesh.vertices =
+    {
+         size, -size,  0.0f, 1.0f, 0.0f, 0.0f, 1.0, 0.0,
+         size,  size,  0.0f, 0.0f, 1.0f, 0.0f, 1.0, 1.0,
+        -size,  size,  0.0f, 0.0f, 0.0f, 1.0f, 0.0, 1.0,
+        -size, -size,  0.0f, 1.0f, 1.0f, 1.0f, 0,0, 0.0
+    };
+    quad.mesh.indices =
+    {
+        0, 1, 2,
+        3, 0, 2
+    };
+
+    Scene scene;
+    scene.name = "quad_scene";
+    scene.models.push_back(quad);
+
     std::shared_ptr<vk::Renderer> renderer = impl->renderer;
-    renderer = std::make_shared<vk::Renderer>(instance, physicalDevice, surface, widgetExtent);
+    renderer = std::make_shared<vk::Renderer>(instance, physicalDevice, surface, widgetExtent, scene);
     if (!renderer->create())
         return;
     impl->renderer = renderer;;
