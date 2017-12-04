@@ -124,6 +124,18 @@ void Controller::start()
     impl->surfaceWidget->setInstance(impl->instance->handle());
     impl->surfaceWidget->createSurface();
 
+    connect(impl->surfaceWidget.get(), &vk::SurfaceWidget::interval,
+            this, &Controller::onSurfaceInterval);
+
+    connect(impl->surfaceWidget.get(), &vk::SurfaceWidget::resized,
+            this, &Controller::onSurfaceResized);
+
+    connect(impl->surfaceWidget.get(), &vk::SurfaceWidget::wheel,
+            this, &Controller::onSurfaceWheel);
+
+    connect(impl->surfaceWidget.get(), &vk::SurfaceWidget::mouseMove,
+            this, &Controller::onSurfaceMouseMove);
+
     std::future<void> uiDataTask = std::async([&]()
     {
         auto devices = impl->instance->physicalDevices();
@@ -164,6 +176,9 @@ void Controller::runDeviceTest(int deviceIndex)
     w->startTimer(16, Qt::PreciseTimer);
     w->setWindowTitle("Device test");
     w->show();
+
+    if (impl->renderer)
+        return;
 
     VkExtent2D widgetExtent;
     widgetExtent.width  = uint32_t(w->width());
@@ -217,42 +232,40 @@ void Controller::runDeviceTest(int deviceIndex)
         impl->scene->models.push_back(quad);
     }
 
-    std::shared_ptr<vk::Renderer> renderer = impl->renderer;
-    renderer = std::make_shared<vk::Renderer>(instance, physicalDevice, surface, widgetExtent, impl->scene);
-    if (!renderer->create())
-        return;
-    impl->renderer = renderer;
+    impl->renderer = std::make_shared<vk::Renderer>(instance, physicalDevice, surface, widgetExtent, impl->scene);
+    impl->renderer->create();
+}
 
-    connect(w, &vk::SurfaceWidget::interval, [renderer]()
-    {
-//        q *= glm::angleAxis(glm::radians(0.5f), glm::vec3(0.0f, 1.0f, 0.0f));
-//        matrices.model = glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 0.0f, 2.0f));
-//        matrices.model *= glm::mat4_cast(q);
+void Controller::onSurfaceInterval()
+{
+    if (impl->renderer && impl->renderer->isValid())
+        impl->renderer->renderFrame();
+}
 
-        if (renderer->isValid())
-            renderer->renderFrame();
-    });
+void Controller::onSurfaceResized()
+{
+    VkExtent2D extent;
+    extent.width  = uint32_t(impl->surfaceWidget->width());
+    extent.height = uint32_t(impl->surfaceWidget->height());
+    if (impl->renderer)
+        impl->renderer->resized(extent);
+}
 
-    connect(w, &vk::SurfaceWidget::resized, [renderer, w]()
-    {
-        VkExtent2D extent;
-        extent.width  = uint32_t(w->width());
-        extent.height = uint32_t(w->height());
-        renderer->resized(extent);
-    });
-
-    connect(w, &vk::SurfaceWidget::wheel, [&](int delta)
-    {
-        const float amount = 1.0f;
+void Controller::onSurfaceWheel(int delta)
+{
+    const float amount = 1.0f;
+    if (impl->scene)
         impl->scene->camera.pos.z += (delta > 0 ? -amount : amount);
-    });
+}
 
-    connect(w, &vk::SurfaceWidget::mouseMove, [&](const QPoint& offset)
+void Controller::onSurfaceMouseMove(const QPoint &offset)
+{
+    if (impl->scene)
     {
         const float scale = 0.01f;
         impl->scene->camera.pos.x -= float(offset.x()) * scale;
         impl->scene->camera.pos.y += float(offset.y()) * scale;
-    });
+    }
 }
 
 } // namespace vk_capabilities

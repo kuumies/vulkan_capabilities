@@ -35,6 +35,11 @@ public:
 public:
     void runDeviceTest(int deviceIndex);
 
+    void onSurfaceInterval();
+    void onSurfaceResized();
+    void onSurfaceWheel(int delta);
+    void onSurfaceMouseMove(const QPoint& offset);
+
 private:
     struct Impl;
     std::shared_ptr<Impl> impl;
