@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 
 namespace kuu
 {
@@ -15,8 +15,8 @@ namespace kuu
  * -------------------------------------------------------------------------- */
 struct Light
 {
-    glm::vec3 dir = glm::vec3(0.0f, -1.0f, 0.0f);
-    glm::vec3 intensity = glm::vec3(1.0f, 1.0f, 1.0f);
+    glm::vec4 dir       = glm::vec4(1.0f, 1.0f, 1.0f, 0.0f);
+    glm::vec4 intensity = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 };
 
 } // namespace kuu

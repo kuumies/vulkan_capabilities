@@ -16,8 +16,28 @@ namespace kuu
  * -------------------------------------------------------------------------- */
 struct Material
 {
-    glm::vec3 diffuse = glm::vec3(0.5f, 0.5f, 0.5f);
-    std::string diffuseMap;
+    enum class Type
+    {
+        Diffuse,
+        Pbr
+    };
+
+    struct Diffuse
+    {
+        std::string map;
+    } diffuse;
+
+    struct Pbr
+    {
+        std::string ambientOcclusion;
+        std::string baseColor;
+        std::string height;
+        std::string metallic;
+        std::string normal;
+        std::string roughness;
+    } pbr;
+
+    Type type = Type::Diffuse;
 };
 
 } // namespace kuu
