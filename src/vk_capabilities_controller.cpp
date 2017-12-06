@@ -327,6 +327,7 @@ void Controller::runDeviceTest(int deviceIndex)
         {  {-quadRadius, -quadRadius, 0.0f}, { 0.0, 0.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } }
     };
     sphere.mesh.indices  = quadIndices;
+    sphere.mesh.generateTangents();
 
     //sphere.mesh.vertices = sphereVertices;
     //sphere.mesh.indices  = sphereIndices;

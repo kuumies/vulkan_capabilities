@@ -30,6 +30,8 @@ struct Vertex
  * -------------------------------------------------------------------------- */
 struct Mesh
 {
+    void generateTangents();
+
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
 };
