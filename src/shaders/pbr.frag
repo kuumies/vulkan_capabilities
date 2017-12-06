@@ -64,7 +64,7 @@ vec3 brdfFresnel(float cosTheta, vec3 f0)
 
 vec2 parallaxMapping(vec2 texCoords, vec3 viewDir)
 {
-    float height_scale = 0.015;
+    float height_scale = 0.03;
     float height =  texture(heightMap, texCoords).r;
     vec2 p = viewDir.xy / viewDir.z * (height * height_scale);
     return texCoords - p;

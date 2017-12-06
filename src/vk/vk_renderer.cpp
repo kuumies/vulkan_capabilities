@@ -84,6 +84,23 @@ struct RendererTextures
         , commandPool(commandPool)
     {}
 
+    void add(const std::vector<std::string>& filepaths)
+    {
+        Queue queue(device, queueFamilyIndex, 0);
+        queue.create();
+
+        textureMap = vk::loadtextures(filepaths,
+                                      physicalDevice,
+                                      device,
+                                      queue,
+                                      commandPool,
+                                      VK_FILTER_LINEAR,
+                                      VK_FILTER_LINEAR,
+                                      VK_SAMPLER_ADDRESS_MODE_REPEAT,
+                                      VK_SAMPLER_ADDRESS_MODE_REPEAT,
+                                      true);
+    }
+
     void add(const std::string& filepath)
     {
         if (textureMap.count(filepath))
@@ -263,29 +280,6 @@ struct RendererModel
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
         return true;
-    }
-
-    std::shared_ptr<Texture2D> createTexture(
-            const VkPhysicalDevice& physicalDevice,
-            const VkDevice& device,
-            const uint32_t& queueFamilyIndex,
-            CommandPool& commandPool,
-            const std::string& filePath)
-    {
-        Queue queue(device, queueFamilyIndex, 0);
-        queue.create();
-
-        return std::make_shared<Texture2D>(
-            physicalDevice,
-            device,
-            queue,
-            commandPool,
-            filePath,
-            VK_FILTER_LINEAR,
-            VK_FILTER_LINEAR,
-            VK_SAMPLER_ADDRESS_MODE_REPEAT,
-            VK_SAMPLER_ADDRESS_MODE_REPEAT,
-            true);
     }
 
     void destroy()
@@ -663,24 +657,32 @@ struct Renderer::Impl
             queueFamilyIndex,
             *commandPool);
 
+        std::vector<std::string> filepaths;
         for (const Model& model : scene->models)
         {
             switch(model.material.type)
             {
                 case Material::Type::Diffuse:
-                    textures->add(model.material.diffuse.map);
+                    filepaths.push_back(model.material.diffuse.map);
                     break;
 
                 case Material::Type::Pbr:
-                    textures->add(model.material.pbr.ambientOcclusion);
-                    textures->add(model.material.pbr.baseColor);
-                    textures->add(model.material.pbr.height);
-                    textures->add(model.material.pbr.metallic);
-                    textures->add(model.material.pbr.normal);
-                    textures->add(model.material.pbr.roughness);
+                    filepaths.push_back(model.material.pbr.ambientOcclusion);
+                    filepaths.push_back(model.material.pbr.baseColor);
+                    filepaths.push_back(model.material.pbr.height);
+
+                    filepaths.push_back(model.material.pbr.metallic);
+                    filepaths.push_back(model.material.pbr.normal);
+                    filepaths.push_back(model.material.pbr.roughness);
                     break;
             }
         }
+
+        textures->add(filepaths);
+
+//        #pragma omp parallel for
+//        for (int i = 0; i < filepaths.size(); ++i)
+//            textures->add(filepaths[i]);
 
         return true;
     }

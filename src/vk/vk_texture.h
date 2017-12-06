@@ -5,7 +5,9 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
+#include <string>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -23,6 +25,7 @@ class Queue;
 struct Texture2D
 {
     // Loads a RGBA or grayscale image from disk and creates a texture out of it.
+    Texture2D(const VkDevice& device);
     Texture2D(const VkPhysicalDevice& physicalDevice,
               const VkDevice& device,
               Queue& queue,
@@ -38,11 +41,24 @@ struct Texture2D
     VkImage image;
     VkImageView imageView;
     VkSampler sampler;
+    VkDeviceMemory memory;
 
 private:
     struct Impl;
     std::shared_ptr<Impl> impl;
 };
+
+std::map<std::string, std::shared_ptr<Texture2D>>
+    loadtextures(std::vector<std::string> filepaths,
+                 const VkPhysicalDevice& physicalDevice,
+                 const VkDevice& device,
+                 Queue& queue,
+                 CommandPool& commandPool,
+                 VkFilter magFilter,
+                 VkFilter minFilter,
+                 VkSamplerAddressMode addressModeU,
+                 VkSamplerAddressMode addressModeV,
+                 bool generateMipmaps);
 
 } // namespace vk
 } // namespace kuu

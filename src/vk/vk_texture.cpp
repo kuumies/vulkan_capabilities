@@ -5,6 +5,7 @@
 
 #include "vk_texture.h"
 #include <iostream>
+#include <QtCore/QTime>
 #include <QtGui/QImage>
 #include "vk_buffer.h"
 #include "vk_command.h"
@@ -336,15 +337,18 @@ struct Texture2D::Impl
         vkDestroySampler(device, self->sampler, NULL);
         vkDestroyImageView(device,  self->imageView, NULL);
         vkDestroyImage(device,  self->image, NULL);
-        vkFreeMemory(device, memory, NULL);
+        vkFreeMemory(device, self->memory, NULL);
     }
 
     VkDevice device;
     Texture2D* self;
-    VkDeviceMemory memory = VK_NULL_HANDLE;
 };
 
 /* -------------------------------------------------------------------------- */
+
+Texture2D::Texture2D(const VkDevice& device)
+    : impl(std::make_shared<Impl>(device, this))
+{}
 
 Texture2D::Texture2D(const VkPhysicalDevice& physicalDevice,
                      const VkDevice& device,
@@ -400,8 +404,8 @@ Texture2D::Texture2D(const VkPhysicalDevice& physicalDevice,
         return;
 
     // Allocate memory.
-    impl->memory = allocateMemory(physicalDevice, device, image);
-    if (impl->memory == VK_NULL_HANDLE)
+    memory = allocateMemory(physicalDevice, device, image);
+    if (memory == VK_NULL_HANDLE)
         return;
 
     // Create view.
@@ -533,6 +537,226 @@ Texture2D::Texture2D(const VkPhysicalDevice& physicalDevice,
     // Wait until commands has been processed.
     if (!queue.waitIdle())
         return;
+}
+
+/* -------------------------------------------------------------------------- */
+
+std::map<std::string, std::shared_ptr<Texture2D>>
+    loadtextures(std::vector<std::string> filepaths,
+                 const VkPhysicalDevice& physicalDevice,
+                 const VkDevice& device,
+                 Queue& queue,
+                 CommandPool& commandPool,
+                 VkFilter magFilter,
+                 VkFilter minFilter,
+                 VkSamplerAddressMode addressModeU,
+                 VkSamplerAddressMode addressModeV,
+                 bool generateMipmaps)
+{
+    std::sort( filepaths.begin(), filepaths.end() );
+    filepaths.erase( std::unique( filepaths.begin(), filepaths.end() ), filepaths.end() );
+
+    std::vector<QImage> images;
+    images.resize(filepaths.size());
+    std::vector<VkFormat> formats;
+    formats.resize(filepaths.size());
+
+    std::map<std::string, std::shared_ptr<Texture2D>> results;
+
+    QTime timer;
+    timer.start();
+
+    #pragma omp parallel for
+    for (int i = 0; i < filepaths.size(); ++i)
+    {
+//        std::cout << filepaths[i] << std::endl;
+
+        QImage img(QString::fromStdString(filepaths[i]));
+        if (!img.isGrayscale())
+        {
+            img = img.convertToFormat(QImage::Format_ARGB32);
+            img = img.rgbSwapped();
+            formats[i] = VK_FORMAT_R8G8B8A8_UNORM;
+        }
+        else
+        {
+            formats[i] = VK_FORMAT_R8_UNORM;
+        }
+
+        if (img.isNull())
+            std::cerr << "Invalid img" << std::endl;
+
+        images[i] = img;
+    }
+
+//    std::cout << timer.elapsed() << std::endl;
+
+    // Allocate buffers for queue commands.
+    VkCommandBuffer cmdBuf =
+        commandPool.allocateBuffer(
+            VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+
+    // Start recording commands
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(cmdBuf, &beginInfo);
+
+    std::vector<std::shared_ptr<Buffer>> buffers;
+    buffers.resize(filepaths.size());
+
+    for (int f = 0; f < filepaths.size(); ++f)
+    {
+        std::shared_ptr<Texture2D> tex = std::make_shared<Texture2D>(device);
+
+        QImage img = images[f];
+        VkFormat format = formats[f];
+
+        VkExtent3D extent = { uint32_t(img.width()), uint32_t(img.height()), 1 };
+
+        // Calc. mipmap count.
+        uint32_t mipmapCount = 1;
+        if (generateMipmaps)
+            mipmapCount = uint32_t(std::floor(std::log2(std::max(img.width(), img.height())))) + 1;
+
+        // Create image.
+        tex->image = createImage(
+            device,
+            format,
+            extent,
+            mipmapCount);
+        if (tex->image == VK_NULL_HANDLE)
+            continue;
+
+        // Allocate memory.
+        tex->memory = allocateMemory(physicalDevice, device, tex->image);
+        if (tex->memory == VK_NULL_HANDLE)
+            continue;
+
+        // Create view.
+        tex->imageView = createImageView(device, tex->image, format, mipmapCount);
+        if (tex->imageView == VK_NULL_HANDLE)
+            continue;
+
+        // Create sampler.
+        tex->sampler = createSampler(device, magFilter, minFilter, addressModeU, addressModeV, mipmapCount);
+        if (tex->sampler == VK_NULL_HANDLE)
+            continue;
+
+        // Copy pixels from image into host local buffer.
+        const VkDeviceSize imageSize = img.byteCount();
+        std::shared_ptr<Buffer> texBuffer = std::make_shared<Buffer>(physicalDevice, device);
+        texBuffer->setSize(imageSize);
+        texBuffer->setUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+        texBuffer->setMemoryProperties(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        if (!texBuffer->create())
+            continue;
+        texBuffer->copyHostVisible(img.bits(), imageSize);
+        buffers[f] = texBuffer;
+
+        // Transition image into transfer destination layout
+        commandTransitionImageLayout(
+            tex->image,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            0,
+            cmdBuf);
+
+        // Copy buffer to image.
+        commandCopyBufferToImage(texBuffer->handle(), tex->image, extent, cmdBuf);
+
+        // Transition image into transfer source layout
+        commandTransitionImageLayout(
+            tex->image,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            0, cmdBuf);
+
+        if (generateMipmaps)
+        {
+            for (uint32_t i = 1 ; i < mipmapCount; ++i)
+            {
+                VkImageBlit imageBlit = {};
+
+                // Source
+                imageBlit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                imageBlit.srcSubresource.layerCount = 1;
+                imageBlit.srcSubresource.mipLevel = i-1;
+                imageBlit.srcOffsets[1].x = int32_t(extent.width >> (i - 1));
+                imageBlit.srcOffsets[1].y = int32_t(extent.height >> (i - 1));
+                imageBlit.srcOffsets[1].z = 1;
+
+                imageBlit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                imageBlit.dstSubresource.layerCount = 1;
+                imageBlit.dstSubresource.mipLevel = i;
+                imageBlit.dstOffsets[1].x = int32_t(extent.width >> i);
+                imageBlit.dstOffsets[1].y = int32_t(extent.height >> i);
+                imageBlit.dstOffsets[1].z = 1;
+
+                commandTransitionImageLayout(
+                    tex->image,
+                    VK_IMAGE_LAYOUT_UNDEFINED,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    i, cmdBuf);
+
+                vkCmdBlitImage(
+                  cmdBuf,
+                  tex->image,
+                  VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                  tex->image,
+                  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                  1,
+                  &imageBlit,
+                  VK_FILTER_LINEAR);
+
+                commandTransitionImageLayout(
+                    tex->image,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    i, cmdBuf);
+            }
+
+            results[filepaths[f]] = tex;
+        }
+
+        // Transition image into optimal shader read layout.
+        commandTransitionImageLayout(
+            tex->image,
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            0, cmdBuf);
+    }
+
+    // Stop recording commands.
+    const VkResult result = vkEndCommandBuffer(cmdBuf);
+    if (result != VK_SUCCESS)
+    {
+        std::cerr << __FUNCTION__
+                  << ": failed to apply image commands as "
+                  << vk::stringify::result(result)
+                  << std::endl;
+        return results;
+    }
+
+    // Submit commands into queue
+    if (!queue.submit(cmdBuf))
+        return results;
+
+    // Wait until commands has been processed.
+    if (!queue.waitIdle())
+        return results;
+
+    return results;
 }
 
 } // namespace vk
