@@ -119,13 +119,34 @@ struct RendererModel
     {
         indexCount = uint32_t(m.indices.size());
 
+        std::vector<float> vertexVector;
+        for (const Vertex& v : m.vertices)
+        {
+            vertexVector.push_back(v.pos.x);
+            vertexVector.push_back(v.pos.y);
+            vertexVector.push_back(v.pos.z);
+            vertexVector.push_back(v.texCoord.x);
+            vertexVector.push_back(v.texCoord.y);
+            vertexVector.push_back(v.normal.x);
+            vertexVector.push_back(v.normal.y);
+            vertexVector.push_back(v.normal.z);
+            vertexVector.push_back(v.tangent.x);
+            vertexVector.push_back(v.tangent.y);
+            vertexVector.push_back(v.tangent.z);
+            vertexVector.push_back(v.bitangent.x);
+            vertexVector.push_back(v.bitangent.y);
+            vertexVector.push_back(v.bitangent.z);
+        }
+
         mesh = std::make_shared<vk::Mesh>(physicalDevice, device);
-        mesh->setVertices(m.vertices);
+        mesh->setVertices(vertexVector);
         mesh->setIndices(m.indices);
         mesh->addVertexAttributeDescription(0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0);
         mesh->addVertexAttributeDescription(1, 0, VK_FORMAT_R32G32_SFLOAT,    3 * sizeof(float));
         mesh->addVertexAttributeDescription(2, 0, VK_FORMAT_R32G32B32_SFLOAT, 5 * sizeof(float));
-        mesh->setVertexBindingDescription(0, 8 * sizeof(float), VK_VERTEX_INPUT_RATE_VERTEX);
+        mesh->addVertexAttributeDescription(3, 0, VK_FORMAT_R32G32B32_SFLOAT, 8 * sizeof(float));
+        mesh->addVertexAttributeDescription(4, 0, VK_FORMAT_R32G32B32_SFLOAT, 11 * sizeof(float));
+        mesh->setVertexBindingDescription(0, 14 * sizeof(float), VK_VERTEX_INPUT_RATE_VERTEX);
         return mesh->create();
     }
 

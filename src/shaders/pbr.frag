@@ -60,8 +60,19 @@ vec3 brdfFresnel(float cosTheta, vec3 f0)
     return f0 + (1.0 - f0) * pow(1.0 - cosTheta, 5.0);
 }
 
+vec2 parallaxMapping(vec2 texCoords, vec3 viewDir)
+{
+    float height_scale = 0.1;
+    float height =  texture(heightMap, texCoords).r;
+    vec2 p = viewDir.xy / viewDir.z * (height * height_scale);
+    return texCoords - p;
+}
+
 void main()
 {
+
+    //vec2 texCoord2 = parallaxMapping(texCoord, v);
+
     // Sample maps
     float metallic  = texture(metallicMap, texCoord).r;
     float roughness = texture(roughnessMap, texCoord).r;
@@ -72,10 +83,10 @@ void main()
     normal = normalize(normal * 2.0 - 1.0);
 
     // Calculate vectors.
+    vec3 v = normalize(-eyePos);
     //vec3 n = normalize(eyeNormal);
     vec3 n = normalize(normal);
     vec3 l = normalize(-light.eyeDir.xyz);
-    vec3 v = normalize(-eyePos);
     vec3 h = normalize(l + v);
 
     float nDotL = max(dot(n, l), 0.0);
@@ -98,6 +109,8 @@ void main()
 
     vec3 ambient = albedo * ao;
     outColor.rgb = ambient + radiance;
+    //outColor.rgb = radiance;
+    //outColor.rgb = ambient;
     outColor.a = 1.0;
 
     // reinhard tone mapping

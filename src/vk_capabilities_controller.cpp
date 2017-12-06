@@ -206,12 +206,12 @@ void Controller::runDeviceTest(int deviceIndex)
         glm::vec3(-mapOffset * 0.5-0.1f,  2.0 * quadRadius, 2.0f)
     };
 
-    std::vector<float> quadVertices =
+    std::vector<Vertex> quadVertices =
     {
-         quadRadius, -quadRadius,  0.0f, 1.0, 0.0, 0.0f, 0.0f, 1.0f,
-         quadRadius,  quadRadius,  0.0f, 1.0, 1.0, 0.0f, 0.0f, 1.0f,
-        -quadRadius,  quadRadius,  0.0f, 0.0, 1.0, 0.0f, 0.0f, 1.0f,
-        -quadRadius, -quadRadius,  0.0f, 0,0, 0.0, 0.0f, 0.0f, 1.0f,
+        {  { quadRadius, -quadRadius, 0.0f}, { 1.0, 0.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } },
+        {  { quadRadius,  quadRadius, 0.0f}, { 1.0, 1.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } },
+        {  {-quadRadius,  quadRadius, 0.0f}, { 0.0, 1.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } },
+        {  {-quadRadius, -quadRadius, 0.0f}, { 0.0, 0.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } }
     };
 
     std::vector<unsigned int> quadIndices =
@@ -321,10 +321,10 @@ void Controller::runDeviceTest(int deviceIndex)
     quadRadius = 3.0f;
     sphere.mesh.vertices =
     {
-         quadRadius, -quadRadius,  0.0f, 1.0, 0.0, 0.0f, 0.0f, 1.0f,
-         quadRadius,  quadRadius,  0.0f, 1.0, 1.0, 0.0f, 0.0f, 1.0f,
-        -quadRadius,  quadRadius,  0.0f, 0.0, 1.0, 0.0f, 0.0f, 1.0f,
-        -quadRadius, -quadRadius,  0.0f, 0,0, 0.0, 0.0f, 0.0f, 1.0f,
+        {  { quadRadius, -quadRadius, 0.0f}, { 1.0, 0.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } },
+        {  { quadRadius,  quadRadius, 0.0f}, { 1.0, 1.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } },
+        {  {-quadRadius,  quadRadius, 0.0f}, { 0.0, 1.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } },
+        {  {-quadRadius, -quadRadius, 0.0f}, { 0.0, 0.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } }
     };
     sphere.mesh.indices  = quadIndices;
 
