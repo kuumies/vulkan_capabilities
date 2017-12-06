@@ -8,7 +8,7 @@
 
 layout(binding = 1) uniform Light
 {
-    vec4 dir;
+    vec4 eyeDir;
     vec4 intensity;
 
 } light;
@@ -26,12 +26,32 @@ layout(location = 2) in vec3 eyePos;
 
 layout(location = 0) out vec4 outColor;
 
+float brdfNormalDistributionGGX(vec3 n, vec3 h, float a)
+{
+    const float PI = 3.14159;
+
+    float a2 = a * a;
+    float nDotH = max(dot(n, h), 0.0);
+    float nDotH2 = nDotH * nDotH;
+    float q = (nDotH2 * (a2 -1.0) + 1.0);
+    return a2 / (PI * q * q);
+}
+
 void main()
 {
     vec3 n = normalize(eyeNormal);
-    vec3 l = normalize(light.dir.rgb);
+    vec3 l = normalize(-light.eyeDir.xyz);
     vec3 v = normalize(-eyePos);
+    vec3 h = normalize(l + v);
 
-    outColor = texture(baseColorMap, texCoord);
-    outColor = vec4(outColor.rgb * dot(n, l), 1.0);
+    float r = texture(roughnessMap, texCoord).r;
+    //r = 0.3;
+    r = brdfNormalDistributionGGX(n, h, r*r);
+    outColor = vec4(r, r, r, 1.0);
+
+    // reinhard tone mapping
+    //outColor = outColor / (outColor + vec4(1.0));
+    // gamma correction
+    //outColor = pow(outColor, vec4(1.0 / 2.2));
+    //outColor.a = 1.0;
 }

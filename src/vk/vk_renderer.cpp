@@ -770,6 +770,9 @@ struct Renderer::Impl
 
     bool renderFrame()
     {
+        Light eyeLight = scene->light;
+        eyeLight.dir = scene->camera.viewMatrix() * eyeLight.dir;
+
         for (size_t i = 0; i < vulkanModels.size(); ++i)
         {
             RendererModel& m = vulkanModels[i];
@@ -783,7 +786,7 @@ struct Renderer::Impl
 
             m.matricesUniformBuffer->copyHostVisible(&matrices, m.matricesUniformBuffer->size());
             if (m.model.material.type == Material::Type::Pbr)
-                m.lightUniformBuffer->copyHostVisible(&scene->light, m.lightUniformBuffer->size());
+                m.lightUniformBuffer->copyHostVisible(&eyeLight, m.lightUniformBuffer->size());
         }
 
         uint32_t imageIndex;
