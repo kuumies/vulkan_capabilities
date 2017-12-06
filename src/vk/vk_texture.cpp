@@ -364,16 +364,25 @@ Texture2D::Texture2D(const VkPhysicalDevice& physicalDevice,
 {
     // Load image
     QImage img(QString::fromStdString(filePath));
-    img = img.convertToFormat(QImage::Format_RGBA8888);
-    if (img.isNull())
+    if (!img.isGrayscale())
     {
-        std::cerr << __FUNCTION__
-                  << ": image is not a RGB or RGBA image"
-                  << std::endl;
-        return;
+        img = img.convertToFormat(QImage::Format_ARGB32);
+        img = img.rgbSwapped();
+        if (img.isNull())
+        {
+            std::cerr << __FUNCTION__
+                      << ": image is not a RGB or RGBA image"
+                      << std::endl;
+            return;
+        }
+
+        format = VK_FORMAT_R8G8B8A8_UNORM;
+    }
+    else
+    {
+        format = VK_FORMAT_R8_UNORM;
     }
 
-    format = VK_FORMAT_R8G8B8A8_UNORM;
     VkExtent3D extent = { uint32_t(img.width()), uint32_t(img.height()), 1 };
 
     // Calc. mipmap count.

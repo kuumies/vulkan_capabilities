@@ -194,8 +194,8 @@ void Controller::runDeviceTest(int deviceIndex)
         "textures/blocksrough_roughness.png"
     };
 
-    const float quadRadius = 1.0f;
-    const float mapOffset = quadRadius * 2.0f;
+    float quadRadius = 1.0f;
+    float mapOffset = quadRadius * 2.0f;
     std::vector<glm::vec3> positions =
     {
         glm::vec3(-mapOffset * 1.5-0.1f, -2.0 * quadRadius, 2.0f),
@@ -318,10 +318,20 @@ void Controller::runDeviceTest(int deviceIndex)
     sphere.material.pbr.normal           = maps[4];
     sphere.material.pbr.roughness        = maps[5];
 
-    sphere.mesh.vertices = sphereVertices;
-    sphere.mesh.indices  = sphereIndices;
+    quadRadius = 3.0f;
+    sphere.mesh.vertices =
+    {
+         quadRadius, -quadRadius,  0.0f, 1.0, 0.0, 0.0f, 0.0f, 1.0f,
+         quadRadius,  quadRadius,  0.0f, 1.0, 1.0, 0.0f, 0.0f, 1.0f,
+        -quadRadius,  quadRadius,  0.0f, 0.0, 1.0, 0.0f, 0.0f, 1.0f,
+        -quadRadius, -quadRadius,  0.0f, 0,0, 0.0, 0.0f, 0.0f, 1.0f,
+    };
+    sphere.mesh.indices  = quadIndices;
+
+    //sphere.mesh.vertices = sphereVertices;
+    //sphere.mesh.indices  = sphereIndices;
     sphere.worldTransform =
-        glm::translate(glm::mat4(1.0f), glm::vec3(3.1f, 0.0f, 0.0f));
+        glm::translate(glm::mat4(1.0f), glm::vec3(3.1f, 0.0f, 2.0f));
     impl->scene->models.push_back(sphere);
 
     impl->renderer = std::make_shared<vk::Renderer>(instance, physicalDevice, surface, widgetExtent, impl->scene);

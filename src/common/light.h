@@ -15,7 +15,7 @@ namespace kuu
  * -------------------------------------------------------------------------- */
 struct Light
 {
-    glm::vec4 dir       = glm::vec4(-1.0f, -1.0f, -1.0f, 0.0f);
+    glm::vec4 dir       = glm::vec4(0.0f, 0.0f, -1.0f, 0.0f);
     glm::vec4 intensity = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 };
 

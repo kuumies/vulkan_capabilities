@@ -15,4 +15,6 @@ layout(location = 0) out vec4 outColor;
 void main()
 {
     outColor = texture(texSampler, uv);
+    if (outColor.g == 0 && outColor.b == 0)
+        outColor = vec4(outColor.r, outColor.r, outColor.r, outColor.a);
 }

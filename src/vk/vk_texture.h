@@ -22,7 +22,7 @@ class Queue;
 // memory.
 struct Texture2D
 {
-    // Loads a RGBA image from disk and creates a texture out of it.
+    // Loads a RGBA or grayscale image from disk and creates a texture out of it.
     Texture2D(const VkPhysicalDevice& physicalDevice,
               const VkDevice& device,
               Queue& queue,
