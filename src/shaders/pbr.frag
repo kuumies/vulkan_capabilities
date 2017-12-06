@@ -23,6 +23,8 @@ layout(binding = 7) uniform sampler2D roughnessMap;
 layout(location = 0) in vec2 texCoord;
 layout(location = 1) in vec3 eyeNormal;
 layout(location = 2) in vec3 eyePos;
+layout(location = 3) in mat3 tbn;
+//layout(location = 4) in mat3 tbnInverse;
 
 layout(location = 0) out vec4 outColor;
 
@@ -62,7 +64,7 @@ vec3 brdfFresnel(float cosTheta, vec3 f0)
 
 vec2 parallaxMapping(vec2 texCoords, vec3 viewDir)
 {
-    float height_scale = 0.1;
+    float height_scale = 0.015;
     float height =  texture(heightMap, texCoords).r;
     vec2 p = viewDir.xy / viewDir.z * (height * height_scale);
     return texCoords - p;
@@ -70,24 +72,27 @@ vec2 parallaxMapping(vec2 texCoords, vec3 viewDir)
 
 void main()
 {
-
-    //vec2 texCoord2 = parallaxMapping(texCoord, v);
-
-    // Sample maps
-    float metallic  = texture(metallicMap, texCoord).r;
-    float roughness = texture(roughnessMap, texCoord).r;
-    float ao        = texture(ambientOcclusionMap, texCoord).r;
-    vec3 albedo     = texture(baseColorMap, texCoord).rgb;
-    //albedo = pow(albedo, vec3(2.2));
-    vec3 normal     = texture(normalMap, texCoord).rgb;
-    normal = normalize(normal * 2.0 - 1.0);
-
     // Calculate vectors.
     vec3 v = normalize(-eyePos);
-    //vec3 n = normalize(eyeNormal);
-    vec3 n = normalize(normal);
     vec3 l = normalize(-light.eyeDir.xyz);
     vec3 h = normalize(l + v);
+
+    vec3 vTangent = normalize(transpose(tbn) * v);
+    vec2 mapTexCoord = texCoord;
+    mapTexCoord = parallaxMapping(mapTexCoord, vTangent);
+
+    // Sample maps
+    float metallic  = texture(metallicMap, mapTexCoord).r;
+    float roughness = texture(roughnessMap, mapTexCoord).r;
+    float ao        = texture(ambientOcclusionMap, mapTexCoord).r;
+    vec3 albedo     = texture(baseColorMap, mapTexCoord).rgb;
+    //albedo = pow(albedo, vec3(2.2));
+    vec3 normal     = texture(normalMap, mapTexCoord).rgb;
+    normal = normalize(normal * 2.0 - 1.0);
+    normal = tbn * normal;
+
+    //vec3 n = normalize(eyeNormal);
+    vec3 n = normalize(normal);
 
     float nDotL = max(dot(n, l), 0.0);
     vec3 f0 = mix(vec3(0.04), albedo, metallic);

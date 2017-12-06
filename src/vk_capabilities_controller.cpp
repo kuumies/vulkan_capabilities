@@ -233,23 +233,23 @@ void Controller::runDeviceTest(int deviceIndex)
         impl->scene->models.push_back(quad);
     }
 
-    float sphereRadius = 3.0f;
-    std::vector<float> sphereVertices;
+    float sphereRadius = 2.0f;
+    std::vector<Vertex> sphereVertices;
     std::vector<unsigned int> sphereIndices;
 
     int vertexCount = 0;
 
-    auto addVertex = [&](const std::vector<float>& v)
+    auto addVertex = [&](const Vertex& v)
     {
-        sphereVertices.insert(sphereVertices.end(), v.begin(), v.end());
+        sphereVertices.push_back(v);
         sphereIndices.push_back(vertexCount);
         vertexCount++;
     };
 
     auto addTriangle = [&](
-            const std::vector<float>& a,
-            const std::vector<float>& b,
-            const std::vector<float>& c)
+            const Vertex& a,
+            const Vertex& b,
+            const Vertex& c)
     {
         addVertex(a);
         addVertex(b);
@@ -257,10 +257,10 @@ void Controller::runDeviceTest(int deviceIndex)
     };
 
     auto addQuad = [&](
-            const std::vector<float>& a,
-            const std::vector<float>& b,
-            const std::vector<float>& c,
-            const std::vector<float>& d)
+            const Vertex& a,
+            const Vertex& b,
+            const Vertex& c,
+            const Vertex& d)
     {
         addTriangle(a, d, c);
         addTriangle(c, b, a);
@@ -271,7 +271,7 @@ void Controller::runDeviceTest(int deviceIndex)
         float ringStep   = 1.0f / float(ringCount   - 1);
         float sectorStep = 1.0f / float(sectorCount - 1);
 
-        std::vector<std::vector<float>> vertices;
+        std::vector<Vertex> vertices;
         for(int r = 0; r < ringCount; ++r)
             for( int s = 0; s < sectorCount; ++s)
             {
@@ -282,13 +282,12 @@ void Controller::runDeviceTest(int deviceIndex)
                 glm::vec3 p = glm::vec3(x, y, z) * radius;
                 glm::vec2 tc = glm::vec2(s * sectorStep, r * ringStep);
                 glm::vec3 n = glm::normalize(p - glm::vec3(0.0f));
+                glm::vec3 t;
+                glm::vec3 bt;
 
                 vertices.push_back(
-                { p.x, p.y, p.z,
-                  tc.x, tc.y,
-                  n.x, n.y, n.z });
+                { p, tc, n, t, bt });
             }
-
 
         for(int r = 0; r < ringCount - 1; r++)
         {
@@ -309,31 +308,57 @@ void Controller::runDeviceTest(int deviceIndex)
 
     genSphere(sphereRadius, 32, 32);
 
-    Model sphere;
-    sphere.material.type = Material::Type::Pbr;
-    sphere.material.pbr.ambientOcclusion = maps[0];
-    sphere.material.pbr.baseColor        = maps[1];
-    sphere.material.pbr.height           = maps[2];
-    sphere.material.pbr.metallic         = maps[3];
-    sphere.material.pbr.normal           = maps[4];
-    sphere.material.pbr.roughness        = maps[5];
+    Model pbrSphere;
+    pbrSphere.material.type = Material::Type::Pbr;
+    pbrSphere.material.pbr.ambientOcclusion = maps[0];
+    pbrSphere.material.pbr.baseColor        = maps[1];
+    pbrSphere.material.pbr.height           = maps[2];
+    pbrSphere.material.pbr.metallic         = maps[3];
+    pbrSphere.material.pbr.normal           = maps[4];
+    pbrSphere.material.pbr.roughness        = maps[5];
 
     quadRadius = 3.0f;
-    sphere.mesh.vertices =
+    pbrSphere.mesh.vertices =
     {
         {  { quadRadius, -quadRadius, 0.0f}, { 1.0, 0.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } },
         {  { quadRadius,  quadRadius, 0.0f}, { 1.0, 1.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } },
         {  {-quadRadius,  quadRadius, 0.0f}, { 0.0, 1.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } },
         {  {-quadRadius, -quadRadius, 0.0f}, { 0.0, 0.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } }
     };
-    sphere.mesh.indices  = quadIndices;
-    sphere.mesh.generateTangents();
+    pbrSphere.mesh.indices  = quadIndices;
+    pbrSphere.mesh.vertices = sphereVertices;
+    pbrSphere.mesh.indices  = sphereIndices;
 
-    //sphere.mesh.vertices = sphereVertices;
-    //sphere.mesh.indices  = sphereIndices;
-    sphere.worldTransform =
+    pbrSphere.mesh.generateTangents();
+    pbrSphere.worldTransform =
         glm::translate(glm::mat4(1.0f), glm::vec3(3.1f, 0.0f, 2.0f));
-    impl->scene->models.push_back(sphere);
+    impl->scene->models.push_back(pbrSphere);
+
+#if 0
+    Model pbrQuad;
+    pbrQuad.material.type = Material::Type::Pbr;
+    pbrQuad.material.pbr.ambientOcclusion = maps[0];
+    pbrQuad.material.pbr.baseColor        = maps[1];
+    pbrQuad.material.pbr.height           = maps[2];
+    pbrQuad.material.pbr.metallic         = maps[3];
+    pbrQuad.material.pbr.normal           = maps[4];
+    pbrQuad.material.pbr.roughness        = maps[5];
+
+    quadRadius = 3.0f;
+    pbrQuad.mesh.vertices =
+    {
+        {  { quadRadius, -quadRadius, 0.0f}, { 1.0, 0.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } },
+        {  { quadRadius,  quadRadius, 0.0f}, { 1.0, 1.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } },
+        {  {-quadRadius,  quadRadius, 0.0f}, { 0.0, 1.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } },
+        {  {-quadRadius, -quadRadius, 0.0f}, { 0.0, 0.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } }
+    };
+    pbrQuad.mesh.indices  = quadIndices;
+    pbrQuad.mesh.generateTangents();
+    pbrQuad.worldTransform =
+        glm::translate(glm::mat4(1.0f), glm::vec3(3.1f, -3.0f, 2.0f)) *
+        glm::mat4_cast(glm::angleAxis(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+    impl->scene->models.push_back(pbrQuad);
+#endif
 
     impl->renderer = std::make_shared<vk::Renderer>(instance, physicalDevice, surface, widgetExtent, impl->scene);
     impl->renderer->create();
