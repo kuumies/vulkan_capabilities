@@ -71,6 +71,54 @@ struct Matrices
     glm::mat4 normal;
 };
 
+struct RendererTextures
+{
+    RendererTextures(
+            const VkPhysicalDevice& physicalDevice,
+            const VkDevice& device,
+            const uint32_t& queueFamilyIndex,
+            CommandPool& commandPool)
+        : physicalDevice(physicalDevice)
+        , device(device)
+        , queueFamilyIndex(queueFamilyIndex)
+        , commandPool(commandPool)
+    {}
+
+    void add(const std::string& filepath)
+    {
+        if (textureMap.count(filepath))
+            return;
+
+        Queue queue(device, queueFamilyIndex, 0);
+        queue.create();
+
+        textureMap[filepath] =
+            std::make_shared<Texture2D>(
+                physicalDevice,
+                device,
+                queue,
+                commandPool,
+                filepath,
+                VK_FILTER_LINEAR,
+                VK_FILTER_LINEAR,
+                VK_SAMPLER_ADDRESS_MODE_REPEAT,
+                VK_SAMPLER_ADDRESS_MODE_REPEAT,
+                true);
+    }
+
+    void destroy()
+    {
+        textureMap.clear();
+    }
+
+    const VkPhysicalDevice physicalDevice;
+    const VkDevice device;
+    const uint32_t queueFamilyIndex;
+    CommandPool& commandPool;
+
+    std::map<std::string, std::shared_ptr<Texture2D>> textureMap;
+};
+
 /* -------------------------------------------------------------------------- */
 
 struct RendererModel
@@ -79,9 +127,8 @@ struct RendererModel
         const VkPhysicalDevice& physicalDevice,
         const VkDevice& device,
         const VkDescriptorPool& descriptorPool,
-        const uint32_t& queueFamilyIndex,
-        CommandPool& commandPool,
-        const Model& m)
+        const Model& m,
+        std::shared_ptr<RendererTextures> textureManager)
     {
         model = m;
 
@@ -94,16 +141,16 @@ struct RendererModel
         switch (m.material.type)
         {
             case Material::Type::Diffuse:
-                textures.push_back(createTexture(physicalDevice, device, queueFamilyIndex, commandPool, m.material.diffuse.map));
+                textures.push_back(textureManager->textureMap.at(m.material.diffuse.map));
                 break;
 
             case Material::Type::Pbr:
-                textures.push_back(createTexture(physicalDevice, device, queueFamilyIndex, commandPool, m.material.pbr.ambientOcclusion));
-                textures.push_back(createTexture(physicalDevice, device, queueFamilyIndex, commandPool, m.material.pbr.baseColor));
-                textures.push_back(createTexture(physicalDevice, device, queueFamilyIndex, commandPool, m.material.pbr.height   ));
-                textures.push_back(createTexture(physicalDevice, device, queueFamilyIndex, commandPool, m.material.pbr.metallic));
-                textures.push_back(createTexture(physicalDevice, device, queueFamilyIndex, commandPool, m.material.pbr.normal));
-                textures.push_back(createTexture(physicalDevice, device, queueFamilyIndex, commandPool, m.material.pbr.roughness));
+                textures.push_back(textureManager->textureMap.at(m.material.pbr.ambientOcclusion));
+                textures.push_back(textureManager->textureMap.at(m.material.pbr.baseColor));
+                textures.push_back(textureManager->textureMap.at(m.material.pbr.height));
+                textures.push_back(textureManager->textureMap.at(m.material.pbr.metallic));
+                textures.push_back(textureManager->textureMap.at(m.material.pbr.normal));
+                textures.push_back(textureManager->textureMap.at(m.material.pbr.roughness));
                 break;
         }
 
@@ -415,6 +462,9 @@ struct Renderer::Impl
         if (!createDescriptorPool())
             return false;
 
+        if (!createTextures())
+            return false;
+
         if (!createModels())
             return false;
 
@@ -461,16 +511,24 @@ struct Renderer::Impl
             queueFamilies,
             { graphics });
 
+        const int transfer = helper::findQueueFamilyIndex(
+            VK_QUEUE_TRANSFER_BIT,
+            queueFamilies,
+            { presentation, graphics });
+
         if (presentation == -1)
             return false;
 
         graphicsFamilyIndex     = graphics;
         presentationFamilyIndex = presentation;
+        transferFamilyIndex    = transfer;
 
         device = std::make_shared<LogicalDevice>(physicalDevice);
         device->setExtensions( { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
         device->addQueueFamily(graphicsFamilyIndex,     1, 1.0f);
         device->addQueueFamily(presentationFamilyIndex, 1, 1.0f);
+        if (transferFamilyIndex >= 0)
+            device->addQueueFamily(transferFamilyIndex, 1, 1.0f);
         return device->create();
     }
 
@@ -594,17 +652,49 @@ struct Renderer::Impl
         return descriptorPool->create();
     }
 
+    bool createTextures()
+    {
+        std::shared_ptr<CommandPool> commandPool = graphicsCommandPool;
+        uint32_t queueFamilyIndex = graphicsFamilyIndex;
+
+        textures = std::make_shared<RendererTextures>(
+            physicalDevice,
+            device->handle(),
+            queueFamilyIndex,
+            *commandPool);
+
+        for (const Model& model : scene->models)
+        {
+            switch(model.material.type)
+            {
+                case Material::Type::Diffuse:
+                    textures->add(model.material.diffuse.map);
+                    break;
+
+                case Material::Type::Pbr:
+                    textures->add(model.material.pbr.ambientOcclusion);
+                    textures->add(model.material.pbr.baseColor);
+                    textures->add(model.material.pbr.height);
+                    textures->add(model.material.pbr.metallic);
+                    textures->add(model.material.pbr.normal);
+                    textures->add(model.material.pbr.roughness);
+                    break;
+            }
+        }
+
+        return true;
+    }
+
     bool createModels()
     {
         for (const Model& model : scene->models)
-        {
+        {           
             RendererModel m;
             if (!m.create(physicalDevice,
                           device->handle(),
                           descriptorPool->handle(),
-                          graphicsFamilyIndex,
-                          *commandPool,
-                          model))
+                          model,
+                          textures))
             {
                 return false;
             }
@@ -657,15 +747,26 @@ struct Renderer::Impl
 
     bool createCommandPool()
     {
-        commandPool = std::make_shared<CommandPool>(device->handle());
-        commandPool->setQueueFamilyIndex(graphicsFamilyIndex);
-        return commandPool->create();
+        graphicsCommandPool = std::make_shared<CommandPool>(device->handle());
+        graphicsCommandPool->setQueueFamilyIndex(graphicsFamilyIndex);
+        if (!graphicsCommandPool->create())
+            return false;
+
+        if (transferFamilyIndex >= 0)
+        {
+            transferCommandPool = std::make_shared<CommandPool>(device->handle());
+            transferCommandPool->setQueueFamilyIndex(transferFamilyIndex);
+            if (!transferCommandPool->create())
+                return false;
+        }
+
+        return true;
     }
 
     bool createCommandBuffers()
     {
         commandBuffers =
-            commandPool->allocateBuffers(
+            graphicsCommandPool->allocateBuffers(
                 VK_COMMAND_BUFFER_LEVEL_PRIMARY,
                 swapchainImageCount);
 
@@ -851,7 +952,8 @@ struct Renderer::Impl
         vkDeviceWaitIdle(device->handle());
         this->extent = extent;
 
-        commandPool.reset();
+        graphicsCommandPool.reset();
+        transferCommandPool.reset();
         commandBuffers.clear();
         diffusePipeline.reset();
         pbrPipeline.reset();
@@ -879,7 +981,9 @@ struct Renderer::Impl
 
         vkDeviceWaitIdle(device->handle());
 
-        commandPool->destroy();
+        graphicsCommandPool->destroy();
+        if (transferCommandPool)
+            transferCommandPool->destroy();
         commandBuffers.clear();
         renderingFinished->destroy();
         imageAvailable->destroy();
@@ -890,6 +994,7 @@ struct Renderer::Impl
         for (RendererModel& m : vulkanModels)
             m.destroy();
         vulkanModels.clear();
+        textures->destroy();
 
         swapchain->destroy();
         renderPass->destroy();
@@ -898,16 +1003,19 @@ struct Renderer::Impl
 
     bool isValid() const
     {
-        return commandBuffers.size() > 0                         &&
-               commandPool       && commandPool->isValid()       &&
-               renderingFinished && renderingFinished->isValid() &&
-               imageAvailable    && imageAvailable->isValid()    &&
-               diffusePipeline   && diffusePipeline->isValid()   &&
-               pbrPipeline       && pbrPipeline->isValid()       &&
-               descriptorPool    && descriptorPool->isValid()    &&
-               swapchain         && swapchain->isValid()         &&
-               renderPass        && renderPass->isValid()        &&
-               device            && device->isValid();
+        if (transferCommandPool && !transferCommandPool->isValid())
+            return false;
+
+        return commandBuffers.size() > 0                             &&
+               graphicsCommandPool && graphicsCommandPool->isValid() &&
+               renderingFinished   && renderingFinished->isValid()   &&
+               imageAvailable      && imageAvailable->isValid()      &&
+               diffusePipeline     && diffusePipeline->isValid()     &&
+               pbrPipeline         && pbrPipeline->isValid()         &&
+               descriptorPool      && descriptorPool->isValid()      &&
+               swapchain           && swapchain->isValid()           &&
+               renderPass          && renderPass->isValid()          &&
+               device              && device->isValid();
     }
 
     // From user.
@@ -922,6 +1030,7 @@ struct Renderer::Impl
     VkExtent2D extent;
 
     // Queue family indices.
+    uint32_t transferFamilyIndex;
     uint32_t graphicsFamilyIndex;
     uint32_t presentationFamilyIndex;
 
@@ -935,6 +1044,9 @@ struct Renderer::Impl
     std::shared_ptr<RendererPipeline> diffusePipeline;
     std::shared_ptr<RendererPipeline> pbrPipeline;
 
+    // Textures
+    std::shared_ptr<RendererTextures> textures;
+
     // Swapchain
     std::shared_ptr<Swapchain> swapchain;
     uint32_t swapchainImageCount;
@@ -943,7 +1055,8 @@ struct Renderer::Impl
     std::shared_ptr<DescriptorPool> descriptorPool;
 
     // Commands
-    std::shared_ptr<CommandPool> commandPool;
+    std::shared_ptr<CommandPool> graphicsCommandPool;
+    std::shared_ptr<CommandPool> transferCommandPool;
     std::vector<VkCommandBuffer> commandBuffers;
 
     // Sync
