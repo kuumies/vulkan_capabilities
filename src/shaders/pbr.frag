@@ -64,10 +64,36 @@ vec3 brdfFresnel(float cosTheta, vec3 f0)
 
 vec2 parallaxMapping(vec2 texCoords, vec3 viewDir)
 {
-    float height_scale = 0.03;
-    float height =  texture(heightMap, texCoords).r;
-    vec2 p = viewDir.xy / viewDir.z * (height * height_scale);
-    return texCoords - p;
+    float height_scale = 0.1;
+
+    const float minLayers = 8.0;
+    const float maxLayers = 32.0;
+    float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));
+
+     float layerDepth = 1.0 / numLayers;
+     float currentLayerDepth = 0.0;
+     vec2 P = viewDir.xy * height_scale;
+     vec2 deltaTexCoords = P / numLayers;
+
+     vec2  currentTexCoords     = texCoords;
+     float currentDepthMapValue = 1.0 - texture(heightMap, currentTexCoords).r;
+
+     while(currentLayerDepth < currentDepthMapValue)
+     {
+         currentTexCoords -= deltaTexCoords;
+         currentDepthMapValue = 1.0 - texture(heightMap, currentTexCoords).r;
+         currentLayerDepth += layerDepth;
+     }
+
+     vec2 prevTexCoords = currentTexCoords + deltaTexCoords;
+
+     float afterDepth  = currentDepthMapValue - currentLayerDepth;
+     float beforeDepth = 1.0 - texture(heightMap, prevTexCoords).r - currentLayerDepth + layerDepth;
+
+     float weight = afterDepth / (afterDepth - beforeDepth);
+     vec2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
+
+     return finalTexCoords;
 }
 
 void main()
@@ -80,6 +106,8 @@ void main()
     vec3 vTangent = normalize(transpose(tbn) * v);
     vec2 mapTexCoord = texCoord;
     mapTexCoord = parallaxMapping(mapTexCoord, vTangent);
+//    if(mapTexCoord.x > 1.0 || mapTexCoord.y > 1.0 || mapTexCoord.x < 0.0 || mapTexCoord.y < 0.0)
+//        discard;
 
     // Sample maps
     float metallic  = texture(metallicMap, mapTexCoord).r;

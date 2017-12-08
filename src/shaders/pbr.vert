@@ -38,6 +38,10 @@ void main()
     vec3 b = normalize(vec3(matrices.normal * vec4(inBitangent, 0.0)));
     vec3 n = normalize(vec3(matrices.normal * vec4(inNormal,    0.0)));
 
+    // re-orthogonalize T with respect to N
+    t = normalize(t - dot(t, n) * n);
+    b = cross(n, t);
+
     gl_Position = matrices.projection *
                   matrices.view *
                   matrices.model * vec4(inPosition, 1.0);
