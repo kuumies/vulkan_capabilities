@@ -23,7 +23,9 @@ namespace vk
 VkImage createImage(const VkDevice& device,
                     const VkFormat& format,
                     const VkExtent3D& extent,
-                    const uint32_t& mipLevels)
+                    const uint32_t& mipLevels,
+                    const uint32_t& arrayLayers,
+                    VkImageCreateFlags flags)
 {
     // Create image.
     VkImageCreateInfo info = {};
@@ -32,12 +34,13 @@ VkImage createImage(const VkDevice& device,
     info.format        = format;
     info.extent        = extent;
     info.mipLevels     = mipLevels;
-    info.arrayLayers   = 1;
+    info.arrayLayers   = arrayLayers;
     info.samples       = VK_SAMPLE_COUNT_1_BIT;
     info.tiling        = VK_IMAGE_TILING_OPTIMAL;
     info.usage         = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     info.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
     info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    info.flags         = flags;
 
     // Create image
     VkImage image;
@@ -126,12 +129,14 @@ VkDeviceMemory allocateMemory(const VkPhysicalDevice& physicalDevice,
 VkImageView createImageView(const VkDevice& device,
                             const VkImage& image,
                             const VkFormat& format,
-                            const uint32_t& mipLevels)
+                            const uint32_t& mipLevels,
+                            const VkImageViewType& viewType,
+                            const uint32_t& layers)
 {
     VkImageViewCreateInfo viewInfo = {};
     viewInfo.sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image    = image;
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.viewType = viewType;
     viewInfo.format   = format;
     viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
     viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -140,7 +145,7 @@ VkImageView createImageView(const VkDevice& device,
     viewInfo.subresourceRange = {};
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     viewInfo.subresourceRange.levelCount = mipLevels;
-    viewInfo.subresourceRange.layerCount = 1;
+    viewInfo.subresourceRange.layerCount = layers;
 
     VkImageView imageView;
     const VkResult result =
@@ -167,6 +172,7 @@ VkSampler createSampler(const VkDevice& device,
                         const VkFilter& minFilter,
                         const VkSamplerAddressMode& addressModeU,
                         const VkSamplerAddressMode& addressModeV,
+                        const VkSamplerAddressMode& addressModeW,
                         const uint32_t& mipLevels)
 {
     VkSamplerCreateInfo info = {};
@@ -175,7 +181,7 @@ VkSampler createSampler(const VkDevice& device,
     info.minFilter               = minFilter;
     info.addressModeU            = addressModeU;
     info.addressModeV            = addressModeV;
-    info.addressModeW            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    info.addressModeW            = addressModeW;
     info.anisotropyEnable        = VK_TRUE;
     info.maxAnisotropy           = 16;
     info.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
@@ -436,7 +442,9 @@ bool textureFromImage(const VkDevice& device,
         device,
         format,
         extent,
-        mipmapCount);
+        mipmapCount,
+        1,
+        0);
     if (image == VK_NULL_HANDLE)
         return false;
 
@@ -446,12 +454,12 @@ bool textureFromImage(const VkDevice& device,
         return false;
 
     // Create view.
-    imageView = createImageView(device, image, format, mipmapCount);
+    imageView = createImageView(device, image, format, mipmapCount, VK_IMAGE_VIEW_TYPE_2D, 1);
     if (imageView == VK_NULL_HANDLE)
         return false;
 
     // Create sampler.
-    sampler = createSampler(device, magFilter, minFilter, addressModeU, addressModeV, mipmapCount);
+    sampler = createSampler(device, magFilter, minFilter, addressModeU, addressModeV, VK_SAMPLER_ADDRESS_MODE_REPEAT, mipmapCount);
     if (sampler == VK_NULL_HANDLE)
         return false;
 
@@ -681,6 +689,130 @@ std::map<std::string, std::shared_ptr<Texture2D>>
         return results;
 
     return results;
+}
+
+/* -------------------------------------------------------------------------- */
+
+struct TextureCube::Impl
+{
+    Impl(const VkDevice& device, TextureCube* self)
+        : device(device)
+        , self(self)
+    {}
+
+    ~Impl()
+    {
+        vkDestroySampler(device,   self->sampler,   NULL);
+        vkDestroyImageView(device, self->imageView, NULL);
+        vkDestroyImage(device,     self->image,     NULL);
+        vkFreeMemory(device,       self->memory,    NULL);
+    }
+
+    VkDevice device;
+    TextureCube* self;
+};
+
+/* -------------------------------------------------------------------------- */
+
+TextureCube::TextureCube(
+        const VkPhysicalDevice& physicalDevice,
+        const VkDevice& device,
+        Queue& queue,
+        CommandPool& commandPool,
+        const std::vector<std::string>& filePaths,
+        VkFilter magFilter,
+        VkFilter minFilter,
+        VkSamplerAddressMode addressModeU,
+        VkSamplerAddressMode addressModeV,
+        VkSamplerAddressMode addressModeW,
+        bool generateMipmaps)
+    : format(VK_FORMAT_UNDEFINED)
+    , image(VK_NULL_HANDLE)
+    , imageView(VK_NULL_HANDLE)
+    , sampler(VK_NULL_HANDLE)
+    , impl(std::make_shared<Impl>(device, this))
+{
+    if (filePaths.size() != 6)
+        return;
+
+    // Load images asynchronously
+    std::vector<QImage> images;
+    images.resize(filePaths.size());
+
+    #pragma omp parallel for
+    for (int i = 0; i < filePaths.size(); ++i)
+    {
+        QImage img(QString::fromStdString(filePaths[i]));
+        img = img.convertToFormat(QImage::Format_ARGB32);
+        img = img.rgbSwapped();
+        images[i] = img;
+    }
+
+    uint32_t totalSize = 0;
+    for (const QImage& image : images)
+        totalSize += image.byteCount();
+
+    // Create a single buffer for images data.
+    Buffer buf(physicalDevice, device);
+    buf.setSize(totalSize);
+    buf.setUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+    buf.setMemoryProperties(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    if (!buf.create())
+        return;
+
+    // Copy images into single buffer
+    VkDeviceSize offset = 0;
+    for (const QImage& image : images)
+    {
+        buf.copyHostVisible(image.bits(), image.byteCount(), offset);
+        offset += image.byteCount();
+    }
+
+    // Images dimensions.
+    VkExtent3D extent;
+    extent.width  = images[0].width();
+    extent.height = images[0].height();
+    extent.depth  = 1;
+
+    // Mipmap count.
+    uint32_t mipmapCount = 1;
+    if (generateMipmaps)
+        mipmapCount = uint32_t(std::floor(std::log2(std::max(extent.width, extent.height)))) + 1;
+
+    // Crate texture cube image
+    format = VK_FORMAT_R8G8B8A8_UNORM;
+    image = createImage(device,
+                        format,
+                        extent,
+                        mipmapCount,
+                        6,
+                        VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
+
+    // Allocate memory.
+    memory = allocateMemory(physicalDevice, device, image);
+    if (memory == VK_NULL_HANDLE)
+        return;
+
+    // Create view.
+    imageView = createImageView(device,
+                                image,
+                                format,
+                                mipmapCount,
+                                VK_IMAGE_VIEW_TYPE_CUBE,
+                                6);
+    if (imageView == VK_NULL_HANDLE)
+        return;
+
+    // Create sampler.
+    sampler = createSampler(device,
+                            magFilter,
+                            minFilter,
+                            addressModeU,
+                            addressModeV,
+                            addressModeW,
+                            mipmapCount);
+    if (sampler == VK_NULL_HANDLE)
+        return;
 }
 
 } // namespace vk

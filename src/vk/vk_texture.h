@@ -60,5 +60,34 @@ std::map<std::string, std::shared_ptr<Texture2D>>
                  VkSamplerAddressMode addressModeV,
                  bool generateMipmaps);
 
+
+// A scoped texture cube texture.
+struct TextureCube
+{
+    // Loads a RGBA or grayscale texture cube images from disk and
+    // creates a texture cube out of them.
+    TextureCube(const VkPhysicalDevice& physicalDevice,
+                const VkDevice& device,
+                Queue& queue,
+                CommandPool& commandPool,
+                const std::vector<std::string>& filePaths,
+                VkFilter magFilter,
+                VkFilter minFilter,
+                VkSamplerAddressMode addressModeU,
+                VkSamplerAddressMode addressModeV,
+                VkSamplerAddressMode addressModeW,
+                bool generateMipmaps);
+
+    VkFormat format;
+    VkImage image;
+    VkImageView imageView;
+    VkSampler sampler;
+    VkDeviceMemory memory;
+
+private:
+    struct Impl;
+    std::shared_ptr<Impl> impl;
+};
+
 } // namespace vk
 } // namespace kuu

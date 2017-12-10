@@ -63,13 +63,13 @@ public:
 
     // Maps and unmaps the buffer data.
     void* map();
-    void* map(VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags);
+    void* map(VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags = 0);
     void unmap();
 
     // Copies data into host visible buffer. This requires that buffer memory
     // properties has a host visible flag set. Data is copied immediately if
     // the memory properties has host coherent flag set.
-    void copyHostVisible(const void* data, size_t size);
+    void copyHostVisible(const void* data, size_t size, VkDeviceSize offset = 0);
 
 private:
     struct Impl;

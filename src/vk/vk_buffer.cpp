@@ -255,9 +255,9 @@ void Buffer::unmap()
                 impl->bufferMemory);
 }
 
-void Buffer::copyHostVisible(const void* data, size_t size)
+void Buffer::copyHostVisible(const void* data, size_t size, VkDeviceSize offset)
 {
-    void* uniformDst = map();
+    void* uniformDst = map(offset, size);
     memcpy(uniformDst, data, size);
     unmap();
 }
