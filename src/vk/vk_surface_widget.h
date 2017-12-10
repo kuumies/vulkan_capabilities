@@ -51,7 +51,7 @@ signals:
     void interval();
     void resized();
     void wheel(int delta);
-    void mouseMove(const QPoint& pos);
+    void mouseMove(const QPoint& pos, int buttons);
 
 protected:
     // Paint event needs to be disabled.

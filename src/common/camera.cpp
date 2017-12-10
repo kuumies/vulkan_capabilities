@@ -13,7 +13,8 @@ namespace kuu
 
 glm::mat4 Camera::worldTransform() const
 {
-    return glm::translate(glm::mat4(1.0f), glm::vec3(pos));
+    const glm::quat q = yaw * pitch * roll;
+    return glm::translate(glm::mat4(1.0f), glm::vec3(pos)) * glm::mat4_cast(q);
 }
 
 glm::mat4 Camera::viewMatrix() const

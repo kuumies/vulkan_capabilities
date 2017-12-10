@@ -11,6 +11,7 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/mat4x4.hpp>
 #include <glm/geometric.hpp>
+#include <glm/trigonometric.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
@@ -386,13 +387,21 @@ void Controller::onSurfaceWheel(int delta)
         impl->scene->camera.pos.z += (delta > 0 ? -amount : amount);
 }
 
-void Controller::onSurfaceMouseMove(const QPoint &offset)
+void Controller::onSurfaceMouseMove(const QPoint& offset, int buttons)
 {
     if (impl->scene)
     {
-        const float scale = 0.01f;
-        impl->scene->camera.pos.x -= float(offset.x()) * scale;
-        impl->scene->camera.pos.y += float(offset.y()) * scale;
+        if (buttons & Qt::LeftButton)
+        {
+            const float scale = 0.01f;
+            impl->scene->camera.pos.x -= float(offset.x()) * scale;
+            impl->scene->camera.pos.y += float(offset.y()) * scale;
+        }
+        if (buttons & Qt::RightButton)
+        {
+            impl->scene->camera.yaw   *= glm::angleAxis(-glm::radians(float(offset.x()) * 0.1f), glm::vec3(0.0f, 1.0f, 0.0f));
+            impl->scene->camera.pitch *= glm::angleAxis(-glm::radians(float(offset.y()) * 0.1f), glm::vec3(1.0f, 0.0f, 0.0f));
+        }
     }
 }
 

@@ -158,7 +158,7 @@ void SurfaceWidget::mousePressEvent(QMouseEvent* e)
 
 void SurfaceWidget::mouseMoveEvent(QMouseEvent* e)
 {
-    emit mouseMove(e->pos() - impl->startPos);
+    emit mouseMove(e->pos() - impl->startPos, e->buttons());
     impl->startPos = e->pos();
 }
 

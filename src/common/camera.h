@@ -10,6 +10,7 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/mat4x4.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <memory>
 
 namespace kuu
@@ -45,6 +46,9 @@ struct Camera
 
     // World transform parameters
     glm::vec3 pos = glm::vec3(0.0f, 0.0f, 10.0f);
+    glm::quat pitch;
+    glm::quat yaw;
+    glm::quat roll;
 };
 
 } // namespace kuu

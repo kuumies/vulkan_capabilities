@@ -38,7 +38,7 @@ public:
     void onSurfaceInterval();
     void onSurfaceResized();
     void onSurfaceWheel(int delta);
-    void onSurfaceMouseMove(const QPoint& offset);
+    void onSurfaceMouseMove(const QPoint& offset, int buttons);
 
 private:
     struct Impl;
