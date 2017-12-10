@@ -604,7 +604,7 @@ std::map<std::string, std::shared_ptr<Texture2D>>
     std::sort(filepaths.begin(), filepaths.end());
     filepaths.erase(std::unique(filepaths.begin(), filepaths.end() ), filepaths.end());
 
-    // Load images, save format.
+    // Load images asynchronously
     std::vector<QImage> images;
     images.resize(filepaths.size());
 
