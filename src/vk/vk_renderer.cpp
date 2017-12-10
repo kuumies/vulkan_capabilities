@@ -123,9 +123,39 @@ struct RendererTextures
                 true);
     }
 
+    bool createTextureCube()
+    {
+        std::vector<std::string> filePaths =
+        {
+            "textures/right.jpg",
+            "textures/left.jpg",
+            "textures/top.jpg",
+            "textures/bottom.jpg",
+            "textures/back.jpg",
+            "textures/front.jpg"
+        };
+
+        Queue queue(device, queueFamilyIndex, 0);
+        queue.create();
+
+        skyTextureCube = std::make_shared<TextureCube>(
+                    physicalDevice,
+                    device,
+                    queue,
+                    commandPool,
+                    filePaths,
+                    VK_FILTER_LINEAR,
+                    VK_FILTER_LINEAR,
+                    VK_SAMPLER_ADDRESS_MODE_REPEAT,
+                    VK_SAMPLER_ADDRESS_MODE_REPEAT,
+                    VK_SAMPLER_ADDRESS_MODE_REPEAT);
+        return true;
+    }
+
     void destroy()
     {
         textureMap.clear();
+        skyTextureCube.reset();
     }
 
     const VkPhysicalDevice physicalDevice;
@@ -134,6 +164,7 @@ struct RendererTextures
     CommandPool& commandPool;
 
     std::map<std::string, std::shared_ptr<Texture2D>> textureMap;
+    std::shared_ptr<TextureCube> skyTextureCube;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -422,19 +453,16 @@ struct SkyBoxPipeline
 {
     SkyBoxPipeline(const VkPhysicalDevice& physicalDevice,
                    const VkDevice& device,
-                   const uint32_t& queueFamilyIndex,
                    const VkDescriptorPool& descriptorPool,
                    const VkRenderPass&  renderPass,
                    const VkExtent2D& extent,
-                   CommandPool& commandPool)
+                   std::shared_ptr<TextureCube> skyTextureCube)
+        : skyTextureCube(skyTextureCube)
     {
         if (!createMesh(physicalDevice, device))
             return;
 
         if (!createShaders(device))
-            return;
-
-        if (!createTextureCube(physicalDevice, device, queueFamilyIndex, commandPool))
             return;
 
         if(!createUniformBuffer(physicalDevice, device))
@@ -608,38 +636,6 @@ struct SkyBoxPipeline
         return true;
     }
 
-    bool createTextureCube(const VkPhysicalDevice& physicalDevice,
-                           const VkDevice& device,
-                           const uint32_t& queueFamilyIndex,
-                           CommandPool& commandPool)
-    {
-        std::vector<std::string> filePaths =
-        {
-            "textures/right.jpg",
-            "textures/left.jpg",
-            "textures/top.jpg",
-            "textures/bottom.jpg",
-            "textures/back.jpg",
-            "textures/front.jpg"
-        };
-
-        Queue queue(device, queueFamilyIndex, 0);
-        queue.create();
-
-        skyTextureCube = std::make_shared<TextureCube>(
-                    physicalDevice,
-                    device,
-                    queue,
-                    commandPool,
-                    filePaths,
-                    VK_FILTER_LINEAR,
-                    VK_FILTER_LINEAR,
-                    VK_SAMPLER_ADDRESS_MODE_REPEAT,
-                    VK_SAMPLER_ADDRESS_MODE_REPEAT,
-                    VK_SAMPLER_ADDRESS_MODE_REPEAT);
-        return true;
-    }
-
     bool createPipeline(
         const VkDevice& device,
         const VkExtent2D& extent,
@@ -686,20 +682,19 @@ struct SkyBoxPipeline
     void destroy()
     {
         mesh->destroy();
-        skyTextureCube.reset();
         vshModule->destroy();
         fshModule->destroy();
         pipeline->destroy();
         matricesUniformBuffer->destroy();
         descriptorSets->destroy();
+        skyTextureCube.reset();
     }
+
+    std::shared_ptr<TextureCube> skyTextureCube;
 
     // Mesh
     std::shared_ptr<Mesh> mesh;
     uint32_t indexCount;
-
-    // Texture cube map
-    std::shared_ptr<TextureCube> skyTextureCube;
 
     // Shaders
     std::shared_ptr<ShaderModule> vshModule;
@@ -982,6 +977,7 @@ struct Renderer::Impl
         }
 
         textures->add(filepaths);
+        textures->createTextureCube();
 
         return true;
     }
@@ -1010,14 +1006,23 @@ struct Renderer::Impl
         if (vulkanModels.size() == 0)
             return false;
 
+        if (skyBoxPipeline)
+        {
+            skyBoxPipeline->createPipeline(
+                device->handle(),
+                extent,
+                renderPass->handle());
+        }
+        else
+        {
         skyBoxPipeline = std::make_shared<SkyBoxPipeline>(
             physicalDevice,
             device->handle(),
-            graphicsFamilyIndex,
             descriptorPool->handle(),
             renderPass->handle(),
             extent,
-            *graphicsCommandPool);
+            textures->skyTextureCube);
+        }
 
         std::vector<VkDescriptorSetLayout> diffuseDescriptorSetLayouts;
         for (const RendererModel& m : vulkanModels)
@@ -1308,7 +1313,7 @@ struct Renderer::Impl
         commandBuffers.clear();
         diffusePipeline.reset();
         pbrPipeline.reset();
-        skyBoxPipeline.reset();
+        skyBoxPipeline->pipeline->destroy();
         renderPass.reset();
         swapchain.reset();
 

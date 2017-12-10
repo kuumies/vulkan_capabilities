@@ -19,7 +19,8 @@ struct Material
     enum class Type
     {
         Diffuse,
-        Pbr
+        Pbr,
+        Skybox
     };
 
     struct Diffuse
