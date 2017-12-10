@@ -367,6 +367,8 @@ void Controller::runDeviceTest(int deviceIndex)
 
 void Controller::onSurfaceInterval()
 {
+    if (impl->scene)
+        impl->scene->camera.update();
     if (impl->renderer && impl->renderer->isValid())
         impl->renderer->renderFrame();
 }
@@ -384,7 +386,7 @@ void Controller::onSurfaceWheel(int delta)
 {
     const float amount = 1.0f;
     if (impl->scene)
-        impl->scene->camera.pos.z += (delta > 0 ? -amount : amount);
+        impl->scene->camera.tPos.z += (delta > 0 ? -amount : amount);
 }
 
 void Controller::onSurfaceMouseMove(const QPoint& offset, int buttons)
@@ -394,13 +396,13 @@ void Controller::onSurfaceMouseMove(const QPoint& offset, int buttons)
         if (buttons & Qt::LeftButton)
         {
             const float scale = 0.01f;
-            impl->scene->camera.pos.x -= float(offset.x()) * scale;
-            impl->scene->camera.pos.y += float(offset.y()) * scale;
+            impl->scene->camera.tPos.x -= float(offset.x()) * scale;
+            impl->scene->camera.tPos.y += float(offset.y()) * scale;
         }
         if (buttons & Qt::RightButton)
         {
-            impl->scene->camera.yaw   *= glm::angleAxis(-glm::radians(float(offset.x()) * 0.1f), glm::vec3(0.0f, 1.0f, 0.0f));
-            impl->scene->camera.pitch *= glm::angleAxis(-glm::radians(float(offset.y()) * 0.1f), glm::vec3(1.0f, 0.0f, 0.0f));
+            impl->scene->camera.tYaw   *= glm::angleAxis(-glm::radians(float(offset.x()) * 0.1f), glm::vec3(0.0f, 1.0f, 0.0f));
+            impl->scene->camera.tPitch *= glm::angleAxis(-glm::radians(float(offset.y()) * 0.1f), glm::vec3(1.0f, 0.0f, 0.0f));
         }
     }
 }

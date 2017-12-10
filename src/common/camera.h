@@ -31,6 +31,9 @@ namespace kuu
  * -------------------------------------------------------------------------- */
 struct Camera
 {
+    // Updates the camera
+    void update();
+
     // Returns the world transform.
     glm::mat4 worldTransform() const;
     // Returns view transform.
@@ -49,6 +52,11 @@ struct Camera
     glm::quat pitch;
     glm::quat yaw;
     glm::quat roll;
+
+    glm::vec3 tPos = glm::vec3(0.0f, 0.0f, 10.0f);
+    glm::quat tPitch;
+    glm::quat tYaw;
+    glm::quat tRoll;
 };
 
 } // namespace kuu

@@ -22,6 +22,14 @@ glm::mat4 Camera::viewMatrix() const
     return glm::inverse(worldTransform());
 }
 
+void Camera::update()
+{
+    yaw   = glm::slerp(yaw,   tYaw,   0.05f);
+    pitch = glm::slerp(pitch, tPitch, 0.05f);
+    roll  = glm::slerp(roll,  tRoll,  0.05f);
+    pos  = glm::mix(pos, tPos, 0.1f);
+}
+
 glm::mat4 Camera::projectionMatrix() const
 {
     glm::mat4 m = glm::perspective(
