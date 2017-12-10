@@ -51,7 +51,8 @@ signals:
     void interval();
     void resized();
     void wheel(int delta);
-    void mouseMove(const QPoint& pos, int buttons);
+    void mouseMove(const QPoint& pos, int buttons, int modifiers);
+    void key(int key, int modifiers, bool down);
 
 protected:
     // Paint event needs to be disabled.
@@ -63,6 +64,7 @@ protected:
     void mouseMoveEvent(QMouseEvent* e) override;
     void mouseReleaseEvent(QMouseEvent* e) override;
     void keyPressEvent(QKeyEvent* e) override;
+    void keyReleaseEvent(QKeyEvent* e) override;
 
 private:
     struct Impl;

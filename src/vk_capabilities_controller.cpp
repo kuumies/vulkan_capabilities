@@ -137,6 +137,9 @@ void Controller::start()
     connect(impl->surfaceWidget.get(), &vk::SurfaceWidget::mouseMove,
             this, &Controller::onSurfaceMouseMove);
 
+    connect(impl->surfaceWidget.get(), &vk::SurfaceWidget::key,
+            this, &Controller::onSurfaceKey);
+
     std::future<void> uiDataTask = std::async([&]()
     {
         auto devices = impl->instance->physicalDevices();
@@ -389,7 +392,7 @@ void Controller::onSurfaceWheel(int delta)
         impl->scene->camera.tPos.z += (delta > 0 ? -amount : amount);
 }
 
-void Controller::onSurfaceMouseMove(const QPoint& offset, int buttons)
+void Controller::onSurfaceMouseMove(const QPoint& offset, int buttons, int modifiers)
 {
     if (impl->scene)
     {
@@ -401,9 +404,38 @@ void Controller::onSurfaceMouseMove(const QPoint& offset, int buttons)
         }
         if (buttons & Qt::RightButton)
         {
-            impl->scene->camera.tYaw   *= glm::angleAxis(-glm::radians(float(offset.x()) * 0.1f), glm::vec3(0.0f, 1.0f, 0.0f));
-            impl->scene->camera.tPitch *= glm::angleAxis(-glm::radians(float(offset.y()) * 0.1f), glm::vec3(1.0f, 0.0f, 0.0f));
+            if (modifiers & Qt::ControlModifier)
+            {
+                impl->scene->camera.tRoll *= glm::angleAxis(-glm::radians(float(offset.x()) * 0.1f), glm::vec3(0.0f, 0.0f, 1.0f));
+            }
+            else
+            {
+                impl->scene->camera.tYaw   *= glm::angleAxis(-glm::radians(float(offset.x()) * 0.1f), glm::vec3(0.0f, 1.0f, 0.0f));
+                impl->scene->camera.tPitch *= glm::angleAxis(-glm::radians(float(offset.y()) * 0.1f), glm::vec3(1.0f, 0.0f, 0.0f));
+            }
         }
+    }
+}
+
+void Controller::onSurfaceKey(int key, int modifiers, bool down)
+{
+    if (down)
+    {
+        glm::vec3 moveDir;
+        switch(key)
+        {
+            case Qt::Key_W: moveDir.z = -1.0f; break;
+            case Qt::Key_S: moveDir.z =  1.0f; break;
+            case Qt::Key_A: moveDir.x = -1.0f; break;
+            case Qt::Key_D: moveDir.x =  1.0f; break;
+        }
+
+        moveDir = impl->scene->camera.rotation() * moveDir;
+        impl->scene->camera.move = moveDir;
+    }
+    else
+    {
+        impl->scene->camera.move = glm::vec3();
     }
 }
 

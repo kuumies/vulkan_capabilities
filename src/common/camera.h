@@ -34,6 +34,8 @@ struct Camera
     // Updates the camera
     void update();
 
+    // Returns rotation.
+    glm::quat rotation() const;
     // Returns the world transform.
     glm::mat4 worldTransform() const;
     // Returns view transform.
@@ -57,6 +59,8 @@ struct Camera
     glm::quat tPitch;
     glm::quat tYaw;
     glm::quat tRoll;
+
+    glm::vec3 move;
 };
 
 } // namespace kuu

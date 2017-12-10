@@ -158,7 +158,7 @@ void SurfaceWidget::mousePressEvent(QMouseEvent* e)
 
 void SurfaceWidget::mouseMoveEvent(QMouseEvent* e)
 {
-    emit mouseMove(e->pos() - impl->startPos, e->buttons());
+    emit mouseMove(e->pos() - impl->startPos, e->buttons(), e->modifiers());
     impl->startPos = e->pos();
 }
 
@@ -167,10 +167,21 @@ void SurfaceWidget::mouseReleaseEvent(QMouseEvent* e)
     impl->startPos = QPoint();
 }
 
-void SurfaceWidget::keyPressEvent(QKeyEvent *e)
+void SurfaceWidget::keyPressEvent(QKeyEvent* e)
 {
     if (e->key() == Qt::Key_Escape)
+    {
         close();
+        e->accept();
+        return;
+    }
+
+    emit key(e->key(), e->modifiers(), true);
+}
+
+void SurfaceWidget::keyReleaseEvent(QKeyEvent* e)
+{
+    emit key(e->key(), e->modifiers(), false);
 }
 
 } // namespace vk
