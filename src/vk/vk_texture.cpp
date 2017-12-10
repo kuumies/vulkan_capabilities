@@ -531,13 +531,11 @@ Texture2D::Texture2D(const VkPhysicalDevice& physicalDevice,
                       << std::endl;
             return;
         }
+    }
 
-        format = VK_FORMAT_R8G8B8A8_UNORM;
-    }
-    else
-    {
-        format = VK_FORMAT_R8_UNORM;
-    }
+    // Set the image format
+    format = img.isGrayscale() ? VK_FORMAT_R8_UNORM
+                               : VK_FORMAT_R8G8B8A8_UNORM;
 
     // Allocate buffer for queue commands.
     VkCommandBuffer cmdBuf =
@@ -555,8 +553,7 @@ Texture2D::Texture2D(const VkPhysicalDevice& physicalDevice,
     textureFromImage(device,
                      physicalDevice,
                      img,
-                     img.isGrayscale() ? VK_FORMAT_R8_UNORM
-                                       : VK_FORMAT_R8G8B8A8_UNORM,
+                     format,
                      cmdBuf,
                      generateMipmaps,
                      magFilter,
@@ -643,11 +640,12 @@ std::map<std::string, std::shared_ptr<Texture2D>>
     for (int f = 0; f < filepaths.size(); ++f)
     {
         std::shared_ptr<Texture2D> tex = std::make_shared<Texture2D>(device);
+        tex->format = images[f].isGrayscale() ? VK_FORMAT_R8_UNORM
+                                              : VK_FORMAT_R8G8B8A8_UNORM;
         textureFromImage(device,
                          physicalDevice,
                          images[f],
-                         images[f].isGrayscale() ? VK_FORMAT_R8_UNORM
-                                                 : VK_FORMAT_R8G8B8A8_UNORM,
+                         tex->format,
                          cmdBuf,
                          generateMipmaps,
                          magFilter,
