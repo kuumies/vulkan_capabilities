@@ -9,6 +9,25 @@
 namespace kuu
 {
 
+void Mesh::addVertex(const Vertex &v)
+{
+    indices.push_back(vertices.size());
+    vertices.push_back(v);
+}
+
+void Mesh::addTriangle(const Vertex &a, const Vertex &b, const Vertex &c)
+{
+    addVertex(a);
+    addVertex(b);
+    addVertex(c);
+}
+
+void Mesh::addQuad(const Vertex &a, const Vertex &b, const Vertex &c, const Vertex &d)
+{
+    addTriangle(a, d, c);
+    addTriangle(c, b, a);
+}
+
 void Mesh::generateTangents()
 {
     bool triangles = (indices.size() % 3) == 0;

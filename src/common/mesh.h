@@ -30,6 +30,16 @@ struct Vertex
  * -------------------------------------------------------------------------- */
 struct Mesh
 {
+    void addVertex(const Vertex& v);
+    void addTriangle(
+            const Vertex& a,
+            const Vertex& b,
+            const Vertex& c);
+    void addQuad(
+            const Vertex& a,
+            const Vertex& b,
+            const Vertex& c,
+            const Vertex& d);
     void generateTangents();
 
     std::vector<Vertex> vertices;
