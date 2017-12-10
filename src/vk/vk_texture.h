@@ -75,8 +75,7 @@ struct TextureCube
                 VkFilter minFilter,
                 VkSamplerAddressMode addressModeU,
                 VkSamplerAddressMode addressModeV,
-                VkSamplerAddressMode addressModeW,
-                bool generateMipmaps);
+                VkSamplerAddressMode addressModeW);
 
     VkFormat format;
     VkImage image;

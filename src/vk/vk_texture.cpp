@@ -220,6 +220,7 @@ bool commandTransitionImageLayout(
     const VkPipelineStageFlags srcStageMask,
     const VkPipelineStageFlags dstStageMask,
     const uint32_t mipLevel,
+    const uint32_t layerCount,
     const VkCommandBuffer& cmdBuf)
 {
     VkAccessFlags srcAccessMask;
@@ -283,7 +284,7 @@ bool commandTransitionImageLayout(
     barrier.subresourceRange.baseMipLevel   = mipLevel;
     barrier.subresourceRange.levelCount     = 1;
     barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount     = 1;
+    barrier.subresourceRange.layerCount     = layerCount;
 
     vkCmdPipelineBarrier(
         cmdBuf,
@@ -296,6 +297,21 @@ bool commandTransitionImageLayout(
     );
 
     return true;
+}
+
+void commandCopyBufferToImage(
+    const VkBuffer& buffer,
+    const VkImage& image,
+    const VkCommandBuffer& cmdBuf,
+    const std::vector<VkBufferImageCopy>& usedRegions)
+{
+    vkCmdCopyBufferToImage(
+        cmdBuf,
+        buffer,
+        image,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        uint32_t(usedRegions.size()),
+        usedRegions.data());
 }
 
 void commandCopyBufferToImage(
@@ -320,13 +336,7 @@ void commandCopyBufferToImage(
     std::vector<VkBufferImageCopy> usedRegions;
     usedRegions.push_back(region);
 
-    vkCmdCopyBufferToImage(
-        cmdBuf,
-        buffer,
-        image,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        uint32_t(usedRegions.size()),
-        usedRegions.data());
+    commandCopyBufferToImage(buffer, image, cmdBuf, usedRegions);
 }
 
 void recordCommands(
@@ -344,6 +354,7 @@ void recordCommands(
         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
         0,
+        1,
         cmdBuf);
 
     // Copy buffer to image.
@@ -356,7 +367,7 @@ void recordCommands(
         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        0, cmdBuf);
+        0, 1, cmdBuf);
 
     for (uint32_t i = 1 ; i < mipmapCount; ++i)
     {
@@ -383,7 +394,7 @@ void recordCommands(
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
-            i, cmdBuf);
+            i, 1, cmdBuf);
 
         vkCmdBlitImage(
           cmdBuf,
@@ -401,7 +412,7 @@ void recordCommands(
             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
-            i, cmdBuf);
+            i, 1, cmdBuf);
     }
 
     // Transition image into optimal shader read layout.
@@ -411,7 +422,7 @@ void recordCommands(
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        0, cmdBuf);
+        0, 1, cmdBuf);
 }
 
 bool textureFromImage(const VkDevice& device,
@@ -724,8 +735,7 @@ TextureCube::TextureCube(
         VkFilter minFilter,
         VkSamplerAddressMode addressModeU,
         VkSamplerAddressMode addressModeV,
-        VkSamplerAddressMode addressModeW,
-        bool generateMipmaps)
+        VkSamplerAddressMode addressModeW)
     : format(VK_FORMAT_UNDEFINED)
     , image(VK_NULL_HANDLE)
     , imageView(VK_NULL_HANDLE)
@@ -774,17 +784,12 @@ TextureCube::TextureCube(
     extent.height = images[0].height();
     extent.depth  = 1;
 
-    // Mipmap count.
-    uint32_t mipmapCount = 1;
-    if (generateMipmaps)
-        mipmapCount = uint32_t(std::floor(std::log2(std::max(extent.width, extent.height)))) + 1;
-
     // Crate texture cube image
     format = VK_FORMAT_R8G8B8A8_UNORM;
     image = createImage(device,
                         format,
                         extent,
-                        mipmapCount,
+                        1,
                         6,
                         VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
 
@@ -797,7 +802,7 @@ TextureCube::TextureCube(
     imageView = createImageView(device,
                                 image,
                                 format,
-                                mipmapCount,
+                                1,
                                 VK_IMAGE_VIEW_TYPE_CUBE,
                                 6);
     if (imageView == VK_NULL_HANDLE)
@@ -810,8 +815,68 @@ TextureCube::TextureCube(
                             addressModeU,
                             addressModeV,
                             addressModeW,
-                            mipmapCount);
+                            1);
     if (sampler == VK_NULL_HANDLE)
+        return;
+
+    // Define texture cube image regions in memory
+    std::vector<VkBufferImageCopy> regions;
+    offset = 0;
+    for (uint32_t layer = 0; layer < 6; layer++)
+    {
+        VkBufferImageCopy region = {};
+        region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.imageSubresource.mipLevel       = 1;
+        region.imageSubresource.baseArrayLayer = layer;
+        region.imageSubresource.layerCount     = 1;
+        region.imageExtent                     = extent;
+        region.bufferOffset                    = offset;
+
+        regions.push_back(region);
+        offset += images[layer].byteCount();
+    }
+
+    // Allocate buffers for queue commands.
+    VkCommandBuffer cmdBuf =
+        commandPool.allocateBuffer(
+            VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+
+    // Start recording commands
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(cmdBuf, &beginInfo);
+
+    // Transition image into transfer destination layout
+    commandTransitionImageLayout(
+        image,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        0, 6,
+        cmdBuf);
+
+    // Copy buffer to image.
+    commandCopyBufferToImage(buf.handle(), image, cmdBuf, regions);
+
+    // Stop recording commands.
+    const VkResult result = vkEndCommandBuffer(cmdBuf);
+    if (result != VK_SUCCESS)
+    {
+        std::cerr << __FUNCTION__
+                  << ": failed to apply texture cube commands as "
+                  << vk::stringify::result(result)
+                  << std::endl;
+        return;
+    }
+
+    // Submit commands into queue
+    if (!queue.submit(cmdBuf))
+        return;
+
+    // Wait until commands has been processed.
+    if (!queue.waitIdle())
         return;
 }
 
