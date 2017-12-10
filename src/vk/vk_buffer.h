@@ -69,7 +69,7 @@ public:
     // Copies data into host visible buffer. This requires that buffer memory
     // properties has a host visible flag set. Data is copied immediately if
     // the memory properties has host coherent flag set.
-    void copyHostVisible(void* data, size_t size);
+    void copyHostVisible(const void* data, size_t size);
 
 private:
     struct Impl;

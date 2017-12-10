@@ -255,7 +255,7 @@ void Buffer::unmap()
                 impl->bufferMemory);
 }
 
-void Buffer::copyHostVisible(void* data, size_t size)
+void Buffer::copyHostVisible(const void* data, size_t size)
 {
     void* uniformDst = map();
     memcpy(uniformDst, data, size);
