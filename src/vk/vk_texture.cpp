@@ -766,7 +766,8 @@ TextureCube::TextureCube(
     Buffer buf(physicalDevice, device);
     buf.setSize(totalSize);
     buf.setUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-    buf.setMemoryProperties(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    buf.setMemoryProperties(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     if (!buf.create())
         return;
 
@@ -824,15 +825,21 @@ TextureCube::TextureCube(
     offset = 0;
     for (uint32_t layer = 0; layer < 6; layer++)
     {
-        VkBufferImageCopy region = {};
+        VkBufferImageCopy region;
+        region.bufferOffset      = offset;
+        region.bufferRowLength   = 0;
+        region.bufferImageHeight = 0;
+
         region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.imageSubresource.mipLevel       = 1;
+        region.imageSubresource.mipLevel       = 0;
         region.imageSubresource.baseArrayLayer = layer;
         region.imageSubresource.layerCount     = 1;
-        region.imageExtent                     = extent;
-        region.bufferOffset                    = offset;
+
+        region.imageOffset = { 0, 0, 0 };
+        region.imageExtent = extent;
 
         regions.push_back(region);
+
         offset += images[layer].byteCount();
     }
 
@@ -859,6 +866,15 @@ TextureCube::TextureCube(
 
     // Copy buffer to image.
     commandCopyBufferToImage(buf.handle(), image, cmdBuf, regions);
+
+    // Transition image into optimal shader read layout.
+    commandTransitionImageLayout(
+        image,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        0, 6, cmdBuf);
 
     // Stop recording commands.
     const VkResult result = vkEndCommandBuffer(cmdBuf);

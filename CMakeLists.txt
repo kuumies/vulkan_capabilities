@@ -74,7 +74,7 @@ file(GLOB_RECURSE CPP_SOURCES src/*.cpp)
 file(GLOB_RECURSE UI_SOURCES  src/*.ui)
 file(GLOB_RECURSE QRC_SOURCES src/*.qrc)
 file(GLOB_RECURSE GLSL_SOURCES src/*.vert src/*.frag)
-file(GLOB_RECURSE TEXTURE_SOURCES src/textures/*.png)
+file(GLOB_RECURSE TEXTURE_SOURCES src/textures/*.png src/textures/*.jpg)
 
 add_executable(${PROJECT_NAME}
     ${CPP_SOURCES}

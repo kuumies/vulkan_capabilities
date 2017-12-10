@@ -123,8 +123,37 @@ struct RendererTextures
                 true);
     }
 
+    void addTextureCube()
+    {
+        std::vector<std::string> filePaths =
+        {
+            "textures/right.jpg",
+            "textures/left.jpg",
+            "textures/top.jpg",
+            "textures/bottom.jpg",
+            "textures/back.jpg",
+            "textures/front.jpg"
+        };
+
+        Queue queue(device, queueFamilyIndex, 0);
+        queue.create();
+
+        skyTextureCube = std::make_shared<TextureCube>(
+                    physicalDevice,
+                    device,
+                    queue,
+                    commandPool,
+                    filePaths,
+                    VK_FILTER_LINEAR,
+                    VK_FILTER_LINEAR,
+                    VK_SAMPLER_ADDRESS_MODE_REPEAT,
+                    VK_SAMPLER_ADDRESS_MODE_REPEAT,
+                    VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    }
+
     void destroy()
     {
+        skyTextureCube.reset();
         textureMap.clear();
     }
 
@@ -134,6 +163,7 @@ struct RendererTextures
     CommandPool& commandPool;
 
     std::map<std::string, std::shared_ptr<Texture2D>> textureMap;
+    std::shared_ptr<TextureCube> skyTextureCube;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -679,10 +709,7 @@ struct Renderer::Impl
         }
 
         textures->add(filepaths);
-
-//        #pragma omp parallel for
-//        for (int i = 0; i < filepaths.size(); ++i)
-//            textures->add(filepaths[i]);
+        textures->addTextureCube();
 
         return true;
     }
