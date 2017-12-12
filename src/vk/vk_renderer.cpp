@@ -742,6 +742,12 @@ struct Renderer::Impl
         if (!createLogicalDevice())
             return false;
 
+        atmosphereRenderer = std::make_shared<AtmosphereRenderer>(
+            physicalDevice,
+            device->handle(),
+            graphicsFamilyIndex);
+        atmosphereRenderer->render();
+
         if (!createSwapchain())
             return false;
 
@@ -768,12 +774,6 @@ struct Renderer::Impl
 
         if (!createSync())
             return false;
-
-        atmosphereRenderer = std::make_shared<AtmosphereRenderer>(
-            physicalDevice,
-            device->handle(),
-            graphicsFamilyIndex);
-        atmosphereRenderer->render();
 
         return true;
     }
@@ -1022,13 +1022,13 @@ struct Renderer::Impl
         }
         else
         {
-        skyBoxPipeline = std::make_shared<SkyBoxPipeline>(
-            physicalDevice,
-            device->handle(),
-            descriptorPool->handle(),
-            renderPass->handle(),
-            extent,
-            textures->skyTextureCube);
+            skyBoxPipeline = std::make_shared<SkyBoxPipeline>(
+                physicalDevice,
+                device->handle(),
+                descriptorPool->handle(),
+                renderPass->handle(),
+                extent,
+                atmosphereRenderer->textureCube());
         }
 
         std::vector<VkDescriptorSetLayout> diffuseDescriptorSetLayouts;

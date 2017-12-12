@@ -22,7 +22,6 @@ layout(binding = 0) uniform Params
 
 } data;
 
-
 /* ---------------------------------------------------------------- */
 
 layout(location = 0) in vec2 uv;
@@ -104,6 +103,9 @@ vec3 absorb(float dist, vec3 color, float factor){
 
 void main(void)
 {
+    colorOut = vec4(uv, 0.0, 1.0);
+    return;
+
     const float surface_height = 0.99;
     const float intensity = 1.8;
     const int step_count = 16;

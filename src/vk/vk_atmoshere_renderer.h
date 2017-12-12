@@ -17,6 +17,8 @@ namespace kuu
 namespace vk
 {
 
+struct TextureCube;
+
 class AtmosphereRenderer
 {
 public:
@@ -46,6 +48,8 @@ public:
         const uint32_t& graphicsQueueFamilyIndex);
 
     void render();
+
+    std::shared_ptr<TextureCube> textureCube() const;
 
 private:
     struct Impl;

@@ -353,7 +353,7 @@ void AtmosphereRenderer::render()
         VK_CULL_MODE_NONE,
         VK_FRONT_FACE_COUNTER_CLOCKWISE);
     pipeline->setMultisampleState(VK_FALSE, VK_SAMPLE_COUNT_1_BIT);
-    pipeline->setDepthStencilState(VK_TRUE);
+    pipeline->setDepthStencilState(VK_FALSE, VK_FALSE);
     pipeline->setColorBlendingState(
             VK_FALSE,
             VK_LOGIC_OP_CLEAR,
@@ -560,8 +560,11 @@ void AtmosphereRenderer::render()
     vkDestroyRenderPass(
         impl->device,
         renderPass,
-        NULL);
+                NULL);
 }
+
+std::shared_ptr<TextureCube> AtmosphereRenderer::textureCube() const
+{ return impl->textureCube; }
 
 } // namespace vk
 } // namespace kuu
