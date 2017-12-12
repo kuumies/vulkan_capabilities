@@ -25,7 +25,10 @@ VkImage createImage(const VkDevice& device,
                     const VkExtent3D& extent,
                     const uint32_t& mipLevels,
                     const uint32_t& arrayLayers,
-                    VkImageCreateFlags flags)
+                    VkImageCreateFlags flags,
+                    VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                                              VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                                              VK_IMAGE_USAGE_SAMPLED_BIT)
 {
     // Create image.
     VkImageCreateInfo info = {};
@@ -37,7 +40,7 @@ VkImage createImage(const VkDevice& device,
     info.arrayLayers   = arrayLayers;
     info.samples       = VK_SAMPLE_COUNT_1_BIT;
     info.tiling        = VK_IMAGE_TILING_OPTIMAL;
-    info.usage         = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    info.usage         = usage;
     info.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
     info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     info.flags         = flags;
@@ -555,6 +558,8 @@ Texture2D::Texture2D(const VkPhysicalDevice& physicalDevice,
     // Set the image format
     format = img.isGrayscale() ? VK_FORMAT_R8_UNORM
                                : VK_FORMAT_R8G8B8A8_UNORM;
+    // Set the image extent
+    extent = { uint32_t(img.width()), uint32_t(img.height()) };
 
     // Allocate buffer for queue commands.
     VkCommandBuffer cmdBuf =
@@ -602,6 +607,51 @@ Texture2D::Texture2D(const VkPhysicalDevice& physicalDevice,
 
     // Wait until commands has been processed.
     if (!queue.waitIdle())
+        return;
+}
+
+Texture2D::Texture2D(const VkPhysicalDevice& physicalDevice,
+                     const VkDevice& device,
+                     const VkExtent2D& extent,
+                     const VkFormat& format,
+                     VkFilter magFilter,
+                     VkFilter minFilter,
+                     VkSamplerAddressMode addressModeU,
+                     VkSamplerAddressMode addressModeV)
+    : format(format)
+    , extent(extent)
+    , image(VK_NULL_HANDLE)
+    , imageView(VK_NULL_HANDLE)
+    , sampler(VK_NULL_HANDLE)
+    , impl(std::make_shared<Impl>(device, this))
+{
+    const uint32_t mipmapCount = 1;
+
+    // Create image.
+    VkExtent3D imageExtent = { extent.width, extent.height, 1 };
+    image = createImage(
+        device,
+        format,
+        imageExtent,
+        mipmapCount,
+        1,
+        0);
+    if (image == VK_NULL_HANDLE)
+        return;
+
+    // Allocate memory.
+    memory = allocateMemory(physicalDevice, device, image);
+    if (memory == VK_NULL_HANDLE)
+        return;
+
+    // Create view.
+    imageView = createImageView(device, image, format, mipmapCount, VK_IMAGE_VIEW_TYPE_2D, 1);
+    if (imageView == VK_NULL_HANDLE)
+        return;
+
+    // Create sampler.
+    sampler = createSampler(device, magFilter, minFilter, addressModeU, addressModeV, VK_SAMPLER_ADDRESS_MODE_REPEAT, mipmapCount);
+    if (sampler == VK_NULL_HANDLE)
         return;
 }
 
@@ -895,6 +945,117 @@ TextureCube::TextureCube(
     if (!queue.waitIdle())
         return;
 }
+
+TextureCube::TextureCube(const VkPhysicalDevice& physicalDevice,
+                         const VkDevice& device,
+                         const VkExtent3D& extent,
+                         const VkFormat& format,
+                         VkFilter magFilter,
+                         VkFilter minFilter,
+                         VkSamplerAddressMode addressModeU,
+                         VkSamplerAddressMode addressModeV,
+                         VkSamplerAddressMode addressModeW)
+    : format(format)
+    , image(VK_NULL_HANDLE)
+    , imageView(VK_NULL_HANDLE)
+    , sampler(VK_NULL_HANDLE)
+    , impl(std::make_shared<Impl>(device, this))
+{
+    // Crate texture cube image
+    image = createImage(device,
+                        format,
+                        extent,
+                        1,
+                        6,
+                        VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+                        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+
+    // Allocate memory.
+    memory = allocateMemory(physicalDevice, device, image);
+    if (memory == VK_NULL_HANDLE)
+        return;
+
+    // Create view.
+    imageView = createImageView(device,
+                                image,
+                                format,
+                                1,
+                                VK_IMAGE_VIEW_TYPE_CUBE,
+                                6);
+    if (imageView == VK_NULL_HANDLE)
+        return;
+
+    // Create sampler.
+    sampler = createSampler(device,
+                            magFilter,
+                            minFilter,
+                            addressModeU,
+                            addressModeV,
+                            addressModeW,
+                            1);
+    if (sampler == VK_NULL_HANDLE)
+        return;
+}
+
+bool transitionTexture(Queue& queue,
+                       CommandPool& commandPool,
+                       std::shared_ptr<Texture2D> texture,
+                       VkImageLayout from,
+                       VkImageLayout to)
+{
+
+    // Allocate buffers for queue commands.
+    VkCommandBuffer cmdBuf =
+        commandPool.allocateBuffer(
+            VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+
+    // Start recording commands
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(cmdBuf, &beginInfo);
+
+    // Transition image into optimal shader read layout.
+    commandTransitionImageLayout(
+        texture->image,
+        from,
+        to,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        0, 6, cmdBuf);
+
+    // Stop recording commands.
+    const VkResult result = vkEndCommandBuffer(cmdBuf);
+    if (result != VK_SUCCESS)
+    {
+        std::cerr << __FUNCTION__
+                  << ": failed to transition texture as "
+                  << vk::stringify::result(result)
+                  << std::endl;
+        return false;
+    }
+
+    // Submit commands into queue
+    if (!queue.submit(cmdBuf))
+        return false;
+
+    // Wait until commands has been processed.
+    return queue.waitIdle();
+}
+
+//bool transitionTexture(const VkCommandBuffer& cmdBuf,
+//                       const VkImage& image,
+//                       VkImageLayout from,
+//                       VkImageLayout to)
+//{
+//    commandTransitionImageLayout(
+//        image,
+//        from,
+//        to,
+//        VK_PIPELINE_STAGE_TRANSFER_BIT,
+//        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+//        0, 6, cmdBuf);
+//}
 
 } // namespace vk
 } // namespace kuu

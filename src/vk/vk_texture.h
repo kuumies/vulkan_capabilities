@@ -24,8 +24,9 @@ class Queue;
 // memory.
 struct Texture2D
 {
-    // Loads a RGBA or grayscale image from disk and creates a texture out of it.
+    // Creates a null texture
     Texture2D(const VkDevice& device);
+    // Loads a RGBA or grayscale image from disk and creates a texture out of it.
     Texture2D(const VkPhysicalDevice& physicalDevice,
               const VkDevice& device,
               Queue& queue,
@@ -36,8 +37,18 @@ struct Texture2D
               VkSamplerAddressMode addressModeU,
               VkSamplerAddressMode addressModeV,
               bool generateMipmaps);
+    // Creates an empty texture with undefined layout
+    Texture2D(const VkPhysicalDevice& physicalDevice,
+              const VkDevice& device,
+              const VkExtent2D& extent,
+              const VkFormat& format,
+              VkFilter magFilter,
+              VkFilter minFilter,
+              VkSamplerAddressMode addressModeU,
+              VkSamplerAddressMode addressModeV);
 
     VkFormat format;
+    VkExtent2D extent;
     VkImage image;
     VkImageView imageView;
     VkSampler sampler;
@@ -60,6 +71,17 @@ std::map<std::string, std::shared_ptr<Texture2D>>
                  VkSamplerAddressMode addressModeV,
                  bool generateMipmaps);
 
+// Transitions texture to given in layout.
+bool transitionTexture(Queue& queue,
+                       CommandPool& commandPool,
+                       std::shared_ptr<Texture2D> texture,
+                       VkImageLayout from,
+                       VkImageLayout to);
+
+//bool transitionTexture(const VkCommandBuffer& cmdBuf,
+//                       const VkImage& image,
+//                       VkImageLayout from,
+//                       VkImageLayout to);
 
 // A scoped texture cube texture.
 struct TextureCube
@@ -71,6 +93,17 @@ struct TextureCube
                 Queue& queue,
                 CommandPool& commandPool,
                 const std::vector<std::string>& filePaths,
+                VkFilter magFilter,
+                VkFilter minFilter,
+                VkSamplerAddressMode addressModeU,
+                VkSamplerAddressMode addressModeV,
+                VkSamplerAddressMode addressModeW);
+
+    // Texture cube of given in extent. Pixels content is undefined.
+    TextureCube(const VkPhysicalDevice& physicalDevice,
+                const VkDevice& device,
+                const VkExtent3D& extent,
+                const VkFormat& format,
                 VkFilter magFilter,
                 VkFilter minFilter,
                 VkSamplerAddressMode addressModeU,
