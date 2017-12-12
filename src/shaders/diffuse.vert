@@ -22,11 +22,6 @@ layout(location = 4) in vec3 inBitangent;
 
 layout(location = 0) out vec2 uv;
 
-out gl_PerVertex
-{
-    vec4 gl_Position;
-};
-
 void main()
 {
     gl_Position = matrices.projection *
