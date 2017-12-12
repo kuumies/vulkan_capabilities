@@ -17,6 +17,7 @@
 #include "vk_command.h"
 #include "vk_descriptor_set.h"
 #include "vk_helper.h"
+#include "vk_atmoshere_renderer.h"
 #include "vk_image.h"
 #include "vk_logical_device.h"
 #include "vk_mesh.h"
@@ -577,7 +578,7 @@ struct SkyBoxPipeline
         mesh->addVertexAttributeDescription(4, 0, VK_FORMAT_R32G32B32_SFLOAT, 11 * sizeof(float));
         mesh->setVertexBindingDescription(0, 14 * sizeof(float), VK_VERTEX_INPUT_RATE_VERTEX);
 
-        indexCount = m.indices.size();
+        indexCount = uint32_t(m.indices.size());
 
         return mesh->create();
     }
@@ -734,7 +735,7 @@ struct Renderer::Impl
     }
 
     bool create()
-    {
+    {       
         if (!setupSurface())
             return false;
 
@@ -767,6 +768,12 @@ struct Renderer::Impl
 
         if (!createSync())
             return false;
+
+        atmosphereRenderer = std::make_shared<AtmosphereRenderer>(
+            physicalDevice,
+            device->handle(),
+            graphicsFamilyIndex);
+        atmosphereRenderer->render();
 
         return true;
     }
@@ -1338,6 +1345,8 @@ struct Renderer::Impl
 
         vkDeviceWaitIdle(device->handle());
 
+        atmosphereRenderer.reset();
+
         skyBoxPipeline->destroy();
         graphicsCommandPool->destroy();
         if (transferCommandPool)
@@ -1427,6 +1436,9 @@ struct Renderer::Impl
 
     // Vulkan models.
     std::vector<RendererModel> vulkanModels;
+
+    // IBR renderer
+    std::shared_ptr<AtmosphereRenderer> atmosphereRenderer;
 };
 
 /* -------------------------------------------------------------------------- */
