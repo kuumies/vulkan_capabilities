@@ -338,7 +338,7 @@ void Controller::runDeviceTest(int deviceIndex)
         glm::translate(glm::mat4(1.0f), glm::vec3(3.1f, 0.0f, 2.0f));
     impl->scene->models.push_back(pbrSphere);
 
-#if 1
+#if 0
     Model pbrQuad;
     pbrQuad.material.type = Material::Type::Pbr;
     pbrQuad.material.pbr.ambientOcclusion = maps[0];
@@ -362,6 +362,104 @@ void Controller::runDeviceTest(int deviceIndex)
         glm::translate(glm::mat4(1.0f), glm::vec3(3.1f, -3.0f, 2.0f)) *
         glm::mat4_cast(glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
     impl->scene->models.push_back(pbrQuad);
+#endif
+
+#if 1
+    //--------------------------------------------------------------------------
+    // Box mesh in NDC space.
+
+    float width  = 15.0f;
+    float height = 1.0f;
+    float depth  = 15.0f;
+    float bw = width  / 2.0f;
+    float bh = height / 2.0f;
+    float bd = depth  / 2.0f;
+
+    // Create the vertex list
+    std::vector<Vertex> vertices =
+    {
+        // -------------------------------------------------------
+        // Back
+        { { -bw, -bh, -bd },  { 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f } },
+        { {  bw,  bh, -bd },  { 1.0f, 1.0f }, { 0.0f, 0.0f, -1.0f } },
+        { {  bw, -bh, -bd },  { 1.0f, 0.0f }, { 0.0f, 0.0f, -1.0f } },
+        { {  bw,  bh, -bd },  { 1.0f, 1.0f }, { 0.0f, 0.0f, -1.0f } },
+        { { -bw, -bh, -bd },  { 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f } },
+        { { -bw,  bh, -bd },  { 0.0f, 1.0f }, { 0.0f, 0.0f, -1.0f } },
+
+        // -------------------------------------------------------
+        // Front
+        { { -bw, -bh,  bd },  { 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
+        { {  bw, -bh,  bd },  { 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
+        { {  bw,  bh,  bd },  { 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+        { {  bw,  bh,  bd },  { 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+        { { -bw,  bh,  bd },  { 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+        { { -bw, -bh,  bd },  { 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
+
+        // -------------------------------------------------------
+        // Left
+        { { -bw,  bh,  bd },  { 1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f } },
+        { { -bw,  bh, -bd },  { 1.0f, 1.0f }, { -1.0f, 0.0f, 0.0f } },
+        { { -bw, -bh, -bd },  { 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f } },
+        { { -bw, -bh, -bd },  { 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f } },
+        { { -bw, -bh,  bd },  { 0.0f, 0.0f }, { -1.0f, 0.0f, 0.0f } },
+        { { -bw,  bh,  bd },  { 1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f } },
+
+        // -------------------------------------------------------
+        // Right
+        { {  bw,  bh,  bd },  { 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f } },
+        { {  bw, -bh, -bd },  { 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f } },
+        { {  bw,  bh, -bd },  { 1.0f, 1.0f }, { 1.0f, 0.0f, 0.0f } },
+        { {  bw, -bh, -bd },  { 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f } },
+        { {  bw,  bh,  bd },  { 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f } },
+        { {  bw, -bh,  bd },  { 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f } },
+
+        // -------------------------------------------------------
+        // Bottom
+        { { -bw, -bh, -bd },  { 0.0f, 1.0f }, { 0.0f, -1.0f, 0.0f } },
+        { {  bw, -bh, -bd },  { 1.0f, 1.0f }, { 0.0f, -1.0f, 0.0f } },
+        { {  bw, -bh,  bd },  { 1.0f, 0.0f }, { 0.0f, -1.0f, 0.0f } },
+        { {  bw, -bh,  bd },  { 1.0f, 0.0f }, { 0.0f, -1.0f, 0.0f } },
+        { { -bw, -bh,  bd },  { 0.0f, 0.0f }, { 0.0f, -1.0f, 0.0f } },
+        { { -bw, -bh, -bd },  { 0.0f, 1.0f }, { 0.0f, -1.0f, 0.0f } },
+
+        // -------------------------------------------------------
+        // Top
+        { { -bw,  bh, -bd },  { 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } },
+        { {  bw,  bh,  bd },  { 1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
+        { {  bw,  bh, -bd },  { 1.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } },
+        { {  bw,  bh,  bd },  { 1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
+        { { -bw,  bh, -bd },  { 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } },
+        { { -bw,  bh,  bd },  { 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
+    };
+
+    kuu::Mesh m;
+    for (const Vertex& v : vertices)
+        m.addVertex(v);
+    m.generateTangents();
+
+    std::vector<float> vertexVector;
+    for (const Vertex& v : m.vertices)
+    {
+        vertexVector.push_back(v.pos.x);
+        vertexVector.push_back(v.pos.y);
+        vertexVector.push_back(v.pos.z);
+        vertexVector.push_back(v.texCoord.x);
+        vertexVector.push_back(v.texCoord.y);
+    }
+
+    Model pbrBox;
+    pbrBox.material.type = Material::Type::Pbr;
+    pbrBox.material.pbr.ambientOcclusion = maps[0];
+    pbrBox.material.pbr.baseColor        = maps[1];
+    pbrBox.material.pbr.height           = maps[2];
+    pbrBox.material.pbr.metallic         = maps[3];
+    pbrBox.material.pbr.normal           = maps[4];
+    pbrBox.material.pbr.roughness        = maps[5];
+    pbrBox.mesh = m;
+    pbrBox.worldTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -5.0f, 0.0f));
+    impl->scene->models.push_back(pbrBox);
+
 #endif
 
     impl->renderer = std::make_shared<vk::Renderer>(instance, physicalDevice, surface, widgetExtent, impl->scene);

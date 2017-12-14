@@ -153,13 +153,13 @@ void main()
         ao = texture(ambientOcclusionMap, tc).r;
 
     // Use normal form map if available
-    //if (textureSize(normalMap, 1).x > 0)
-    //{
+    if (textureSize(normalMap, 1).x > 0)
+    {
         n = texture(normalMap, tc).rgb;
         n = normalize(n * 2.0 - 1.0);
         n = tbn * n;
         n = normalize(n);
-    //}
+    }
 
     // Vector angles
     float nDotL = max(dot(n, l), 0.0);

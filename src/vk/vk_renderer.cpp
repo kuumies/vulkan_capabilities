@@ -1115,8 +1115,8 @@ struct Renderer::Impl
                 descriptorPool->handle(),
                 renderPass->handle(),
                 extent,
-                //atmosphereRenderer->textureCube()
-                irradianceRenderer->textureCube()
+                atmosphereRenderer->textureCube()
+                //irradianceRenderer->textureCube()
                 //iblPrefilterRenderer->textureCube()
             );
         }
