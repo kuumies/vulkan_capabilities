@@ -14,5 +14,9 @@ layout(location = 0) out vec4 outColor;
 
 void main()
 {
+    float lod = 4.0;
+    //outColor = textureLod(skyboxMap, texCoord, lod);
     outColor = texture(skyboxMap, texCoord);
+    // reinhard tone mapping
+    outColor = outColor / (outColor + vec4(1.0));
 }

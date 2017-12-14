@@ -338,7 +338,7 @@ void Controller::runDeviceTest(int deviceIndex)
         glm::translate(glm::mat4(1.0f), glm::vec3(3.1f, 0.0f, 2.0f));
     impl->scene->models.push_back(pbrSphere);
 
-#if 0
+#if 1
     Model pbrQuad;
     pbrQuad.material.type = Material::Type::Pbr;
     pbrQuad.material.pbr.ambientOcclusion = maps[0];
@@ -360,7 +360,7 @@ void Controller::runDeviceTest(int deviceIndex)
     pbrQuad.mesh.generateTangents();
     pbrQuad.worldTransform =
         glm::translate(glm::mat4(1.0f), glm::vec3(3.1f, -3.0f, 2.0f)) *
-        glm::mat4_cast(glm::angleAxis(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+        glm::mat4_cast(glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
     impl->scene->models.push_back(pbrQuad);
 #endif
 

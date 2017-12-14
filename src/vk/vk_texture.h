@@ -108,13 +108,15 @@ struct TextureCube
                 VkFilter minFilter,
                 VkSamplerAddressMode addressModeU,
                 VkSamplerAddressMode addressModeV,
-                VkSamplerAddressMode addressModeW);
+                VkSamplerAddressMode addressModeW,
+                bool mipmaps);
 
     VkFormat format;
     VkImage image;
     VkImageView imageView;
     VkSampler sampler;
     VkDeviceMemory memory;
+    uint32_t mipmapCount;
 
 private:
     struct Impl;

@@ -7,7 +7,7 @@
 
 #include <glm/mat3x3.hpp>
 #include <glm/mat4x4.hpp>
-#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 #include <memory>
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -24,13 +24,14 @@ class AtmosphereRenderer
 public:
     struct Params
     {
-        glm::vec2 viewport;
+        glm::vec4 viewport;
         glm::mat4 inv_proj;
-        glm::mat3 inv_view_rot;
-        glm::vec3 lightdir;
-        glm::vec3 Kr = glm::vec3(0.18867780436772762,
+        glm::mat4 inv_view_rot;
+        glm::vec4 lightdir = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
+        glm::vec4 Kr = glm::vec4(0.18867780436772762,
                                  0.4978442963618773,
-                                 0.6616065586417131);
+                                 0.6616065586417131,
+                                 0.0f);
         float rayleighBrightness      = 0.8f;
         float mieBrightness           = 0.1f;
         float spotBrightness          = 1000.0f;

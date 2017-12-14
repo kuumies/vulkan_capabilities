@@ -1,11 +1,11 @@
 /* -------------------------------------------------------------------------- *
    Antti Jumpponen <kuumies@gmail.com>
-   The implementation of kuu::vk::AtmosphereRenderer class
+   The implementation of kuu::vk::IrradianceRenderer class
  * -------------------------------------------------------------------------- */
 
 #pragma once
 
-#include "vk_atmoshere_renderer.h"
+#include "vk_irradiance_renderer.h"
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/mat4x4.hpp>
@@ -35,7 +35,15 @@ namespace vk
 
 /* -------------------------------------------------------------------------- */
 
-struct AtmosphereRenderer::Impl
+struct UniformData
+{
+    glm::mat4 viewMatrix;
+    glm::mat4 projectionMatrix;
+};
+
+/* -------------------------------------------------------------------------- */
+
+struct IrradianceRenderer::Impl
 {
     // Input Vulkan handles
     VkPhysicalDevice physicalDevice;
@@ -44,25 +52,24 @@ struct AtmosphereRenderer::Impl
     // Graphics queue.
     uint32_t graphicsQueueFamilyIndex;
 
-    // Input texture cube
-    std::shared_ptr<TextureCube> textureCube;
+    // Texture cubes
+    std::shared_ptr<TextureCube> inputTextureCube;
+    std::shared_ptr<TextureCube> outputTextureCube;
 
     // Dimensions of the texture cube.
     VkExtent3D extent;
 
     // Format of the texture cube.
     VkFormat format;
-
-    // Parameters
-    AtmosphereRenderer::Params params;
 };
 
 /* -------------------------------------------------------------------------- */
 
-AtmosphereRenderer::AtmosphereRenderer(
+IrradianceRenderer::IrradianceRenderer(
         const VkPhysicalDevice& physicalDevice,
         const VkDevice& device,
-        const uint32_t& graphicsQueueFamilyIndex)
+        const uint32_t& graphicsQueueFamilyIndex,
+        std::shared_ptr<TextureCube> inputTextureCube)
     : impl(std::make_shared<Impl>())
 {
     impl->physicalDevice           = physicalDevice;
@@ -70,7 +77,8 @@ AtmosphereRenderer::AtmosphereRenderer(
     impl->graphicsQueueFamilyIndex = graphicsQueueFamilyIndex;
     impl->format                   = VK_FORMAT_R32G32B32A32_SFLOAT;
     impl->extent                   = { uint32_t(512), uint32_t(512), uint32_t(1) };
-    impl->textureCube = std::make_shared<TextureCube>(
+    impl->inputTextureCube         = inputTextureCube;
+    impl->outputTextureCube = std::make_shared<TextureCube>(
             physicalDevice,
             device,
             impl->extent,
@@ -80,27 +88,83 @@ AtmosphereRenderer::AtmosphereRenderer(
             VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
             VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
             VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            false);
+            true);
 }
 
-void AtmosphereRenderer::render()
+void IrradianceRenderer::render()
 {
     //--------------------------------------------------------------------------
-    // Quad mesh in NDC space.
+    // Box mesh in NDC space.
 
+    float width  = 2.0f;
+    float height = 2.0f;
+    float depth  = 2.0f;
+    float w = width  / 2.0f;
+    float h = height / 2.0f;
+    float d = depth  / 2.0f;
+
+    // Create the vertex list
     std::vector<Vertex> vertices =
     {
-        { { 1,  1, 0 }, { 1, 1 } },
-        { {-1,  1, 0 }, { 0, 1 } },
-        { {-1, -1, 0 }, { 0, 0 } },
-        { { 1,  1, 0 }, { 1, 1 } },
-        { {-1, -1, 0 }, { 0, 0 } },
-        { { 1, -1, 0 }, { 1, 0 } },
+        // -------------------------------------------------------
+        // Back
+        { { -w, -h, -d },  { 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f } },
+        { {  w,  h, -d },  { 1.0f, 1.0f }, { 0.0f, 0.0f, -1.0f } },
+        { {  w, -h, -d },  { 1.0f, 0.0f }, { 0.0f, 0.0f, -1.0f } },
+        { {  w,  h, -d },  { 1.0f, 1.0f }, { 0.0f, 0.0f, -1.0f } },
+        { { -w, -h, -d },  { 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f } },
+        { { -w,  h, -d },  { 0.0f, 1.0f }, { 0.0f, 0.0f, -1.0f } },
+
+        // -------------------------------------------------------
+        // Front
+        { { -w, -h,  d },  { 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
+        { {  w, -h,  d },  { 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
+        { {  w,  h,  d },  { 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+        { {  w,  h,  d },  { 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+        { { -w,  h,  d },  { 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+        { { -w, -h,  d },  { 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
+
+        // -------------------------------------------------------
+        // Left
+        { { -w,  h,  d },  { 1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f } },
+        { { -w,  h, -d },  { 1.0f, 1.0f }, { -1.0f, 0.0f, 0.0f } },
+        { { -w, -h, -d },  { 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f } },
+        { { -w, -h, -d },  { 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f } },
+        { { -w, -h,  d },  { 0.0f, 0.0f }, { -1.0f, 0.0f, 0.0f } },
+        { { -w,  h,  d },  { 1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f } },
+
+        // -------------------------------------------------------
+        // Right
+        { {  w,  h,  d },  { 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f } },
+        { {  w, -h, -d },  { 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f } },
+        { {  w,  h, -d },  { 1.0f, 1.0f }, { 1.0f, 0.0f, 0.0f } },
+        { {  w, -h, -d },  { 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f } },
+        { {  w,  h,  d },  { 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f } },
+        { {  w, -h,  d },  { 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f } },
+
+        // -------------------------------------------------------
+        // Bottom
+        { { -w, -h, -d },  { 0.0f, 1.0f }, { 0.0f, -1.0f, 0.0f } },
+        { {  w, -h, -d },  { 1.0f, 1.0f }, { 0.0f, -1.0f, 0.0f } },
+        { {  w, -h,  d },  { 1.0f, 0.0f }, { 0.0f, -1.0f, 0.0f } },
+        { {  w, -h,  d },  { 1.0f, 0.0f }, { 0.0f, -1.0f, 0.0f } },
+        { { -w, -h,  d },  { 0.0f, 0.0f }, { 0.0f, -1.0f, 0.0f } },
+        { { -w, -h, -d },  { 0.0f, 1.0f }, { 0.0f, -1.0f, 0.0f } },
+
+        // -------------------------------------------------------
+        // Top
+        { { -w,  h, -d },  { 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } },
+        { {  w,  h,  d },  { 1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
+        { {  w,  h, -d },  { 1.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } },
+        { {  w,  h,  d },  { 1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
+        { { -w,  h, -d },  { 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } },
+        { { -w,  h,  d },  { 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
     };
 
     kuu::Mesh m;
-    for(const Vertex& v : vertices)
+    for (const Vertex& v : vertices)
         m.addVertex(v);
+    m.generateTangents();
 
     std::vector<float> vertexVector;
     for (const Vertex& v : m.vertices)
@@ -112,11 +176,9 @@ void AtmosphereRenderer::render()
         vertexVector.push_back(v.texCoord.y);
     }
 
-    std::shared_ptr<Mesh> mesh =
-        std::make_shared<Mesh>(
-            impl->physicalDevice,
-            impl->device);
-
+    std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>(
+        impl->physicalDevice,
+        impl->device);
     mesh->setVertices(vertexVector);
     mesh->setIndices(m.indices);
     mesh->addVertexAttributeDescription(0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0);
@@ -128,8 +190,8 @@ void AtmosphereRenderer::render()
     //--------------------------------------------------------------------------
     // Shader modules.
 
-    const std::string vshFilePath = "shaders/atmosphere.vert.spv";
-    const std::string fshFilePath = "shaders/atmosphere.frag.spv";
+    const std::string vshFilePath = "shaders/irradiance.vert.spv";
+    const std::string fshFilePath = "shaders/irradiance.frag.spv";
 
     std::shared_ptr<ShaderModule> vshModule =
         std::make_shared<ShaderModule>(impl->device, vshFilePath);
@@ -174,16 +236,13 @@ void AtmosphereRenderer::render()
      for (const glm::quat& faceRotation : faceRotations)
          viewMatrices.push_back(glm::mat4_cast(faceRotation));
 
-    impl->params.viewport.x = float(impl->extent.width);
-    impl->params.viewport.y = float(impl->extent.height);
-
     std::vector<std::shared_ptr<Buffer>> uniformBuffers;
     for (int f = 0; f < 6; ++f)
     {
         std::shared_ptr<Buffer> paramsBuffer =
             std::make_shared<Buffer>(impl->physicalDevice,
                                      impl->device);
-        paramsBuffer->setSize(sizeof(Params));
+        paramsBuffer->setSize(sizeof(UniformData));
         paramsBuffer->setUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
         paramsBuffer->setMemoryProperties(
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
@@ -193,14 +252,12 @@ void AtmosphereRenderer::render()
 
         glm::mat4 projection = glm::perspective(float(M_PI / 2.0), 1.0f, 0.1f, 512.0f);
         projection[1][1] *= -1;
-        const glm::mat4 invViewMatrix = glm::inverse(viewMatrices[f]);
-        const glm::mat4 invViewNormalMatrix =
-            glm::inverseTranspose(glm::mat3(invViewMatrix));
 
-        impl->params.inv_view_rot = invViewNormalMatrix;
-        impl->params.inv_proj     = glm::inverse(projection);
+        UniformData uniform;
+        uniform.viewMatrix       = viewMatrices[f];
+        uniform.projectionMatrix = projection;
 
-        paramsBuffer->copyHostVisible(&impl->params, paramsBuffer->size());
+        paramsBuffer->copyHostVisible(&uniform, paramsBuffer->size());
 
         uniformBuffers.push_back(paramsBuffer);
     }
@@ -210,7 +267,8 @@ void AtmosphereRenderer::render()
 
     std::shared_ptr<DescriptorPool> descriptorPool =
         std::make_shared<DescriptorPool>(impl->device);
-    descriptorPool->addTypeSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 6);
+    descriptorPool->addTypeSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         6);
+    descriptorPool->addTypeSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 6);
     descriptorPool->setMaxCount(6);
     if (!descriptorPool->create())
         return;
@@ -225,6 +283,10 @@ void AtmosphereRenderer::render()
         descriptorSet->addLayoutBinding(
             0,
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+            VK_SHADER_STAGE_VERTEX_BIT);
+        descriptorSet->addLayoutBinding(
+            1,
+            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
             VK_SHADER_STAGE_FRAGMENT_BIT);
 
         if (!descriptorSet->create())
@@ -233,6 +295,12 @@ void AtmosphereRenderer::render()
         descriptorSet->writeUniformBuffer(
             0, uniformBuffers[f]->handle(),
             0, uniformBuffers[f]->size());
+
+        descriptorSet->writeImage(
+            1,
+            impl->inputTextureCube->sampler,
+            impl->inputTextureCube->imageView,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
         descriptorSets.push_back(descriptorSet);
     }
@@ -426,12 +494,12 @@ void AtmosphereRenderer::render()
 
     VkImageSubresourceRange subresourceRange = {};
     subresourceRange.aspectMask  = VK_IMAGE_ASPECT_COLOR_BIT;
-    subresourceRange.levelCount  = 1;
+    subresourceRange.levelCount  = impl->outputTextureCube->mipmapCount;
     subresourceRange.layerCount  = 6;
 
     image_layout_transition::record(
         cmdBuf,
-        impl->textureCube->image,
+        impl->outputTextureCube->image,
         VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         subresourceRange);
@@ -439,115 +507,120 @@ void AtmosphereRenderer::render()
     std::vector<VkClearValue> clearValues(1);
     clearValues[0].color        = { 0.1f, 0.1f, 0.1f, 1.0f };
 
-    for (uint32_t f = 0; f < 6; f++)
+    for (uint32_t m = 0; m < impl->outputTextureCube->mipmapCount; m++)
     {
-        VkViewport viewport;
-        viewport.x        = 0;
-        viewport.y        = 0;
-        viewport.width    = float(impl->extent.width);
-        viewport.height   = float(impl->extent.height);
-        viewport.minDepth = 0.0f;
-        viewport.maxDepth = 1.0f;
-        vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
+        for (uint32_t f = 0; f < 6; f++)
+        {
+            VkViewport viewport;
+            viewport.x        = 0;
+            viewport.y        = 0;
+            viewport.width    = float(impl->extent.width  * std::pow(0.5f, m));
+            viewport.height   = float(impl->extent.height * std::pow(0.5f, m));
+            viewport.minDepth = 0.0f;
+            viewport.maxDepth = 1.0f;
+            vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
-        VkRect2D scissor;
-        scissor.offset = {};
-        scissor.extent = { impl->extent.width, impl->extent.height };
-        vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
+            VkRect2D scissor;
+            scissor.offset = {};
+            scissor.extent = { impl->extent.width, impl->extent.height };
+            vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
 
-        VkRenderPassBeginInfo renderPassInfo;
-        renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.pNext             = NULL;
-        renderPassInfo.renderPass        = renderPass;
-        renderPassInfo.framebuffer       = framebuffer;
-        renderPassInfo.renderArea.offset = { 0, 0 };
-        renderPassInfo.renderArea.extent = { impl->extent.width, impl->extent.height };
-        renderPassInfo.clearValueCount   = uint32_t(clearValues.size());
-        renderPassInfo.pClearValues      = clearValues.data();
+            VkRenderPassBeginInfo renderPassInfo;
+            renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+            renderPassInfo.pNext             = NULL;
+            renderPassInfo.renderPass        = renderPass;
+            renderPassInfo.framebuffer       = framebuffer;
+            renderPassInfo.renderArea.offset = { 0, 0 };
+            renderPassInfo.renderArea.extent = { impl->extent.width, impl->extent.height };
+            renderPassInfo.clearValueCount   = uint32_t(clearValues.size());
+            renderPassInfo.pClearValues      = clearValues.data();
 
-        vkCmdBeginRenderPass(
-            cmdBuf,
-            &renderPassInfo,
-            VK_SUBPASS_CONTENTS_INLINE);
+            vkCmdBeginRenderPass(
+                cmdBuf,
+                &renderPassInfo,
+                VK_SUBPASS_CONTENTS_INLINE);
 
-        VkDescriptorSet descriptorHandle = descriptorSets[f]->handle();
+            VkDescriptorSet descriptorHandle = descriptorSets[f]->handle();
 
-        vkCmdBindDescriptorSets(
-            cmdBuf,
-            VK_PIPELINE_BIND_POINT_GRAPHICS,
-            pipeline->pipelineLayoutHandle(), 0, 1,
-            &descriptorHandle, 0, NULL);
+            vkCmdBindDescriptorSets(
+                cmdBuf,
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                pipeline->pipelineLayoutHandle(), 0, 1,
+                &descriptorHandle, 0, NULL);
 
-        vkCmdBindPipeline(
-            cmdBuf,
-            VK_PIPELINE_BIND_POINT_GRAPHICS,
-            pipeline->handle());
+            vkCmdBindPipeline(
+                cmdBuf,
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                pipeline->handle());
 
-        const VkBuffer vertexBuffer = mesh->vertexBufferHandle();
-        const VkDeviceSize offsets[1] = { 0 };
-        vkCmdBindVertexBuffers(
-            cmdBuf, 0, 1,
-            &vertexBuffer,
-            offsets);
+            const VkBuffer vertexBuffer = mesh->vertexBufferHandle();
+            const VkDeviceSize offsets[1] = { 0 };
+            vkCmdBindVertexBuffers(
+                cmdBuf, 0, 1,
+                &vertexBuffer,
+                offsets);
 
-        const VkBuffer indexBuffer = mesh->indexBufferHandle();
-        vkCmdBindIndexBuffer(
-            cmdBuf,
-            indexBuffer,
-            0, VK_INDEX_TYPE_UINT32);
+            const VkBuffer indexBuffer = mesh->indexBufferHandle();
+            vkCmdBindIndexBuffer(
+                cmdBuf,
+                indexBuffer,
+                0, VK_INDEX_TYPE_UINT32);
 
-        uint32_t indexCount = uint32_t(mesh->indices().size());
-        vkCmdDrawIndexed(
-            cmdBuf,
-            indexCount,
-            1, 0, 0, 1);
+            uint32_t indexCount = uint32_t(mesh->indices().size());
+            vkCmdDrawIndexed(
+                cmdBuf,
+                indexCount,
+                1, 0, 0, 1);
 
-        vkCmdEndRenderPass(cmdBuf);
+            vkCmdEndRenderPass(cmdBuf);
 
-        image_layout_transition::record(
-            cmdBuf,
-            image.imageHandle(),
-            VK_IMAGE_ASPECT_COLOR_BIT,
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+            image_layout_transition::record(
+                cmdBuf,
+                image.imageHandle(),
+                VK_IMAGE_ASPECT_COLOR_BIT,
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-        VkImageCopy copyRegion = {};
+            VkImageCopy copyRegion = {};
 
-        copyRegion.srcSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-        copyRegion.srcSubresource.baseArrayLayer = 0;
-        copyRegion.srcSubresource.mipLevel       = 0;
-        copyRegion.srcSubresource.layerCount     = 1;
-        copyRegion.srcOffset                      = { 0, 0, 0 };
+            copyRegion.srcSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+            copyRegion.srcSubresource.baseArrayLayer = 0;
+            copyRegion.srcSubresource.mipLevel       = 0;
+            copyRegion.srcSubresource.layerCount     = 1;
+            copyRegion.srcOffset                      = { 0, 0, 0 };
 
-        copyRegion.dstSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-        copyRegion.dstSubresource.baseArrayLayer = f;
-        copyRegion.dstSubresource.mipLevel       = 0;
-        copyRegion.dstSubresource.layerCount     = 1;
-        copyRegion.dstOffset                     = { 0, 0, 0 };
+            copyRegion.dstSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+            copyRegion.dstSubresource.baseArrayLayer = f;
+            copyRegion.dstSubresource.mipLevel       = m;
+            copyRegion.dstSubresource.layerCount     = 1;
+            copyRegion.dstOffset                     = { 0, 0, 0 };
 
-        copyRegion.extent = impl->extent;
+            copyRegion.extent.width  = uint32_t(viewport.width);
+            copyRegion.extent.height = uint32_t(viewport.height);
+            copyRegion.extent.depth  = 1;
 
-        vkCmdCopyImage(
-            cmdBuf,
-            image.imageHandle(),
-            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            impl->textureCube->image,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            1,
-            &copyRegion);
+            vkCmdCopyImage(
+                cmdBuf,
+                image.imageHandle(),
+                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                impl->outputTextureCube->image,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                1,
+                &copyRegion);
 
-        // Transform framebuffer color attachment back
-        image_layout_transition::record(
-            cmdBuf,
-            image.imageHandle(),
-            VK_IMAGE_ASPECT_COLOR_BIT,
-            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+            // Transform framebuffer color attachment back
+            image_layout_transition::record(
+                cmdBuf,
+                image.imageHandle(),
+                VK_IMAGE_ASPECT_COLOR_BIT,
+                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+        }
     }
 
     image_layout_transition::record(
         cmdBuf,
-        impl->textureCube->image,
+        impl->outputTextureCube->image,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         subresourceRange);
@@ -583,11 +656,13 @@ void AtmosphereRenderer::render()
     vkDestroyRenderPass(
         impl->device,
         renderPass,
-                NULL);
+        NULL);
+
+    impl->inputTextureCube.reset();
 }
 
-std::shared_ptr<TextureCube> AtmosphereRenderer::textureCube() const
-{ return impl->textureCube; }
+std::shared_ptr<TextureCube> IrradianceRenderer::textureCube() const
+{ return impl->outputTextureCube; }
 
 } // namespace vk
 } // namespace kuu

@@ -635,7 +635,10 @@ Texture2D::Texture2D(const VkPhysicalDevice& physicalDevice,
         imageExtent,
         mipmapCount,
         1,
-        0);
+        0,
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+        VK_IMAGE_USAGE_SAMPLED_BIT);
     if (image == VK_NULL_HANDLE)
         return;
 
@@ -954,18 +957,23 @@ TextureCube::TextureCube(const VkPhysicalDevice& physicalDevice,
                          VkFilter minFilter,
                          VkSamplerAddressMode addressModeU,
                          VkSamplerAddressMode addressModeV,
-                         VkSamplerAddressMode addressModeW)
+                         VkSamplerAddressMode addressModeW,
+                         bool mipmaps)
     : format(format)
     , image(VK_NULL_HANDLE)
     , imageView(VK_NULL_HANDLE)
     , sampler(VK_NULL_HANDLE)
     , impl(std::make_shared<Impl>(device, this))
 {
+    mipmapCount = 1;
+    if (mipmaps)
+        mipmapCount = uint32_t((floor(log2(extent.width))) + 1);
+
     // Crate texture cube image
     image = createImage(device,
                         format,
                         extent,
-                        1,
+                        mipmapCount,
                         6,
                         VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
                         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
@@ -979,7 +987,7 @@ TextureCube::TextureCube(const VkPhysicalDevice& physicalDevice,
     imageView = createImageView(device,
                                 image,
                                 format,
-                                1,
+                                mipmapCount,
                                 VK_IMAGE_VIEW_TYPE_CUBE,
                                 6);
     if (imageView == VK_NULL_HANDLE)
@@ -992,7 +1000,7 @@ TextureCube::TextureCube(const VkPhysicalDevice& physicalDevice,
                             addressModeU,
                             addressModeV,
                             addressModeW,
-                            1);
+                            mipmapCount);
     if (sampler == VK_NULL_HANDLE)
         return;
 }

@@ -11,6 +11,7 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/string_cast.hpp>
 #include <iostream>
 #include <QtGui/QImage>
 #include "vk_buffer.h"
@@ -18,6 +19,9 @@
 #include "vk_descriptor_set.h"
 #include "vk_helper.h"
 #include "vk_atmoshere_renderer.h"
+#include "vk_irradiance_renderer.h"
+#include "vk_ibl_prefilter_renderer.h"
+#include "vk_ibl_brdf_lut_renderer.h"
 #include "vk_image.h"
 #include "vk_logical_device.h"
 #include "vk_mesh.h"
@@ -153,10 +157,28 @@ struct RendererTextures
         return true;
     }
 
+    void setIrradiance(std::shared_ptr<TextureCube> irradiance)
+    {
+        this->irradiance = irradiance;
+    }
+
+    void setPrefiltered(std::shared_ptr<TextureCube> prefiltered)
+    {
+        this->prefiltered = prefiltered;
+    }
+
+    void setBrdfLut(std::shared_ptr<Texture2D> lut)
+    {
+        this->brdfLut = lut;
+    }
+
     void destroy()
     {
         textureMap.clear();
         skyTextureCube.reset();
+        irradiance.reset();
+        prefiltered.reset();
+        brdfLut.reset();
     }
 
     const VkPhysicalDevice physicalDevice;
@@ -166,6 +188,9 @@ struct RendererTextures
 
     std::map<std::string, std::shared_ptr<Texture2D>> textureMap;
     std::shared_ptr<TextureCube> skyTextureCube;
+    std::shared_ptr<TextureCube> irradiance;
+    std::shared_ptr<TextureCube> prefiltered;
+    std::shared_ptr<Texture2D> brdfLut;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -200,6 +225,9 @@ struct RendererModel
                 textures.push_back(textureManager->textureMap.at(m.material.pbr.metallic));
                 textures.push_back(textureManager->textureMap.at(m.material.pbr.normal));
                 textures.push_back(textureManager->textureMap.at(m.material.pbr.roughness));
+                irradiance  = textureManager->irradiance;
+                prefiltered = textureManager->prefiltered;
+                brdfLut     = textureManager->brdfLut;
                 break;
         }
 
@@ -288,6 +316,9 @@ struct RendererModel
                 descriptorSets->addLayoutBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
                 for (int i = 2; i < 8; ++i)
                     descriptorSets->addLayoutBinding(i, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
+                descriptorSets->addLayoutBinding(8, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
+                descriptorSets->addLayoutBinding(9, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
+                descriptorSets->addLayoutBinding(10, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
                 uniformBuffers.push_back(matricesUniformBuffer);
                 uniformBuffers.push_back(lightUniformBuffer);
                 break;
@@ -311,6 +342,33 @@ struct RendererModel
                 tex->imageView,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
+        if (irradiance)
+        {
+            descriptorSets->writeImage(
+                binding++,
+                irradiance->sampler,
+                irradiance->imageView,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        }
+
+        if (prefiltered)
+        {
+            descriptorSets->writeImage(
+                binding++,
+                prefiltered->sampler,
+                prefiltered->imageView,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        }
+
+        if (brdfLut)
+        {
+            descriptorSets->writeImage(
+                binding++,
+                brdfLut->sampler,
+                brdfLut->imageView,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        }
+
         return true;
     }
 
@@ -321,6 +379,9 @@ struct RendererModel
         lightUniformBuffer->destroy();
         descriptorSets->destroy();
         textures.clear();
+        irradiance.reset();
+        prefiltered.reset();
+        brdfLut.reset();
     }
 
     // Mesh
@@ -336,6 +397,9 @@ struct RendererModel
 
     // Texture
     std::vector<std::shared_ptr<Texture2D>> textures;
+    std::shared_ptr<TextureCube> irradiance;
+    std::shared_ptr<TextureCube> prefiltered;
+    std::shared_ptr<Texture2D> brdfLut;
 
     // Model
     Model model;
@@ -748,6 +812,26 @@ struct Renderer::Impl
             graphicsFamilyIndex);
         atmosphereRenderer->render();
 
+        irradianceRenderer = std::make_shared<IrradianceRenderer>(
+            physicalDevice,
+            device->handle(),
+            graphicsFamilyIndex,
+            atmosphereRenderer->textureCube());
+        irradianceRenderer->render();
+
+        iblPrefilterRenderer = std::make_shared<IblPrefilterRenderer>(
+            physicalDevice,
+            device->handle(),
+            graphicsFamilyIndex,
+            atmosphereRenderer->textureCube());
+        iblPrefilterRenderer->render();
+
+        iblBrdfRenderer = std::make_shared<IblBrdfLutRenderer>(
+            physicalDevice,
+            device->handle(),
+            graphicsFamilyIndex);
+        iblBrdfRenderer->render();
+
         if (!createSwapchain())
             return false;
 
@@ -935,7 +1019,7 @@ struct Renderer::Impl
 
                 case Material::Type::Pbr:
                     uniformBufferCount += 2;
-                    imageSamplerCount  += 6;
+                    imageSamplerCount  += 9;
                     break;
             }
         }
@@ -985,6 +1069,9 @@ struct Renderer::Impl
 
         textures->add(filepaths);
         textures->createTextureCube();
+        textures->setIrradiance(irradianceRenderer->textureCube());
+        textures->setPrefiltered(iblPrefilterRenderer->textureCube());
+        textures->setBrdfLut(iblBrdfRenderer->texture());
 
         return true;
     }
@@ -1028,7 +1115,10 @@ struct Renderer::Impl
                 descriptorPool->handle(),
                 renderPass->handle(),
                 extent,
-                atmosphereRenderer->textureCube());
+                //atmosphereRenderer->textureCube()
+                irradianceRenderer->textureCube()
+                //iblPrefilterRenderer->textureCube()
+            );
         }
 
         std::vector<VkDescriptorSetLayout> diffuseDescriptorSetLayouts;
@@ -1253,6 +1343,8 @@ struct Renderer::Impl
         Light eyeLight = scene->light;
         eyeLight.dir = scene->camera.viewMatrix() * eyeLight.dir;
 
+        //std::cout << glm::to_string(eyeLight.dir) << std::endl;
+
         for (size_t i = 0; i < vulkanModels.size(); ++i)
         {
             RendererModel& m = vulkanModels[i];
@@ -1346,6 +1438,9 @@ struct Renderer::Impl
         vkDeviceWaitIdle(device->handle());
 
         atmosphereRenderer.reset();
+        irradianceRenderer.reset();
+        iblPrefilterRenderer.reset();
+        iblBrdfRenderer.reset();
 
         skyBoxPipeline->destroy();
         graphicsCommandPool->destroy();
@@ -1437,8 +1532,11 @@ struct Renderer::Impl
     // Vulkan models.
     std::vector<RendererModel> vulkanModels;
 
-    // IBR renderer
+    // Sub-renderers
     std::shared_ptr<AtmosphereRenderer> atmosphereRenderer;
+    std::shared_ptr<IrradianceRenderer> irradianceRenderer;
+    std::shared_ptr<IblPrefilterRenderer> iblPrefilterRenderer;
+    std::shared_ptr<IblBrdfLutRenderer> iblBrdfRenderer;
 };
 
 /* -------------------------------------------------------------------------- */
