@@ -179,7 +179,7 @@ void Controller::runDeviceTest(int deviceIndex)
     vk::SurfaceWidget* w = impl->surfaceWidget.get();
     w->startTimer(16, Qt::PreciseTimer);
     w->setWindowTitle("Device test");
-    w->show();
+    w->showMaximized();
 
     if (impl->renderer)
         return;
