@@ -69,7 +69,30 @@ struct TextureManager
         , device(device)
         , queueFamilyIndex(queueFamilyIndex)
         , commandPool(commandPool)
-    {}
+    {
+        VkExtent2D extent = { 1, 1 };
+
+        textures2d["dummy_rgba"] =
+            std::make_shared<Texture2D>(
+                physicalDevice,
+                device,
+                extent,
+                VK_FORMAT_R8G8B8A8_UNORM,
+                VK_FILTER_LINEAR,
+                VK_FILTER_LINEAR,
+                VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+        textures2d["dummy_r"] =
+            std::make_shared<Texture2D>(
+                physicalDevice,
+                device,
+                extent,
+                VK_FORMAT_R8_UNORM,
+                VK_FILTER_LINEAR,
+                VK_FILTER_LINEAR,
+                VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+    }
 
     void add(const std::string& filepath)
     {
@@ -186,93 +209,39 @@ struct PbrModel
             1, lightUniformBuffer->handle(),
             0, lightUniformBuffer->size());
 
+        auto writeTexture = [&](uint32_t binding, std::string filePath, bool grayScale)
+        {
+            std::shared_ptr<Texture2D> tex;
+            if (filePath.size())
+            {
+                textureManager->add(filePath);
+                tex = textureManager->textures2d.at(filePath);
+
+            }
+            else
+            {
+                if (grayScale)
+                    tex = textureManager->textures2d["dummy_r"];
+                else
+                    tex = textureManager->textures2d["dummy_rgba"];
+            }
+
+            descriptorSets->writeImage(
+                    binding,
+                    tex->sampler,
+                    tex->imageView,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        };
+
         // ---------------------------------------------------------------------
         // Texture maps.
 
-        if (model.material.pbr.ambientOcclusion.size())
-        {
-            textureManager->add(model.material.pbr.ambientOcclusion);
-
-            std::shared_ptr<Texture2D> tex =
-                textureManager->textures2d.at(
-                    model.material.pbr.ambientOcclusion);
-
-            descriptorSets->writeImage(
-                    2,
-                    tex->sampler,
-                    tex->imageView,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        }
-        if (model.material.pbr.baseColor.size())
-        {
-            textureManager->add(model.material.pbr.baseColor);
-
-            std::shared_ptr<Texture2D> tex =
-                textureManager->textures2d.at(
-                    model.material.pbr.baseColor);
-
-            descriptorSets->writeImage(
-                    3,
-                    tex->sampler,
-                    tex->imageView,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        }
-        if (model.material.pbr.height.size())
-        {
-            textureManager->add(model.material.pbr.height);
-
-            std::shared_ptr<Texture2D> tex =
-                textureManager->textures2d.at(
-                    model.material.pbr.height);
-
-            descriptorSets->writeImage(
-                    4,
-                    tex->sampler,
-                    tex->imageView,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        }
-        if (model.material.pbr.metallic.size())
-        {
-            textureManager->add(model.material.pbr.metallic);
-
-            std::shared_ptr<Texture2D> tex =
-                textureManager->textures2d.at(
-                    model.material.pbr.metallic);
-
-            descriptorSets->writeImage(
-                    5,
-                    tex->sampler,
-                    tex->imageView,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        }
-        if (model.material.pbr.normal.size())
-        {
-            textureManager->add(model.material.pbr.normal);
-
-            std::shared_ptr<Texture2D> tex =
-                textureManager->textures2d.at(
-                    model.material.pbr.normal);
-
-            descriptorSets->writeImage(
-                    6,
-                    tex->sampler,
-                    tex->imageView,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        }
-        if (model.material.pbr.roughness.size())
-        {
-            textureManager->add(model.material.pbr.roughness);
-
-            std::shared_ptr<Texture2D> tex =
-                textureManager->textures2d.at(
-                    model.material.pbr.roughness);
-
-            descriptorSets->writeImage(
-                    7,
-                    tex->sampler,
-                    tex->imageView,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        }
+        writeTexture(2, model.material.pbr.ambientOcclusion, true);
+        writeTexture(3, model.material.pbr.baseColor,        false);
+        writeTexture(4, model.material.pbr.height,           true);
+        writeTexture(5, model.material.pbr.metallic,         true);
+        writeTexture(6, model.material.pbr.normal,           false);
+        writeTexture(7, model.material.pbr.roughness,        true);
 
         descriptorSets->writeImage(
                 8,

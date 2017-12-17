@@ -136,24 +136,26 @@ void main()
 
     // Offset texture coordinates if height map exits
     vec2 tc = texCoord;
-    if (textureSize(heightMap, 1).x > 0)
+    if (textureSize(heightMap, 1).x > 1)
     {
         vec3 tangent = normalize(transpose(tbn) * v);
         tc = parallaxMapping(tc, tangent);
     }
 
     // Sample maps
-    float metallic  = texture(metallicMap, tc).r;
+    float metallic = 0.0f;
+    if (textureSize(metallicMap, 1).x > 1)
+        metallic  = texture(metallicMap, tc).r;
     float roughness = texture(roughnessMap, tc).r;
     vec3 albedo     = texture(baseColorMap, tc).rgb;
 
     // Use ambient occlusion from map if available
     float ao = 1.0;
-    if (textureSize(ambientOcclusionMap, 1).x > 0)
+    if (textureSize(ambientOcclusionMap, 1).x > 1)
         ao = texture(ambientOcclusionMap, tc).r;
 
     // Use normal form map if available
-    if (textureSize(normalMap, 1).x > 0)
+    if (textureSize(normalMap, 1).x > 1)
     {
         n = texture(normalMap, tc).rgb;
         n = normalize(n * 2.0 - 1.0);

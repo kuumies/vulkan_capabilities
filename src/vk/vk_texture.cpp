@@ -549,7 +549,8 @@ Texture2D::Texture2D(const VkPhysicalDevice& physicalDevice,
         if (img.isNull())
         {
             std::cerr << __FUNCTION__
-                      << ": image is not a RGB or RGBA image"
+                      << ": image is not a RGB or RGBA image "
+                      << filePath
                       << std::endl;
             return;
         }

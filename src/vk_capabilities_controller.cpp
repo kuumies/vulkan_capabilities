@@ -198,6 +198,16 @@ void Controller::runDeviceTest(int deviceIndex)
         "textures/blocksrough_roughness.png"
     };
 
+    std::vector<std::string> maps2 =
+    {
+        "",
+        "textures/rustediron-streaks_basecolor.png",
+        "",
+        "textures/rustediron-streaks_metallic.png",
+        "textures/rustediron-streaks_normal.png",
+        "textures/rustediron-streaks_roughness.png"
+    };
+
     impl->scene = std::make_shared<Scene>();
     impl->scene->name = "pbr_maps_scene";
 
@@ -316,12 +326,12 @@ void Controller::runDeviceTest(int deviceIndex)
 
     Model pbrSphere;
     pbrSphere.material.type = Material::Type::Pbr;
-    pbrSphere.material.pbr.ambientOcclusion = maps[0];
-    pbrSphere.material.pbr.baseColor        = maps[1];
-    pbrSphere.material.pbr.height           = maps[2];
-    pbrSphere.material.pbr.metallic         = maps[3];
-    pbrSphere.material.pbr.normal           = maps[4];
-    pbrSphere.material.pbr.roughness        = maps[5];
+    pbrSphere.material.pbr.ambientOcclusion = maps2[0];
+    pbrSphere.material.pbr.baseColor        = maps2[1];
+    pbrSphere.material.pbr.height           = maps2[2];
+    pbrSphere.material.pbr.metallic         = maps2[3];
+    pbrSphere.material.pbr.normal           = maps2[4];
+    pbrSphere.material.pbr.roughness        = maps2[5];
 
     quadRadius = 3.0f;
     pbrSphere.mesh.vertices =
@@ -337,7 +347,67 @@ void Controller::runDeviceTest(int deviceIndex)
 
     pbrSphere.mesh.generateTangents();
     pbrSphere.worldTransform =
-        glm::translate(glm::mat4(1.0f), glm::vec3(0.1f, 0.0f, 0.0f));
+        glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f, -2.0f, 0.0f));
+    impl->scene->models.push_back(pbrSphere);
+
+    std::vector<std::string> maps3 =
+    {
+        "",
+        "textures/rustediron2_basecolor",
+        "",
+        "textures/rustediron2_metallic.png",
+        "textures/rustediron2_normal.png",
+        "textures/rustediron2_roughness.png"
+    };
+
+    pbrSphere.material.pbr.ambientOcclusion = maps3[0];
+    pbrSphere.material.pbr.baseColor        = maps3[1];
+    pbrSphere.material.pbr.height           = maps3[2];
+    pbrSphere.material.pbr.metallic         = maps3[3];
+    pbrSphere.material.pbr.normal           = maps3[4];
+    pbrSphere.material.pbr.roughness        = maps3[5];
+    pbrSphere.worldTransform =
+        glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, -2.0f, 0.0f));
+    impl->scene->models.push_back(pbrSphere);
+
+    std::vector<std::string> maps4 =
+    {
+        "textures/bamboo-wood-semigloss-ao.png",
+        "textures/bamboo-wood-semigloss-albedo.png",
+        "",
+        "textures/bamboo-wood-semigloss-metal.png",
+        "textures/bamboo-wood-semigloss-normal.png",
+        "textures/bamboo-wood-semigloss-roughness.png"
+    };
+
+    pbrSphere.material.pbr.ambientOcclusion = maps4[0];
+    pbrSphere.material.pbr.baseColor        = maps4[1];
+    pbrSphere.material.pbr.height           = maps4[2];
+    pbrSphere.material.pbr.metallic         = maps4[3];
+    pbrSphere.material.pbr.normal           = maps4[4];
+    pbrSphere.material.pbr.roughness        = maps4[5];
+    pbrSphere.worldTransform =
+        glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f, 2.0f, 0.0f));
+    impl->scene->models.push_back(pbrSphere);
+
+    std::vector<std::string> maps5 =
+    {
+        "textures/oakfloor_AO.png",
+        "textures/oakfloor_basecolor.png",
+        "textures/oakfloor_Height.png",
+        "",
+        "textures/oakfloor_normal.png",
+        "textures/oakfloor_roughness.png"
+    };
+
+    pbrSphere.material.pbr.ambientOcclusion = maps5[0];
+    pbrSphere.material.pbr.baseColor        = maps5[1];
+    pbrSphere.material.pbr.height           = maps5[2];
+    pbrSphere.material.pbr.metallic         = maps5[3];
+    pbrSphere.material.pbr.normal           = maps5[4];
+    pbrSphere.material.pbr.roughness        = maps5[5];
+    pbrSphere.worldTransform =
+        glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 2.0f, 0.0f));
     impl->scene->models.push_back(pbrSphere);
 
 #if 0
