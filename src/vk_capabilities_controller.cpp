@@ -570,6 +570,10 @@ void Controller::runDeviceTest(int deviceIndex)
     extent.height = uint32_t(impl->surfaceWidget->height());
     const float aspect = extent.width / float(extent.height);
     impl->scene->camera.aspectRatio = aspect;
+    impl->scene->camera.pos.y = 1.5f;
+    impl->scene->camera.tPos.y = 1.5f;
+    impl->scene->camera.pos.z += 4.0f;
+    impl->scene->camera.tPos.z += 4.0f;
 
     impl->renderer = std::make_shared<vk::Renderer>(instance, physicalDevice, surface, widgetExtent, impl->scene);
     impl->renderer->create();
