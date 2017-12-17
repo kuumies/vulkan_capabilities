@@ -16,21 +16,33 @@ layout(binding = 1) uniform Light
 } light;
 
 // -----------------------------------------------------------------------------
+// Params
+
+layout(binding = 2) uniform PbrParams
+{
+    vec4  albedo;
+    float metallic;
+    float roughness;
+    float ao;
+
+} pbrParams;
+
+// -----------------------------------------------------------------------------
 // Material maps
 
-layout(binding = 2)  uniform sampler2D ambientOcclusionMap;
-layout(binding = 3)  uniform sampler2D baseColorMap;
-layout(binding = 4)  uniform sampler2D heightMap;
-layout(binding = 5)  uniform sampler2D metallicMap;
-layout(binding = 6)  uniform sampler2D normalMap;
-layout(binding = 7)  uniform sampler2D roughnessMap;
+layout(binding = 3)  uniform sampler2D ambientOcclusionMap;
+layout(binding = 4)  uniform sampler2D baseColorMap;
+layout(binding = 5)  uniform sampler2D heightMap;
+layout(binding = 6)  uniform sampler2D metallicMap;
+layout(binding = 7)  uniform sampler2D normalMap;
+layout(binding = 8)  uniform sampler2D roughnessMap;
 
 // -----------------------------------------------------------------------------
 // Generated maps
 
-layout(binding = 8)  uniform samplerCube irradianceMap;
-layout(binding = 9)  uniform samplerCube prefilteredMap;
-layout(binding = 10) uniform sampler2D brdfLutMap;
+layout(binding = 9)  uniform samplerCube irradianceMap;
+layout(binding = 10)  uniform samplerCube prefilteredMap;
+layout(binding = 11) uniform sampler2D brdfLutMap;
 
 // -----------------------------------------------------------------------------
 // Vertex shader outputs
@@ -143,14 +155,19 @@ void main()
     }
 
     // Sample maps
-    float metallic = 0.0f;
+    float metallic = pbrParams.metallic;
     if (textureSize(metallicMap, 1).x > 1)
         metallic  = texture(metallicMap, tc).r;
-    float roughness = texture(roughnessMap, tc).r;
-    vec3 albedo     = texture(baseColorMap, tc).rgb;
+
+    float roughness = pbrParams.roughness;
+    if (textureSize(roughnessMap, 1).x > 1)
+        roughness = texture(roughnessMap, tc).r;
+    vec3 albedo = pbrParams.albedo.rgb;
+    if (textureSize(baseColorMap, 1).x > 1)
+        albedo = texture(baseColorMap, tc).rgb;
 
     // Use ambient occlusion from map if available
-    float ao = 1.0;
+    float ao = pbrParams.ao;
     if (textureSize(ambientOcclusionMap, 1).x > 1)
         ao = texture(ambientOcclusionMap, tc).r;
 

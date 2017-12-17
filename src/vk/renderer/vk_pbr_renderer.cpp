@@ -46,7 +46,7 @@ namespace
 {
 
 /* -------------------------------------------------------------------------- *
-   Matrices.
+   Uniform structs
  * -------------------------------------------------------------------------- */
 struct Matrices
 {
@@ -54,6 +54,14 @@ struct Matrices
     glm::mat4 view;
     glm::mat4 projection;
     glm::mat4 normal;
+};
+
+struct PbrParams
+{
+    glm::vec4  albedo;
+    float metallic;
+    float roughness;
+    float ao;
 };
 
 /* -------------------------------------------------------------------------- *
@@ -143,6 +151,15 @@ struct PbrModel
         : model(model)
     {
         // ---------------------------------------------------------------------
+        // Params
+
+        pbrParams.albedo    = glm::vec4(model.material.pbr.albedo, 1.0);
+        pbrParams.ao        = model.material.pbr.ao;
+        pbrParams.metallic  = model.material.pbr.metallic;
+        pbrParams.roughness = model.material.pbr.roughness;
+
+
+        // ---------------------------------------------------------------------
         // Mesh
 
         std::vector<float> vertexVector;
@@ -201,6 +218,15 @@ struct PbrModel
             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         lightUniformBuffer->create();
 
+        paramsUniformBuffer = std::make_shared<Buffer>(physicalDevice, device);
+        paramsUniformBuffer->setSize(sizeof(PbrParams));
+        paramsUniformBuffer->setUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+        paramsUniformBuffer->setMemoryProperties(
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        paramsUniformBuffer->create();
+        paramsUniformBuffer->copyHostVisible(&pbrParams, paramsUniformBuffer->size());
+
         descriptorSets->writeUniformBuffer(
             0, matricesUniformBuffer->handle(),
             0, matricesUniformBuffer->size());
@@ -208,6 +234,10 @@ struct PbrModel
         descriptorSets->writeUniformBuffer(
             1, lightUniformBuffer->handle(),
             0, lightUniformBuffer->size());
+
+        descriptorSets->writeUniformBuffer(
+            2, paramsUniformBuffer->handle(),
+            0, paramsUniformBuffer->size());
 
         auto writeTexture = [&](uint32_t binding, std::string filePath, bool grayScale)
         {
@@ -236,27 +266,27 @@ struct PbrModel
         // ---------------------------------------------------------------------
         // Texture maps.
 
-        writeTexture(2, model.material.pbr.ambientOcclusion, true);
-        writeTexture(3, model.material.pbr.baseColor,        false);
-        writeTexture(4, model.material.pbr.height,           true);
-        writeTexture(5, model.material.pbr.metallic,         true);
-        writeTexture(6, model.material.pbr.normal,           false);
-        writeTexture(7, model.material.pbr.roughness,        true);
+        writeTexture(3, model.material.pbr.ambientOcclusionMap, true);
+        writeTexture(4, model.material.pbr.baseColorMap,        false);
+        writeTexture(5, model.material.pbr.heightMap,           true);
+        writeTexture(6, model.material.pbr.metallicMap,         true);
+        writeTexture(7, model.material.pbr.normalMap,           false);
+        writeTexture(8, model.material.pbr.roughnessMap,        true);
 
         descriptorSets->writeImage(
-                8,
+                9,
                 textureManager->irradiance->sampler,
                 textureManager->irradiance->imageView,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
         descriptorSets->writeImage(
-                9,
+                10,
                 textureManager->prefiltered->sampler,
                 textureManager->prefiltered->imageView,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
         descriptorSets->writeImage(
-                10,
+                11,
                 textureManager->brdfLut->sampler,
                 textureManager->brdfLut->imageView,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -271,16 +301,13 @@ struct PbrModel
     // Uniform buffers
     std::shared_ptr<Buffer> matricesUniformBuffer;
     std::shared_ptr<Buffer> lightUniformBuffer;
-    //std::shared_ptr<Buffer> paramsUniformBuffer;
+    std::shared_ptr<Buffer> paramsUniformBuffer;
 
     // Descriptor sets
     std::shared_ptr<DescriptorSets> descriptorSets;
 
     // Material parameters, used when map is not set.
-    glm::vec3  albedo;
-    float metallic;
-    float roughness;
-    float ao;
+    PbrParams pbrParams;
 
     // Material maps.
     std::shared_ptr<Texture2D> albedoMap;
@@ -410,7 +437,8 @@ struct PbrRenderer::Impl
         std::vector<VkDescriptorSetLayoutBinding> layoutBindings =
         {
             { binding++, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT,   NULL },
-            { binding++, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL }
+            { binding++, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL },
+            { binding++, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL },
         };
 
         const uint32_t images = 11;
@@ -561,7 +589,7 @@ void PbrRenderer::setScene(std::shared_ptr<Scene> scene)
         if (m.material.type == Material::Type::Pbr)
             pbrModels.push_back(m);
 
-    uint32_t uniformBufferCount = 2 * uint32_t(pbrModels.size());
+    uint32_t uniformBufferCount = 3 * uint32_t(pbrModels.size());
     uint32_t imageSamplerCount  = 11 * uint32_t(pbrModels.size());
     impl->descriptorPool = std::make_shared<DescriptorPool>(impl->device);
     impl->descriptorPool->addTypeSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,          uniformBufferCount);

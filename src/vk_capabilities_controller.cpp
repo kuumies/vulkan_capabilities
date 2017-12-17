@@ -325,12 +325,12 @@ void Controller::runDeviceTest(int deviceIndex)
     genSphere(sphereRadius, 32, 32);
     Model pbrSphere;
     pbrSphere.material.type = Material::Type::Pbr;
-    pbrSphere.material.pbr.ambientOcclusion = maps2[0];
-    pbrSphere.material.pbr.baseColor        = maps2[1];
-    pbrSphere.material.pbr.height           = maps2[2];
-    pbrSphere.material.pbr.metallic         = maps2[3];
-    pbrSphere.material.pbr.normal           = maps2[4];
-    pbrSphere.material.pbr.roughness        = maps2[5];
+    pbrSphere.material.pbr.ambientOcclusionMap = maps2[0];
+    pbrSphere.material.pbr.baseColorMap        = maps2[1];
+    pbrSphere.material.pbr.heightMap           = maps2[2];
+    pbrSphere.material.pbr.metallicMap         = maps2[3];
+    pbrSphere.material.pbr.normalMap           = maps2[4];
+    pbrSphere.material.pbr.roughnessMap        = maps2[5];
 
     quadRadius = 3.0f;
     pbrSphere.mesh.vertices =
@@ -360,12 +360,12 @@ void Controller::runDeviceTest(int deviceIndex)
         "textures/rustediron2_roughness.png"
     };
 
-    pbrSphere.material.pbr.ambientOcclusion = maps3[0];
-    pbrSphere.material.pbr.baseColor        = maps3[1];
-    pbrSphere.material.pbr.height           = maps3[2];
-    pbrSphere.material.pbr.metallic         = maps3[3];
-    pbrSphere.material.pbr.normal           = maps3[4];
-    pbrSphere.material.pbr.roughness        = maps3[5];
+    pbrSphere.material.pbr.ambientOcclusionMap = maps3[0];
+    pbrSphere.material.pbr.baseColorMap        = maps3[1];
+    pbrSphere.material.pbr.heightMap           = maps3[2];
+    pbrSphere.material.pbr.metallicMap         = maps3[3];
+    pbrSphere.material.pbr.normalMap           = maps3[4];
+    pbrSphere.material.pbr.roughnessMap        = maps3[5];
     pbrSphere.worldTransform =
         glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, -2.0f, 0.0f));
     impl->scene->models.push_back(pbrSphere);
@@ -380,12 +380,14 @@ void Controller::runDeviceTest(int deviceIndex)
         "textures/bamboo-wood-semigloss-roughness.png"
     };
 
-    pbrSphere.material.pbr.ambientOcclusion = maps4[0];
-    pbrSphere.material.pbr.baseColor        = maps4[1];
-    pbrSphere.material.pbr.height           = maps4[2];
-    pbrSphere.material.pbr.metallic         = maps4[3];
-    pbrSphere.material.pbr.normal           = maps4[4];
-    pbrSphere.material.pbr.roughness        = maps4[5];
+
+    pbrSphere.material.pbr = Material::Pbr();
+    pbrSphere.material.pbr.ambientOcclusionMap = maps4[0];
+    pbrSphere.material.pbr.baseColorMap        = maps4[1];
+    pbrSphere.material.pbr.heightMap           = maps4[2];
+    pbrSphere.material.pbr.metallicMap         = maps4[3];
+    pbrSphere.material.pbr.normalMap           = maps4[4];
+    pbrSphere.material.pbr.roughnessMap        = maps4[5];
     pbrSphere.worldTransform =
         glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f, 2.0f, 0.0f));
     impl->scene->models.push_back(pbrSphere);
@@ -400,15 +402,34 @@ void Controller::runDeviceTest(int deviceIndex)
         "textures/oakfloor_roughness.png"
     };
 
-    pbrSphere.material.pbr.ambientOcclusion = maps5[0];
-    pbrSphere.material.pbr.baseColor        = maps5[1];
-    pbrSphere.material.pbr.height           = maps5[2];
-    pbrSphere.material.pbr.metallic         = maps5[3];
-    pbrSphere.material.pbr.normal           = maps5[4];
-    pbrSphere.material.pbr.roughness        = maps5[5];
+    pbrSphere.material.pbr.ambientOcclusionMap = maps5[0];
+    pbrSphere.material.pbr.baseColorMap        = maps5[1];
+    pbrSphere.material.pbr.heightMap           = maps5[2];
+    pbrSphere.material.pbr.metallicMap         = maps5[3];
+    pbrSphere.material.pbr.normalMap           = maps5[4];
+    pbrSphere.material.pbr.roughnessMap        = maps5[5];
     pbrSphere.worldTransform =
         glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 2.0f, 0.0f));
     impl->scene->models.push_back(pbrSphere);
+
+    pbrSphere.material.pbr = Material::Pbr();
+    pbrSphere.material.pbr.ao = 1.0f;
+    pbrSphere.material.pbr.metallic = 0.8f;
+    pbrSphere.material.pbr.roughness = 0.2f;
+    pbrSphere.material.pbr.albedo = glm::vec3(1.0);
+    pbrSphere.worldTransform =
+        glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f, 6.0f, 0.0f));
+    impl->scene->models.push_back(pbrSphere);
+
+    pbrSphere.material.pbr = Material::Pbr();
+    pbrSphere.material.pbr.ao = 1.0f;
+    pbrSphere.material.pbr.metallic = 0.0f;
+    pbrSphere.material.pbr.roughness = 0.8f;
+    pbrSphere.material.pbr.albedo = glm::vec3(0.0f, 0.0f, 1.0f);
+    pbrSphere.worldTransform =
+        glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 6.0f, 0.0f));
+    impl->scene->models.push_back(pbrSphere);
+
 #if 0
     Model pbrQuad;
     pbrQuad.material.type = Material::Type::Pbr;
@@ -521,12 +542,12 @@ void Controller::runDeviceTest(int deviceIndex)
 
     Model pbrBox;
     pbrBox.material.type = Material::Type::Pbr;
-    pbrBox.material.pbr.ambientOcclusion = maps[0];
-    pbrBox.material.pbr.baseColor        = maps[1];
-    pbrBox.material.pbr.height           = maps[2];
-    pbrBox.material.pbr.metallic         = maps[3];
-    pbrBox.material.pbr.normal           = maps[4];
-    pbrBox.material.pbr.roughness        = maps[5];
+    pbrBox.material.pbr.ambientOcclusionMap = maps[0];
+    pbrBox.material.pbr.baseColorMap        = maps[1];
+    pbrBox.material.pbr.heightMap           = maps[2];
+    pbrBox.material.pbr.metallicMap         = maps[3];
+    pbrBox.material.pbr.normalMap           = maps[4];
+    pbrBox.material.pbr.roughnessMap        = maps[5];
     pbrBox.mesh = m;
     pbrBox.worldTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -5.0f, 0.0f));
     impl->scene->models.push_back(pbrBox);

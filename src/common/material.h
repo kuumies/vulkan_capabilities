@@ -30,12 +30,18 @@ struct Material
 
     struct Pbr
     {
-        std::string ambientOcclusion;
-        std::string baseColor;
-        std::string height;
-        std::string metallic;
-        std::string normal;
-        std::string roughness;
+        std::string ambientOcclusionMap;
+        std::string baseColorMap;
+        std::string heightMap;
+        std::string metallicMap;
+        std::string normalMap;
+        std::string roughnessMap;
+
+        glm::vec3  albedo;
+        float metallic = 0.0f;
+        float roughness = 0.0f;
+        float ao = 1.0f;
+
     } pbr;
 
     Type type = Type::Diffuse;
