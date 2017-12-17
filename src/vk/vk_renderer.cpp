@@ -379,8 +379,13 @@ struct Renderer::Impl
 
     bool renderFrame()
     {
-        skyRenderer->updateUniformBuffers();
-        pbrRenderer->updateUniformBuffers();
+        VkFenceCreateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        VkFence fence = VK_NULL_HANDLE;
+        vkCreateFence(device->handle(),
+                      &info,
+                      NULL,
+                      &fence);
 
         uint32_t imageIndex;
         VkResult result = vkAcquireNextImageKHR(
@@ -388,8 +393,11 @@ struct Renderer::Impl
             swapchain->handle(),
             std::numeric_limits<uint64_t>::max(),
             imageAvailable->handle(),
-            VK_NULL_HANDLE,
+            fence,
             &imageIndex);
+
+        vkWaitForFences(device->handle(), 1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+        vkDestroyFence(device->handle(), fence, NULL);
 
         if (result != VK_SUCCESS)
         {
@@ -399,6 +407,9 @@ struct Renderer::Impl
                       << std::endl;
             return false;
         }
+
+        skyRenderer->updateUniformBuffers();
+        pbrRenderer->updateUniformBuffers();
 
         // Render
         Queue graphicsQueue(device->handle(), graphicsFamilyIndex, 0);
