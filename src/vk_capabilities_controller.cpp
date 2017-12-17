@@ -314,14 +314,23 @@ void Controller::runDeviceTest(int deviceIndex)
         }
     };
 
+//    std::vector<std::string> maps2 =
+//    {
+//        "",
+//        "textures/rustediron-streaks_basecolor.png",
+//        "",
+//        "textures/rustediron-streaks_metallic.png",
+//        "textures/rustediron-streaks_normal.png",
+//        "textures/rustediron-streaks_roughness.png"
+//    };
     std::vector<std::string> maps2 =
     {
-        "",
-        "textures/rustediron-streaks_basecolor.png",
-        "",
-        "textures/rustediron-streaks_metallic.png",
-        "textures/rustediron-streaks_normal.png",
-        "textures/rustediron-streaks_roughness.png"
+        "textures/cratered-rock-ao.png",
+        "textures/cratered-rock-albedo.png",
+        "textures/cratered-rock-height.png",
+        "textures/cratered-rock-metalness.png",
+        "textures/cratered-rock-normal.png",
+        "textures/cratered-rock-roughness.png"
     };
 
     genSphere(sphereRadius, 32, 32);
@@ -355,7 +364,7 @@ void Controller::runDeviceTest(int deviceIndex)
     std::vector<std::string> maps3 =
     {
         "",
-        "textures/rustediron2_basecolor",
+        "textures/rustediron2_basecolor.png",
         "",
         "textures/rustediron2_metallic.png",
         "textures/rustediron2_normal.png",
