@@ -198,7 +198,11 @@ void Controller::runDeviceTest(int deviceIndex)
         "textures/blocksrough_roughness.png"
     };
 
+    impl->scene = std::make_shared<Scene>();
+    impl->scene->name = "pbr_maps_scene";
+
     float quadRadius = 1.0f;
+#if 0
     float mapOffset = quadRadius * 2.0f;
     std::vector<glm::vec3> positions =
     {
@@ -224,8 +228,6 @@ void Controller::runDeviceTest(int deviceIndex)
         3, 0, 2
     };
 
-    impl->scene = std::make_shared<Scene>();
-    impl->scene->name = "pbr_maps_scene";
     for (int i = 0; i < 6; ++i)
     {
         Model quad;
@@ -236,7 +238,7 @@ void Controller::runDeviceTest(int deviceIndex)
 
         impl->scene->models.push_back(quad);
     }
-
+#endif
     float sphereRadius = 2.0f;
     std::vector<Vertex> sphereVertices;
     std::vector<unsigned int> sphereIndices;
@@ -329,13 +331,12 @@ void Controller::runDeviceTest(int deviceIndex)
         {  {-quadRadius,  quadRadius, 0.0f}, { 0.0, 1.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } },
         {  {-quadRadius, -quadRadius, 0.0f}, { 0.0, 0.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } }
     };
-    pbrSphere.mesh.indices  = quadIndices;
+
     pbrSphere.mesh.vertices = sphereVertices;
     pbrSphere.mesh.indices  = sphereIndices;
 
     pbrSphere.mesh.generateTangents();
-    pbrSphere.worldTransform =
-        glm::translate(glm::mat4(1.0f), glm::vec3(3.1f, 0.0f, 2.0f));
+
     impl->scene->models.push_back(pbrSphere);
 
 #if 0
