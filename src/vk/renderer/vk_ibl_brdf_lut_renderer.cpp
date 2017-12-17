@@ -66,7 +66,7 @@ IblBrdfLutRenderer::IblBrdfLutRenderer(
     impl->device                   = device;
     impl->graphicsQueueFamilyIndex = graphicsQueueFamilyIndex;
     impl->format                   = VK_FORMAT_R16G16_SFLOAT;
-    impl->extent                   = { uint32_t(512), uint32_t(512), uint32_t(1) };
+    impl->extent                   = { uint32_t(128), uint32_t(128), uint32_t(1) };
     impl->texture = std::make_shared<Texture2D>(
         physicalDevice,
         device,

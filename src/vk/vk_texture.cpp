@@ -544,7 +544,7 @@ Texture2D::Texture2D(const VkPhysicalDevice& physicalDevice,
     QImage img(QString::fromStdString(filePath));
     if (!img.isGrayscale())
     {
-        img = img.convertToFormat(QImage::Format_ARGB32);
+        img = img.convertToFormat(QImage::Format_RGB32);
         img = img.rgbSwapped();
         if (img.isNull())
         {
@@ -554,6 +554,10 @@ Texture2D::Texture2D(const VkPhysicalDevice& physicalDevice,
                       << std::endl;
             return;
         }
+    }
+    else
+    {
+        img = img.convertToFormat(QImage::Format_Grayscale8);
     }
 
     // Set the image format

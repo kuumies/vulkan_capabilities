@@ -76,7 +76,7 @@ IrradianceRenderer::IrradianceRenderer(
     impl->device                   = device;
     impl->graphicsQueueFamilyIndex = graphicsQueueFamilyIndex;
     impl->format                   = VK_FORMAT_R32G32B32A32_SFLOAT;
-    impl->extent                   = { uint32_t(512), uint32_t(512), uint32_t(1) };
+    impl->extent                   = { uint32_t(128), uint32_t(128), uint32_t(1) };
     impl->inputTextureCube         = inputTextureCube;
     impl->outputTextureCube = std::make_shared<TextureCube>(
             physicalDevice,
@@ -88,7 +88,7 @@ IrradianceRenderer::IrradianceRenderer(
             VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
             VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
             VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            true);
+            false);
 }
 
 void IrradianceRenderer::render()

@@ -69,7 +69,7 @@ AtmosphereRenderer::AtmosphereRenderer(
     impl->device                   = device;
     impl->graphicsQueueFamilyIndex = graphicsQueueFamilyIndex;
     impl->format                   = VK_FORMAT_R32G32B32A32_SFLOAT;
-    impl->extent                   = { uint32_t(512), uint32_t(512), uint32_t(1) };
+    impl->extent                   = { uint32_t(128), uint32_t(128), uint32_t(1) };
     impl->textureCube = std::make_shared<TextureCube>(
             physicalDevice,
             device,

@@ -198,16 +198,6 @@ void Controller::runDeviceTest(int deviceIndex)
         "textures/blocksrough_roughness.png"
     };
 
-    std::vector<std::string> maps2 =
-    {
-        "",
-        "textures/rustediron-streaks_basecolor.png",
-        "",
-        "textures/rustediron-streaks_metallic.png",
-        "textures/rustediron-streaks_normal.png",
-        "textures/rustediron-streaks_roughness.png"
-    };
-
     impl->scene = std::make_shared<Scene>();
     impl->scene->name = "pbr_maps_scene";
 
@@ -322,8 +312,17 @@ void Controller::runDeviceTest(int deviceIndex)
         }
     };
 
-    genSphere(sphereRadius, 32, 32);
+    std::vector<std::string> maps2 =
+    {
+        "",
+        "textures/rustediron-streaks_basecolor.png",
+        "",
+        "textures/rustediron-streaks_metallic.png",
+        "textures/rustediron-streaks_normal.png",
+        "textures/rustediron-streaks_roughness.png"
+    };
 
+    genSphere(sphereRadius, 32, 32);
     Model pbrSphere;
     pbrSphere.material.type = Material::Type::Pbr;
     pbrSphere.material.pbr.ambientOcclusion = maps2[0];
@@ -348,6 +347,7 @@ void Controller::runDeviceTest(int deviceIndex)
     pbrSphere.mesh.generateTangents();
     pbrSphere.worldTransform =
         glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f, -2.0f, 0.0f));
+
     impl->scene->models.push_back(pbrSphere);
 
     std::vector<std::string> maps3 =
@@ -409,7 +409,6 @@ void Controller::runDeviceTest(int deviceIndex)
     pbrSphere.worldTransform =
         glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 2.0f, 0.0f));
     impl->scene->models.push_back(pbrSphere);
-
 #if 0
     Model pbrQuad;
     pbrQuad.material.type = Material::Type::Pbr;

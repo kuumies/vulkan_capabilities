@@ -202,6 +202,7 @@ void main()
     vec3 irradiance = (kD * irradianceDiffuse + irradianceSpecular) * ao;
 
     outColor.rgb = radiance + irradiance;
+
     // reinhard tone mapping
     outColor = outColor / (outColor + vec4(1.0));
     outColor.a = 1.0;
