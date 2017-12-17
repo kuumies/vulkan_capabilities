@@ -48,6 +48,8 @@ public:
         const VkDevice& device,
         const uint32_t& graphicsQueueFamilyIndex);
 
+    void setLightDir(const glm::vec3& lightDir);
+
     void render();
 
     std::shared_ptr<TextureCube> textureCube() const;

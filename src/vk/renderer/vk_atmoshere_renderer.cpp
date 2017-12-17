@@ -80,7 +80,12 @@ AtmosphereRenderer::AtmosphereRenderer(
             VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
             VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
             VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            false);
+                false);
+}
+
+void AtmosphereRenderer::setLightDir(const glm::vec3& lightDir)
+{
+    impl->params.lightdir = glm::vec4(lightDir, 1.0);
 }
 
 void AtmosphereRenderer::render()

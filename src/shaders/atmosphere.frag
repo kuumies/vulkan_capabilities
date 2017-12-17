@@ -110,7 +110,12 @@ vec3 absorb(float dist, vec3 color, float factor){
 void main(void)
 {
     vec3 lightDir = normalize(data.lightdir.xyz);
-    //vec3 lightDir = data.lightdir.xyz;
+    lightDir.x = -lightDir.x;
+    lightDir.y = -lightDir.y;
+    //lightDir.z = -lightDir.z;
+//    colorOut.rgb = vec3(20.0, 10.0, 5.0) * 0.1;
+//    colorOut.a = 1.0;
+//    return;
 
     const float surface_height = 0.99;
     const float intensity = 2;

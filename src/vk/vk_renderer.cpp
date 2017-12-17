@@ -265,6 +265,7 @@ struct Renderer::Impl
             physicalDevice,
             device->handle(),
             graphicsFamilyIndex);
+        atmosphereRenderer->setLightDir(scene->light.dir);
         atmosphereRenderer->render();
 
         skyRenderer = std::make_shared<SkyRenderer>(
