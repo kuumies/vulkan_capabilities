@@ -336,7 +336,8 @@ void Controller::runDeviceTest(int deviceIndex)
     pbrSphere.mesh.indices  = sphereIndices;
 
     pbrSphere.mesh.generateTangents();
-
+    pbrSphere.worldTransform =
+        glm::translate(glm::mat4(1.0f), glm::vec3(0.1f, 0.0f, 0.0f));
     impl->scene->models.push_back(pbrSphere);
 
 #if 0
@@ -462,6 +463,12 @@ void Controller::runDeviceTest(int deviceIndex)
     impl->scene->models.push_back(pbrBox);
 
 #endif
+
+    VkExtent2D extent;
+    extent.width  = uint32_t(impl->surfaceWidget->width());
+    extent.height = uint32_t(impl->surfaceWidget->height());
+    const float aspect = extent.width / float(extent.height);
+    impl->scene->camera.aspectRatio = aspect;
 
     impl->renderer = std::make_shared<vk::Renderer>(instance, physicalDevice, surface, widgetExtent, impl->scene);
     impl->renderer->create();
