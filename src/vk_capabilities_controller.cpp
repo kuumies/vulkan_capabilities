@@ -479,6 +479,13 @@ void Controller::onSurfaceResized()
     VkExtent2D extent;
     extent.width  = uint32_t(impl->surfaceWidget->width());
     extent.height = uint32_t(impl->surfaceWidget->height());
+
+    if (impl->scene)
+    {
+        const float aspect = extent.width / float(extent.height);
+        impl->scene->camera.aspectRatio = aspect;
+    }
+
     if (impl->renderer)
         impl->renderer->resized(extent);
 }

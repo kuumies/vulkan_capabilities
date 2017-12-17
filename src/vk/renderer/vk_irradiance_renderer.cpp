@@ -1,11 +1,11 @@
 /* -------------------------------------------------------------------------- *
    Antti Jumpponen <kuumies@gmail.com>
-   The implementation of kuu::vk::IblPrefilterRenderer class
+   The implementation of kuu::vk::IrradianceRenderer class
  * -------------------------------------------------------------------------- */
 
 #pragma once
 
-#include "vk_ibl_prefilter_renderer.h"
+#include "vk_irradiance_renderer.h"
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/mat4x4.hpp>
@@ -14,19 +14,19 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include <iostream>
-#include "vk_buffer.h"
-#include "vk_command.h"
-#include "vk_descriptor_set.h"
-#include "vk_image.h"
-#include "vk_mesh.h"
-#include "vk_pipeline.h"
-#include "vk_queue.h"
-#include "vk_image.h"
-#include "vk_image_layout_transition.h"
-#include "vk_render_pass.h"
-#include "vk_shader_module.h"
-#include "vk_texture.h"
-#include "../common/mesh.h"
+#include "../vk_buffer.h"
+#include "../vk_command.h"
+#include "../vk_descriptor_set.h"
+#include "../vk_image.h"
+#include "../vk_mesh.h"
+#include "../vk_pipeline.h"
+#include "../vk_queue.h"
+#include "../vk_image.h"
+#include "../vk_image_layout_transition.h"
+#include "../vk_render_pass.h"
+#include "../vk_shader_module.h"
+#include "../vk_texture.h"
+#include "../../common/mesh.h"
 
 namespace kuu
 {
@@ -39,12 +39,11 @@ struct UniformData
 {
     glm::mat4 viewMatrix;
     glm::mat4 projectionMatrix;
-    float roughness;
 };
 
 /* -------------------------------------------------------------------------- */
 
-struct IblPrefilterRenderer::Impl
+struct IrradianceRenderer::Impl
 {
     // Input Vulkan handles
     VkPhysicalDevice physicalDevice;
@@ -66,7 +65,7 @@ struct IblPrefilterRenderer::Impl
 
 /* -------------------------------------------------------------------------- */
 
-IblPrefilterRenderer::IblPrefilterRenderer(
+IrradianceRenderer::IrradianceRenderer(
         const VkPhysicalDevice& physicalDevice,
         const VkDevice& device,
         const uint32_t& graphicsQueueFamilyIndex,
@@ -77,7 +76,7 @@ IblPrefilterRenderer::IblPrefilterRenderer(
     impl->device                   = device;
     impl->graphicsQueueFamilyIndex = graphicsQueueFamilyIndex;
     impl->format                   = VK_FORMAT_R32G32B32A32_SFLOAT;
-    impl->extent                   = { uint32_t(128), uint32_t(128), uint32_t(1) };
+    impl->extent                   = { uint32_t(512), uint32_t(512), uint32_t(1) };
     impl->inputTextureCube         = inputTextureCube;
     impl->outputTextureCube = std::make_shared<TextureCube>(
             physicalDevice,
@@ -92,7 +91,7 @@ IblPrefilterRenderer::IblPrefilterRenderer(
             true);
 }
 
-void IblPrefilterRenderer::render()
+void IrradianceRenderer::render()
 {
     //--------------------------------------------------------------------------
     // Box mesh in NDC space.
@@ -191,8 +190,8 @@ void IblPrefilterRenderer::render()
     //--------------------------------------------------------------------------
     // Shader modules.
 
-    const std::string vshFilePath = "shaders/pbr_ibl_prefilter.vert.spv";
-    const std::string fshFilePath = "shaders/pbr_ibl_prefilter.frag.spv";
+    const std::string vshFilePath = "shaders/irradiance.vert.spv";
+    const std::string fshFilePath = "shaders/irradiance.frag.spv";
 
     std::shared_ptr<ShaderModule> vshModule =
         std::make_shared<ShaderModule>(impl->device, vshFilePath);
@@ -237,36 +236,30 @@ void IblPrefilterRenderer::render()
      for (const glm::quat& faceRotation : faceRotations)
          viewMatrices.push_back(glm::mat4_cast(faceRotation));
 
-     const uint32_t mipmapCount = impl->outputTextureCube->mipmapCount;
-
     std::vector<std::shared_ptr<Buffer>> uniformBuffers;
-    for (uint32_t m = 0; m < mipmapCount; ++m)
+    for (int f = 0; f < 6; ++f)
     {
-        for (int f = 0; f < 6; ++f)
-        {
-            std::shared_ptr<Buffer> paramsBuffer =
-                std::make_shared<Buffer>(impl->physicalDevice,
-                                         impl->device);
-            paramsBuffer->setSize(sizeof(UniformData));
-            paramsBuffer->setUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-            paramsBuffer->setMemoryProperties(
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-            if (!paramsBuffer->create())
-                return;
+        std::shared_ptr<Buffer> paramsBuffer =
+            std::make_shared<Buffer>(impl->physicalDevice,
+                                     impl->device);
+        paramsBuffer->setSize(sizeof(UniformData));
+        paramsBuffer->setUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+        paramsBuffer->setMemoryProperties(
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        if (!paramsBuffer->create())
+            return;
 
-            glm::mat4 projection = glm::perspective(float(M_PI / 2.0), 1.0f, 0.1f, 512.0f);
-            projection[1][1] *= -1;
+        glm::mat4 projection = glm::perspective(float(M_PI / 2.0), 1.0f, 0.1f, 512.0f);
+        projection[1][1] *= -1;
 
-            UniformData uniform;
-            uniform.viewMatrix       = viewMatrices[f];
-            uniform.projectionMatrix = projection;
-            uniform.roughness        = float(m) / float(mipmapCount - 1);
+        UniformData uniform;
+        uniform.viewMatrix       = viewMatrices[f];
+        uniform.projectionMatrix = projection;
 
-            paramsBuffer->copyHostVisible(&uniform, paramsBuffer->size());
+        paramsBuffer->copyHostVisible(&uniform, paramsBuffer->size());
 
-            uniformBuffers.push_back(paramsBuffer);
-        }
+        uniformBuffers.push_back(paramsBuffer);
     }
 
     //--------------------------------------------------------------------------
@@ -274,48 +267,42 @@ void IblPrefilterRenderer::render()
 
     std::shared_ptr<DescriptorPool> descriptorPool =
         std::make_shared<DescriptorPool>(impl->device);
-    descriptorPool->addTypeSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         6*mipmapCount);
-    descriptorPool->addTypeSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 6*mipmapCount);
-    descriptorPool->setMaxCount(6*mipmapCount);
+    descriptorPool->addTypeSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         6);
+    descriptorPool->addTypeSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 6);
+    descriptorPool->setMaxCount(6);
     if (!descriptorPool->create())
         return;
 
     std::vector<std::shared_ptr<DescriptorSets>> descriptorSets;
 
-    int i = 0;
-    for (uint32_t m = 0; m < mipmapCount; ++m)
+    for (int f = 0; f < 6; ++f)
     {
-        for (int f = 0; f < 6; ++f)
-        {
-            std::shared_ptr<DescriptorSets> descriptorSet =
-                std::make_shared<DescriptorSets>(impl->device,
-                                                 descriptorPool->handle());
-            descriptorSet->addLayoutBinding(
-                0,
-                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
-                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
-            descriptorSet->addLayoutBinding(
-                1,
-                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
-                VK_SHADER_STAGE_FRAGMENT_BIT);
+        std::shared_ptr<DescriptorSets> descriptorSet =
+            std::make_shared<DescriptorSets>(impl->device,
+                                             descriptorPool->handle());
+        descriptorSet->addLayoutBinding(
+            0,
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+            VK_SHADER_STAGE_VERTEX_BIT);
+        descriptorSet->addLayoutBinding(
+            1,
+            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
+            VK_SHADER_STAGE_FRAGMENT_BIT);
 
-            if (!descriptorSet->create())
-                return;
+        if (!descriptorSet->create())
+            return;
 
-            descriptorSet->writeUniformBuffer(
-                0, uniformBuffers[i]->handle(),
-                0, uniformBuffers[i]->size());
+        descriptorSet->writeUniformBuffer(
+            0, uniformBuffers[f]->handle(),
+            0, uniformBuffers[f]->size());
 
-            descriptorSet->writeImage(
-                1,
-                impl->inputTextureCube->sampler,
-                impl->inputTextureCube->imageView,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        descriptorSet->writeImage(
+            1,
+            impl->inputTextureCube->sampler,
+            impl->inputTextureCube->imageView,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-            descriptorSets.push_back(descriptorSet);
-
-            i++;
-        }
+        descriptorSets.push_back(descriptorSet);
     }
 
     //--------------------------------------------------------------------------
@@ -464,7 +451,8 @@ void IblPrefilterRenderer::render()
             blendConstants);
 
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
-    descriptorSetLayouts.push_back(descriptorSets[0]->layoutHandle());
+    for (int f = 0; f < 6; ++f)
+        descriptorSetLayouts.push_back(descriptorSets[f]->layoutHandle());
 
     const std::vector<VkPushConstantRange> pushConstantRanges;
     pipeline->setPipelineLayout(descriptorSetLayouts, pushConstantRanges);
@@ -519,8 +507,7 @@ void IblPrefilterRenderer::render()
     std::vector<VkClearValue> clearValues(1);
     clearValues[0].color        = { 0.1f, 0.1f, 0.1f, 1.0f };
 
-    i = 0;
-    for (uint32_t m = 0; m < mipmapCount; m++)
+    for (uint32_t m = 0; m < impl->outputTextureCube->mipmapCount; m++)
     {
         for (uint32_t f = 0; f < 6; f++)
         {
@@ -535,7 +522,7 @@ void IblPrefilterRenderer::render()
 
             VkRect2D scissor;
             scissor.offset = {};
-            scissor.extent = { uint32_t(viewport.width), uint32_t(viewport.height) };
+            scissor.extent = { impl->extent.width, impl->extent.height };
             vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
 
             VkRenderPassBeginInfo renderPassInfo;
@@ -553,7 +540,7 @@ void IblPrefilterRenderer::render()
                 &renderPassInfo,
                 VK_SUBPASS_CONTENTS_INLINE);
 
-            VkDescriptorSet descriptorHandle = descriptorSets[i]->handle();
+            VkDescriptorSet descriptorHandle = descriptorSets[f]->handle();
 
             vkCmdBindDescriptorSets(
                 cmdBuf,
@@ -628,8 +615,6 @@ void IblPrefilterRenderer::render()
                 VK_IMAGE_ASPECT_COLOR_BIT,
                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-            i++;
         }
     }
 
@@ -676,7 +661,7 @@ void IblPrefilterRenderer::render()
     impl->inputTextureCube.reset();
 }
 
-std::shared_ptr<TextureCube> IblPrefilterRenderer::textureCube() const
+std::shared_ptr<TextureCube> IrradianceRenderer::textureCube() const
 { return impl->outputTextureCube; }
 
 } // namespace vk

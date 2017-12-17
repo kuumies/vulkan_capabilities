@@ -146,27 +146,32 @@ struct DescriptorSets::Impl
 
     bool create()
     {
-        VkDescriptorSetLayoutCreateInfo layoutInfo;
-        layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.pNext        = NULL;
-        layoutInfo.flags        = 0;
-        layoutInfo.bindingCount = uint32_t(layoutBindings.size());
-        layoutInfo.pBindings    = layoutBindings.data();
-
-        VkResult result =
-            vkCreateDescriptorSetLayout(
-                logicalDevice,
-                &layoutInfo,
-                NULL,
-                &layout);
-
-        if (result != VK_SUCCESS)
+        if (layout == VK_NULL_HANDLE)
         {
-            std::cerr << __FUNCTION__
-                      << ": descriptor set layout creation failed as "
-                      << vk::stringify::resultDesc(result)
-                      << std::endl;
-            return false;
+            VkDescriptorSetLayoutCreateInfo layoutInfo;
+            layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            layoutInfo.pNext        = NULL;
+            layoutInfo.flags        = 0;
+            layoutInfo.bindingCount = uint32_t(layoutBindings.size());
+            layoutInfo.pBindings    = layoutBindings.data();
+
+            VkResult result =
+                vkCreateDescriptorSetLayout(
+                    logicalDevice,
+                    &layoutInfo,
+                    NULL,
+                    &layout);
+
+            if (result != VK_SUCCESS)
+            {
+                std::cerr << __FUNCTION__
+                          << ": descriptor set layout creation failed as "
+                          << vk::stringify::resultDesc(result)
+                          << std::endl;
+                return false;
+            }
+
+            ownLayout = true;
         }
 
         VkDescriptorSetAllocateInfo allocInfo = {};
@@ -175,7 +180,7 @@ struct DescriptorSets::Impl
         allocInfo.descriptorSetCount = 1;
         allocInfo.pSetLayouts        = &layout;
 
-        result = vkAllocateDescriptorSets(
+        VkResult result = vkAllocateDescriptorSets(
             logicalDevice,
             &allocInfo,
             &descriptorSets);
@@ -195,10 +200,11 @@ struct DescriptorSets::Impl
 
     void destroy()
     {
-        vkDestroyDescriptorSetLayout(
-            logicalDevice,
-            layout,
-            NULL);
+        if (ownLayout)
+            vkDestroyDescriptorSetLayout(
+                logicalDevice,
+                layout,
+                NULL);
 
         layout         = VK_NULL_HANDLE;
         descriptorSets = VK_NULL_HANDLE;
@@ -218,6 +224,7 @@ struct DescriptorSets::Impl
     // Child
     VkDescriptorSet descriptorSets = VK_NULL_HANDLE;
     VkDescriptorSetLayout layout   = VK_NULL_HANDLE;
+    bool ownLayout = true;
 
     // Data from user
     std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
@@ -281,6 +288,12 @@ DescriptorSets& DescriptorSets::addLayoutBinding(
 
 std::vector<VkDescriptorSetLayoutBinding> DescriptorSets::layoutBindings() const
 { return impl->layoutBindings; }
+
+DescriptorSets& DescriptorSets::setLayout(VkDescriptorSetLayout layout)
+{
+    impl->layout = layout;
+    impl->ownLayout = false;
+    return *this; }
 
 bool DescriptorSets::create()
 {

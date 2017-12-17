@@ -71,6 +71,9 @@ public:
         const VkSampler* immutableSamplers = NULL);
     std::vector<VkDescriptorSetLayoutBinding> layoutBindings() const;
 
+    // Sets the descriptor set layout. If not set then it is created.
+    DescriptorSets& setLayout(VkDescriptorSetLayout layout);
+
     // Sets the buffer info. The descriptor set is set to be a buffer
     // descriptor set.
     DescriptorSets& setBufferInfo(const VkDescriptorBufferInfo& info);

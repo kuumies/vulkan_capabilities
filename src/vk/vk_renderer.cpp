@@ -14,14 +14,13 @@
 #include <glm/gtx/string_cast.hpp>
 #include <iostream>
 #include <QtGui/QImage>
+#include "renderer/vk_atmoshere_renderer.h"
+#include "renderer/vk_pbr_renderer.h"
+#include "renderer/vk_sky_renderer.h"
 #include "vk_buffer.h"
 #include "vk_command.h"
 #include "vk_descriptor_set.h"
 #include "vk_helper.h"
-#include "vk_atmoshere_renderer.h"
-#include "vk_irradiance_renderer.h"
-#include "vk_ibl_prefilter_renderer.h"
-#include "vk_ibl_brdf_lut_renderer.h"
 #include "vk_image.h"
 #include "vk_logical_device.h"
 #include "vk_mesh.h"
@@ -68,715 +67,6 @@ std::vector<VkQueueFamilyProperties> getQueueFamilies(
 
 /* -------------------------------------------------------------------------- */
 
-struct Matrices
-{
-    glm::mat4 model;
-    glm::mat4 view;
-    glm::mat4 projection;
-    glm::mat4 normal;
-};
-
-struct RendererTextures
-{
-    RendererTextures(
-            const VkPhysicalDevice& physicalDevice,
-            const VkDevice& device,
-            const uint32_t& queueFamilyIndex,
-            CommandPool& commandPool)
-        : physicalDevice(physicalDevice)
-        , device(device)
-        , queueFamilyIndex(queueFamilyIndex)
-        , commandPool(commandPool)
-    {}
-
-    void add(const std::vector<std::string>& filepaths)
-    {
-        Queue queue(device, queueFamilyIndex, 0);
-        queue.create();
-
-        textureMap = vk::loadtextures(filepaths,
-                                      physicalDevice,
-                                      device,
-                                      queue,
-                                      commandPool,
-                                      VK_FILTER_LINEAR,
-                                      VK_FILTER_LINEAR,
-                                      VK_SAMPLER_ADDRESS_MODE_REPEAT,
-                                      VK_SAMPLER_ADDRESS_MODE_REPEAT,
-                                      true);
-    }
-
-    void add(const std::string& filepath)
-    {
-        if (textureMap.count(filepath))
-            return;
-
-        Queue queue(device, queueFamilyIndex, 0);
-        queue.create();
-
-        textureMap[filepath] =
-            std::make_shared<Texture2D>(
-                physicalDevice,
-                device,
-                queue,
-                commandPool,
-                filepath,
-                VK_FILTER_LINEAR,
-                VK_FILTER_LINEAR,
-                VK_SAMPLER_ADDRESS_MODE_REPEAT,
-                VK_SAMPLER_ADDRESS_MODE_REPEAT,
-                true);
-    }
-
-    bool createTextureCube()
-    {
-        std::vector<std::string> filePaths =
-        {
-            "textures/right.jpg",
-            "textures/left.jpg",
-            "textures/top.jpg",
-            "textures/bottom.jpg",
-            "textures/back.jpg",
-            "textures/front.jpg"
-        };
-
-        Queue queue(device, queueFamilyIndex, 0);
-        queue.create();
-
-        skyTextureCube = std::make_shared<TextureCube>(
-                    physicalDevice,
-                    device,
-                    queue,
-                    commandPool,
-                    filePaths,
-                    VK_FILTER_LINEAR,
-                    VK_FILTER_LINEAR,
-                    VK_SAMPLER_ADDRESS_MODE_REPEAT,
-                    VK_SAMPLER_ADDRESS_MODE_REPEAT,
-                    VK_SAMPLER_ADDRESS_MODE_REPEAT);
-        return true;
-    }
-
-    void setIrradiance(std::shared_ptr<TextureCube> irradiance)
-    {
-        this->irradiance = irradiance;
-    }
-
-    void setPrefiltered(std::shared_ptr<TextureCube> prefiltered)
-    {
-        this->prefiltered = prefiltered;
-    }
-
-    void setBrdfLut(std::shared_ptr<Texture2D> lut)
-    {
-        this->brdfLut = lut;
-    }
-
-    void destroy()
-    {
-        textureMap.clear();
-        skyTextureCube.reset();
-        irradiance.reset();
-        prefiltered.reset();
-        brdfLut.reset();
-    }
-
-    const VkPhysicalDevice physicalDevice;
-    const VkDevice device;
-    const uint32_t queueFamilyIndex;
-    CommandPool& commandPool;
-
-    std::map<std::string, std::shared_ptr<Texture2D>> textureMap;
-    std::shared_ptr<TextureCube> skyTextureCube;
-    std::shared_ptr<TextureCube> irradiance;
-    std::shared_ptr<TextureCube> prefiltered;
-    std::shared_ptr<Texture2D> brdfLut;
-};
-
-/* -------------------------------------------------------------------------- */
-
-struct RendererModel
-{
-    bool create(
-        const VkPhysicalDevice& physicalDevice,
-        const VkDevice& device,
-        const VkDescriptorPool& descriptorPool,
-        const Model& m,
-        std::shared_ptr<RendererTextures> textureManager)
-    {
-        model = m;
-
-        if (!createMesh(physicalDevice, device, m.mesh))
-            return false;
-
-        if (!createUniformBuffers(physicalDevice, device))
-            return false;
-
-        switch (m.material.type)
-        {
-            case Material::Type::Diffuse:
-                textures.push_back(textureManager->textureMap.at(m.material.diffuse.map));
-                break;
-
-            case Material::Type::Pbr:
-                textures.push_back(textureManager->textureMap.at(m.material.pbr.ambientOcclusion));
-                textures.push_back(textureManager->textureMap.at(m.material.pbr.baseColor));
-                textures.push_back(textureManager->textureMap.at(m.material.pbr.height));
-                textures.push_back(textureManager->textureMap.at(m.material.pbr.metallic));
-                textures.push_back(textureManager->textureMap.at(m.material.pbr.normal));
-                textures.push_back(textureManager->textureMap.at(m.material.pbr.roughness));
-                irradiance  = textureManager->irradiance;
-                prefiltered = textureManager->prefiltered;
-                brdfLut     = textureManager->brdfLut;
-                break;
-        }
-
-        if (!createDescriptorSets(device, descriptorPool))
-            return false;
-
-        return true;
-    }
-
-    bool createMesh(const VkPhysicalDevice& physicalDevice,
-                    const VkDevice& device,
-                    const kuu::Mesh& m)
-    {
-        indexCount = uint32_t(m.indices.size());
-
-        std::vector<float> vertexVector;
-        for (const Vertex& v : m.vertices)
-        {
-            vertexVector.push_back(v.pos.x);
-            vertexVector.push_back(v.pos.y);
-            vertexVector.push_back(v.pos.z);
-            vertexVector.push_back(v.texCoord.x);
-            vertexVector.push_back(v.texCoord.y);
-            vertexVector.push_back(v.normal.x);
-            vertexVector.push_back(v.normal.y);
-            vertexVector.push_back(v.normal.z);
-            vertexVector.push_back(v.tangent.x);
-            vertexVector.push_back(v.tangent.y);
-            vertexVector.push_back(v.tangent.z);
-            vertexVector.push_back(v.bitangent.x);
-            vertexVector.push_back(v.bitangent.y);
-            vertexVector.push_back(v.bitangent.z);
-        }
-
-        mesh = std::make_shared<vk::Mesh>(physicalDevice, device);
-        mesh->setVertices(vertexVector);
-        mesh->setIndices(m.indices);
-        mesh->addVertexAttributeDescription(0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0);
-        mesh->addVertexAttributeDescription(1, 0, VK_FORMAT_R32G32_SFLOAT,    3 * sizeof(float));
-        mesh->addVertexAttributeDescription(2, 0, VK_FORMAT_R32G32B32_SFLOAT, 5 * sizeof(float));
-        mesh->addVertexAttributeDescription(3, 0, VK_FORMAT_R32G32B32_SFLOAT, 8 * sizeof(float));
-        mesh->addVertexAttributeDescription(4, 0, VK_FORMAT_R32G32B32_SFLOAT, 11 * sizeof(float));
-        mesh->setVertexBindingDescription(0, 14 * sizeof(float), VK_VERTEX_INPUT_RATE_VERTEX);
-        return mesh->create();
-    }
-
-    bool createUniformBuffers(const VkPhysicalDevice& physicalDevice,
-                              const VkDevice& device)
-    {
-        matricesUniformBuffer = std::make_shared<Buffer>(physicalDevice, device);
-        matricesUniformBuffer->setSize(sizeof(Matrices));
-        matricesUniformBuffer->setUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-        matricesUniformBuffer->setMemoryProperties(
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        if (!matricesUniformBuffer->create())
-            return false;
-
-        lightUniformBuffer = std::make_shared<Buffer>(physicalDevice, device);
-        lightUniformBuffer->setSize(sizeof(Light));
-        lightUniformBuffer->setUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-        lightUniformBuffer->setMemoryProperties(
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        if (!lightUniformBuffer->create())
-            return false;
-
-        return true;
-    }
-
-    bool createDescriptorSets(const VkDevice& device,
-                              const VkDescriptorPool& descriptorPool)
-    {
-        descriptorSets = std::make_shared<DescriptorSets>(device, descriptorPool);
-        descriptorSets->addLayoutBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT);
-
-        std::vector<std::shared_ptr<Buffer>> uniformBuffers;
-        switch (model.material.type)
-        {
-            case Material::Type::Diffuse:
-                descriptorSets->addLayoutBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
-                uniformBuffers.push_back(matricesUniformBuffer);
-                break;
-
-            case Material::Type::Pbr:
-                descriptorSets->addLayoutBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
-                for (int i = 2; i < 8; ++i)
-                    descriptorSets->addLayoutBinding(i, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
-                descriptorSets->addLayoutBinding(8, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
-                descriptorSets->addLayoutBinding(9, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
-                descriptorSets->addLayoutBinding(10, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
-                uniformBuffers.push_back(matricesUniformBuffer);
-                uniformBuffers.push_back(lightUniformBuffer);
-                break;
-        }
-
-        if (!descriptorSets->create())
-            return false;
-
-        int binding = 0;
-        for (int i = 0; i < uniformBuffers.size(); ++i)
-            descriptorSets->writeUniformBuffer(
-                binding++,
-                uniformBuffers[i]->handle(),
-                0,
-                uniformBuffers[i]->size());
-
-        for (const auto tex : textures)
-            descriptorSets->writeImage(
-                binding++,
-                tex->sampler,
-                tex->imageView,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-        if (irradiance)
-        {
-            descriptorSets->writeImage(
-                binding++,
-                irradiance->sampler,
-                irradiance->imageView,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        }
-
-        if (prefiltered)
-        {
-            descriptorSets->writeImage(
-                binding++,
-                prefiltered->sampler,
-                prefiltered->imageView,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        }
-
-        if (brdfLut)
-        {
-            descriptorSets->writeImage(
-                binding++,
-                brdfLut->sampler,
-                brdfLut->imageView,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        }
-
-        return true;
-    }
-
-    void destroy()
-    {
-        mesh->destroy();
-        matricesUniformBuffer->destroy();
-        lightUniformBuffer->destroy();
-        descriptorSets->destroy();
-        textures.clear();
-        irradiance.reset();
-        prefiltered.reset();
-        brdfLut.reset();
-    }
-
-    // Mesh
-    std::shared_ptr<Mesh> mesh;
-    uint32_t indexCount;
-
-    // Uniform buffers
-    std::shared_ptr<Buffer> matricesUniformBuffer;
-    std::shared_ptr<Buffer> lightUniformBuffer;
-
-    // Descriptor sets
-    std::shared_ptr<DescriptorSets> descriptorSets;
-
-    // Texture
-    std::vector<std::shared_ptr<Texture2D>> textures;
-    std::shared_ptr<TextureCube> irradiance;
-    std::shared_ptr<TextureCube> prefiltered;
-    std::shared_ptr<Texture2D> brdfLut;
-
-    // Model
-    Model model;
-};
-
-struct RendererPipeline
-{
-    RendererPipeline()
-    {}
-
-    bool create(
-        const VkDevice& device,
-        const VkExtent2D& extent,
-        const VkRenderPass& renderPass,
-        const VkVertexInputBindingDescription& vertexBinding,
-        const std::vector<VkVertexInputAttributeDescription>&  vertexAttributes,
-        const std::vector<VkDescriptorSetLayout>& descriptorSetLayouts,
-        const std::string& vshFilePath,
-        const std::string& fshFilePath)
-    {
-        if (!createShaders(device, vshFilePath, fshFilePath))
-            return false;
-
-        return createPipeline(device, extent, renderPass, vertexBinding,
-                              vertexAttributes, descriptorSetLayouts);
-    }
-
-    bool createShaders(
-        const VkDevice& device,
-        const std::string& vshFilePath,
-        const std::string& fshFilePath)
-    {
-        vshModule = std::make_shared<ShaderModule>(device, vshFilePath);
-        vshModule->setStageName("main");
-        vshModule->setStage(VK_SHADER_STAGE_VERTEX_BIT);
-        if (!vshModule->create())
-            return false;
-
-        fshModule = std::make_shared<ShaderModule>(device, fshFilePath);
-        fshModule->setStageName("main");
-        fshModule->setStage(VK_SHADER_STAGE_FRAGMENT_BIT);
-        if (!fshModule->create())
-            return false;
-
-        return true;
-    }
-
-    bool createPipeline(
-        const VkDevice& device,
-        const VkExtent2D& extent,
-        const VkRenderPass& renderPass,
-        const VkVertexInputBindingDescription& vertexBinding,
-        const std::vector<VkVertexInputAttributeDescription>&  vertexAttributes,
-        const std::vector<VkDescriptorSetLayout>& descriptorSetLayouts)
-    {
-        VkPipelineColorBlendAttachmentState colorBlend = {};
-        colorBlend.blendEnable    = VK_FALSE;
-        colorBlend.colorWriteMask = 0xf;
-
-        float blendConstants[4] = { 0, 0, 0, 0 };
-
-        pipeline = std::make_shared<Pipeline>(device);
-        pipeline->addShaderStage(vshModule->createInfo());
-        pipeline->addShaderStage(fshModule->createInfo());
-        pipeline->setVertexInputState(
-            { vertexBinding },
-              vertexAttributes );
-        pipeline->setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_FALSE);
-        pipeline->setViewportState(
-            { { 0, 0, float(extent.width), float(extent.height), 0, 1 } },
-            { { { 0, 0 }, extent }  } );
-        pipeline->setRasterizerState(
-            VK_POLYGON_MODE_FILL,
-            VK_CULL_MODE_NONE,
-            VK_FRONT_FACE_COUNTER_CLOCKWISE);
-        pipeline->setMultisampleState(VK_FALSE, VK_SAMPLE_COUNT_1_BIT);
-        pipeline->setDepthStencilState(VK_TRUE);
-        pipeline->setColorBlendingState(
-                VK_FALSE,
-                VK_LOGIC_OP_CLEAR,
-                { colorBlend },
-                blendConstants);
-
-        const std::vector<VkPushConstantRange> pushConstantRanges;
-        pipeline->setPipelineLayout(descriptorSetLayouts, pushConstantRanges);
-        pipeline->setDynamicState( { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR } );
-        pipeline->setRenderPass(renderPass);
-        return pipeline->create();
-    }
-
-    void destroy()
-    {
-        pipeline->destroy();
-        fshModule->destroy();
-        vshModule->destroy();
-    }
-
-    bool isValid() const
-    {
-        return pipeline->isValid()  &&
-               vshModule->isValid() &&
-               fshModule->isValid();
-    }
-
-    // Shaders
-    std::shared_ptr<ShaderModule> vshModule;
-    std::shared_ptr<ShaderModule> fshModule;
-
-    // Pipeline
-    std::shared_ptr<Pipeline> pipeline;
-};
-
-/* -------------------------------------------------------------------------- */
-
-struct SkyBoxPipeline
-{
-    SkyBoxPipeline(const VkPhysicalDevice& physicalDevice,
-                   const VkDevice& device,
-                   const VkDescriptorPool& descriptorPool,
-                   const VkRenderPass&  renderPass,
-                   const VkExtent2D& extent,
-                   std::shared_ptr<TextureCube> skyTextureCube)
-        : skyTextureCube(skyTextureCube)
-    {
-        if (!createMesh(physicalDevice, device))
-            return;
-
-        if (!createShaders(device))
-            return;
-
-        if(!createUniformBuffer(physicalDevice, device))
-            return;
-
-        if (!createDescriptorSets(device, descriptorPool))
-            return;
-
-        if (!createPipeline(device, extent, renderPass))
-            return;
-    }
-
-    bool createMesh(const VkPhysicalDevice& physicalDevice,
-                    const VkDevice& device)
-    {
-        float width  = 2.0f;
-        float height = 2.0f;
-        float depth  = 2.0f;
-        float w = width  / 2.0f;
-        float h = height / 2.0f;
-        float d = depth  / 2.0f;
-
-        // Create the vertex list
-        std::vector<Vertex> vertices =
-        {
-            // -------------------------------------------------------
-            // Back
-            { { -w, -h, -d },  { 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f } },
-            { {  w,  h, -d },  { 1.0f, 1.0f }, { 0.0f, 0.0f, -1.0f } },
-            { {  w, -h, -d },  { 1.0f, 0.0f }, { 0.0f, 0.0f, -1.0f } },
-            { {  w,  h, -d },  { 1.0f, 1.0f }, { 0.0f, 0.0f, -1.0f } },
-            { { -w, -h, -d },  { 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f } },
-            { { -w,  h, -d },  { 0.0f, 1.0f }, { 0.0f, 0.0f, -1.0f } },
-
-            // -------------------------------------------------------
-            // Front
-            { { -w, -h,  d },  { 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
-            { {  w, -h,  d },  { 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
-            { {  w,  h,  d },  { 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
-            { {  w,  h,  d },  { 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
-            { { -w,  h,  d },  { 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
-            { { -w, -h,  d },  { 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
-
-            // -------------------------------------------------------
-            // Left
-            { { -w,  h,  d },  { 1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f } },
-            { { -w,  h, -d },  { 1.0f, 1.0f }, { -1.0f, 0.0f, 0.0f } },
-            { { -w, -h, -d },  { 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f } },
-            { { -w, -h, -d },  { 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f } },
-            { { -w, -h,  d },  { 0.0f, 0.0f }, { -1.0f, 0.0f, 0.0f } },
-            { { -w,  h,  d },  { 1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f } },
-
-            // -------------------------------------------------------
-            // Right
-            { {  w,  h,  d },  { 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f } },
-            { {  w, -h, -d },  { 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f } },
-            { {  w,  h, -d },  { 1.0f, 1.0f }, { 1.0f, 0.0f, 0.0f } },
-            { {  w, -h, -d },  { 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f } },
-            { {  w,  h,  d },  { 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f } },
-            { {  w, -h,  d },  { 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f } },
-
-            // -------------------------------------------------------
-            // Bottom
-            { { -w, -h, -d },  { 0.0f, 1.0f }, { 0.0f, -1.0f, 0.0f } },
-            { {  w, -h, -d },  { 1.0f, 1.0f }, { 0.0f, -1.0f, 0.0f } },
-            { {  w, -h,  d },  { 1.0f, 0.0f }, { 0.0f, -1.0f, 0.0f } },
-            { {  w, -h,  d },  { 1.0f, 0.0f }, { 0.0f, -1.0f, 0.0f } },
-            { { -w, -h,  d },  { 0.0f, 0.0f }, { 0.0f, -1.0f, 0.0f } },
-            { { -w, -h, -d },  { 0.0f, 1.0f }, { 0.0f, -1.0f, 0.0f } },
-
-            // -------------------------------------------------------
-            // Top
-            { { -w,  h, -d },  { 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } },
-            { {  w,  h,  d },  { 1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
-            { {  w,  h, -d },  { 1.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } },
-            { {  w,  h,  d },  { 1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
-            { { -w,  h, -d },  { 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } },
-            { { -w,  h,  d },  { 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
-        };
-
-        kuu::Mesh m;
-        for (const Vertex& v : vertices)
-            m.addVertex(v);
-        m.generateTangents();
-
-        std::vector<float> vertexVector;
-        for (const Vertex& v : m.vertices)
-        {
-            vertexVector.push_back(v.pos.x);
-            vertexVector.push_back(v.pos.y);
-            vertexVector.push_back(v.pos.z);
-            vertexVector.push_back(v.texCoord.x);
-            vertexVector.push_back(v.texCoord.y);
-            vertexVector.push_back(v.normal.x);
-            vertexVector.push_back(v.normal.y);
-            vertexVector.push_back(v.normal.z);
-            vertexVector.push_back(v.tangent.x);
-            vertexVector.push_back(v.tangent.y);
-            vertexVector.push_back(v.tangent.z);
-            vertexVector.push_back(v.bitangent.x);
-            vertexVector.push_back(v.bitangent.y);
-            vertexVector.push_back(v.bitangent.z);
-        }
-
-        mesh = std::make_shared<Mesh>(physicalDevice, device);
-        mesh->setVertices(vertexVector);
-        mesh->setIndices(m.indices);
-        mesh->addVertexAttributeDescription(0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0);
-        mesh->addVertexAttributeDescription(1, 0, VK_FORMAT_R32G32_SFLOAT,    3 * sizeof(float));
-        mesh->addVertexAttributeDescription(2, 0, VK_FORMAT_R32G32B32_SFLOAT, 5 * sizeof(float));
-        mesh->addVertexAttributeDescription(3, 0, VK_FORMAT_R32G32B32_SFLOAT, 8 * sizeof(float));
-        mesh->addVertexAttributeDescription(4, 0, VK_FORMAT_R32G32B32_SFLOAT, 11 * sizeof(float));
-        mesh->setVertexBindingDescription(0, 14 * sizeof(float), VK_VERTEX_INPUT_RATE_VERTEX);
-
-        indexCount = uint32_t(m.indices.size());
-
-        return mesh->create();
-    }
-
-    bool createShaders(const VkDevice& device)
-    {
-        vshModule = std::make_shared<ShaderModule>(device, "shaders/skybox.vert.spv");
-        vshModule->setStageName("main");
-        vshModule->setStage(VK_SHADER_STAGE_VERTEX_BIT);
-        if (!vshModule->create())
-            return false;
-
-        fshModule = std::make_shared<ShaderModule>(device, "shaders/skybox.frag.spv");
-        fshModule->setStageName("main");
-        fshModule->setStage(VK_SHADER_STAGE_FRAGMENT_BIT);
-        if (!fshModule->create())
-            return false;
-
-        return true;
-    }
-
-    bool createUniformBuffer(const VkPhysicalDevice& physicalDevice,
-                             const VkDevice& device)
-    {
-        matricesUniformBuffer = std::make_shared<Buffer>(physicalDevice, device);
-        matricesUniformBuffer->setSize(sizeof(Matrices));
-        matricesUniformBuffer->setUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-        matricesUniformBuffer->setMemoryProperties(
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        return matricesUniformBuffer->create();
-    }
-
-    bool createDescriptorSets(const VkDevice& device,
-                              const VkDescriptorPool& descriptorPool)
-    {
-        descriptorSets = std::make_shared<DescriptorSets>(device, descriptorPool);
-        descriptorSets->addLayoutBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                                         1, VK_SHADER_STAGE_VERTEX_BIT);
-        descriptorSets->addLayoutBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                                         1, VK_SHADER_STAGE_FRAGMENT_BIT);
-
-        if (!descriptorSets->create())
-            return false;
-
-        descriptorSets->writeUniformBuffer(
-            0, matricesUniformBuffer->handle(),
-            0, matricesUniformBuffer->size());
-
-        descriptorSets->writeImage(
-            1,
-            skyTextureCube->sampler,
-            skyTextureCube->imageView,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-        return true;
-    }
-
-    bool createPipeline(
-        const VkDevice& device,
-        const VkExtent2D& extent,
-        const VkRenderPass& renderPass)
-    {
-        VkPipelineColorBlendAttachmentState colorBlend = {};
-        colorBlend.blendEnable    = VK_FALSE;
-        colorBlend.colorWriteMask = 0xf;
-
-        float blendConstants[4] = { 0, 0, 0, 0 };
-
-        pipeline = std::make_shared<Pipeline>(device);
-        pipeline->addShaderStage(vshModule->createInfo());
-        pipeline->addShaderStage(fshModule->createInfo());
-        pipeline->setVertexInputState(
-            { mesh->vertexBindingDescription() },
-              mesh->vertexAttributeDescriptions() );
-        pipeline->setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VK_FALSE);
-        pipeline->setViewportState(
-            { { 0, 0, float(extent.width), float(extent.height), 0, 1 } },
-            { { { 0, 0 }, extent }  } );
-        pipeline->setRasterizerState(
-            VK_POLYGON_MODE_FILL,
-            VK_CULL_MODE_NONE,
-            VK_FRONT_FACE_COUNTER_CLOCKWISE);
-        pipeline->setMultisampleState(VK_FALSE, VK_SAMPLE_COUNT_1_BIT);
-        pipeline->setDepthStencilState(VK_TRUE, VK_FALSE);
-        pipeline->setColorBlendingState(
-                VK_FALSE,
-                VK_LOGIC_OP_CLEAR,
-                { colorBlend },
-                blendConstants);
-
-        std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
-        descriptorSetLayouts.push_back(descriptorSets->layoutHandle());
-
-        const std::vector<VkPushConstantRange> pushConstantRanges;
-        pipeline->setPipelineLayout(descriptorSetLayouts, pushConstantRanges);
-        pipeline->setDynamicState( { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR } );
-        pipeline->setRenderPass(renderPass);
-        return pipeline->create();
-    }
-
-    void destroy()
-    {
-        mesh->destroy();
-        vshModule->destroy();
-        fshModule->destroy();
-        pipeline->destroy();
-        matricesUniformBuffer->destroy();
-        descriptorSets->destroy();
-        skyTextureCube.reset();
-    }
-
-    std::shared_ptr<TextureCube> skyTextureCube;
-
-    // Mesh
-    std::shared_ptr<Mesh> mesh;
-    uint32_t indexCount;
-
-    // Shaders
-    std::shared_ptr<ShaderModule> vshModule;
-    std::shared_ptr<ShaderModule> fshModule;
-
-    // Pipeline
-    std::shared_ptr<Pipeline> pipeline;
-
-    // Uniform buffers
-    std::shared_ptr<Buffer> matricesUniformBuffer;
-
-    // Destriptor sets
-    std::shared_ptr<DescriptorSets> descriptorSets;
-};
-
-/* -------------------------------------------------------------------------- */
-
 struct Renderer::Impl
 {
     Impl(const VkInstance& instance,
@@ -806,51 +96,16 @@ struct Renderer::Impl
         if (!createLogicalDevice())
             return false;
 
-        atmosphereRenderer = std::make_shared<AtmosphereRenderer>(
-            physicalDevice,
-            device->handle(),
-            graphicsFamilyIndex);
-        atmosphereRenderer->render();
-
-        irradianceRenderer = std::make_shared<IrradianceRenderer>(
-            physicalDevice,
-            device->handle(),
-            graphicsFamilyIndex,
-            atmosphereRenderer->textureCube());
-        irradianceRenderer->render();
-
-        iblPrefilterRenderer = std::make_shared<IblPrefilterRenderer>(
-            physicalDevice,
-            device->handle(),
-            graphicsFamilyIndex,
-            atmosphereRenderer->textureCube());
-        iblPrefilterRenderer->render();
-
-        iblBrdfRenderer = std::make_shared<IblBrdfLutRenderer>(
-            physicalDevice,
-            device->handle(),
-            graphicsFamilyIndex);
-        iblBrdfRenderer->render();
-
         if (!createSwapchain())
             return false;
 
         if (!createCommandPool())
             return false;
 
-        if (!createDescriptorPool())
-            return false;
-
-        if (!createTextures())
-            return false;
-
-        if (!createModels())
-            return false;
-
         if (!createRenderPass())
             return false;
 
-        if (!createPipelines())
+        if (!createSubRenderers())
             return false;
 
         if (!createCommandBuffers())
@@ -1004,175 +259,40 @@ struct Renderer::Impl
         return swapchain->create();
     }
 
-    bool createDescriptorPool()
+    bool createSubRenderers()
     {
-        uint32_t uniformBufferCount = 0;
-        uint32_t imageSamplerCount  = 0;
-        for (const Model& model : scene->models)
-        {
-            switch(model.material.type)
-            {
-                case Material::Type::Diffuse:
-                    uniformBufferCount += 1;
-                    imageSamplerCount  += 1;
-                    break;
-
-                case Material::Type::Pbr:
-                    uniformBufferCount += 2;
-                    imageSamplerCount  += 9;
-                    break;
-            }
-        }
-
-        // Skybox
-        uniformBufferCount += 1;
-        imageSamplerCount  += 1;
-
-        descriptorPool = std::make_shared<DescriptorPool>(device->handle());
-        descriptorPool->addTypeSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,          uniformBufferCount);
-        descriptorPool->addTypeSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  imageSamplerCount);
-        descriptorPool->setMaxCount(uniformBufferCount + imageSamplerCount);
-        return descriptorPool->create();
-    }
-
-    bool createTextures()
-    {
-        std::shared_ptr<CommandPool> commandPool = graphicsCommandPool;
-        uint32_t queueFamilyIndex = graphicsFamilyIndex;
-
-        textures = std::make_shared<RendererTextures>(
+        atmosphereRenderer = std::make_shared<AtmosphereRenderer>(
             physicalDevice,
             device->handle(),
-            queueFamilyIndex,
-            *commandPool);
+            graphicsFamilyIndex);
+        atmosphereRenderer->render();
 
-        std::vector<std::string> filepaths;
-        for (const Model& model : scene->models)
-        {
-            switch(model.material.type)
-            {
-                case Material::Type::Diffuse:
-                    filepaths.push_back(model.material.diffuse.map);
-                    break;
+        skyRenderer = std::make_shared<SkyRenderer>(
+            physicalDevice,
+            device->handle(),
+            graphicsFamilyIndex,
+            extent,
+            renderPass->handle(),
+            atmosphereRenderer->textureCube());
+        skyRenderer->setScene(scene);
 
-                case Material::Type::Pbr:
-                    filepaths.push_back(model.material.pbr.ambientOcclusion);
-                    filepaths.push_back(model.material.pbr.baseColor);
-                    filepaths.push_back(model.material.pbr.height);
-
-                    filepaths.push_back(model.material.pbr.metallic);
-                    filepaths.push_back(model.material.pbr.normal);
-                    filepaths.push_back(model.material.pbr.roughness);
-                    break;
-            }
-        }
-
-        textures->add(filepaths);
-        textures->createTextureCube();
-        textures->setIrradiance(irradianceRenderer->textureCube());
-        textures->setPrefiltered(iblPrefilterRenderer->textureCube());
-        textures->setBrdfLut(iblBrdfRenderer->texture());
+        pbrRenderer = std::make_shared<PbrRenderer>(
+            physicalDevice,
+            device->handle(),
+            graphicsFamilyIndex,
+            extent,
+            renderPass->handle(),
+            atmosphereRenderer->textureCube());
+        pbrRenderer->setScene(scene);
 
         return true;
-    }
-
-    bool createModels()
-    {
-        for (const Model& model : scene->models)
-        {           
-            RendererModel m;
-            if (!m.create(physicalDevice,
-                          device->handle(),
-                          descriptorPool->handle(),
-                          model,
-                          textures))
-            {
-                return false;
-            }
-
-            vulkanModels.push_back(m);
-        }
-        return true;
-    }
-
-    bool createPipelines()
-    {
-        if (vulkanModels.size() == 0)
-            return false;
-
-        if (skyBoxPipeline)
-        {
-            skyBoxPipeline->createPipeline(
-                device->handle(),
-                extent,
-                renderPass->handle());
-        }
-        else
-        {
-            skyBoxPipeline = std::make_shared<SkyBoxPipeline>(
-                physicalDevice,
-                device->handle(),
-                descriptorPool->handle(),
-                renderPass->handle(),
-                extent,
-                atmosphereRenderer->textureCube()
-                //irradianceRenderer->textureCube()
-                //iblPrefilterRenderer->textureCube()
-            );
-        }
-
-        std::vector<VkDescriptorSetLayout> diffuseDescriptorSetLayouts;
-        for (const RendererModel& m : vulkanModels)
-            if (m.model.material.type == Material::Type::Diffuse)
-                diffuseDescriptorSetLayouts.push_back(m.descriptorSets->layoutHandle());
-
-        diffusePipeline = std::make_shared<RendererPipeline>();
-        if (!diffusePipeline->create(
-                device->handle(),
-                extent,
-                renderPass->handle(),
-                vulkanModels[0].mesh->vertexBindingDescription(),
-                vulkanModels[0].mesh->vertexAttributeDescriptions(),
-                diffuseDescriptorSetLayouts,
-                "shaders/diffuse.vert.spv",
-                "shaders/diffuse.frag.spv"))
-        {
-            return false;
-        }
-
-        std::vector<VkDescriptorSetLayout> pbrDescriptorSetLayouts;
-        for (const RendererModel& m : vulkanModels)
-            if (m.model.material.type == Material::Type::Pbr)
-                pbrDescriptorSetLayouts.push_back(m.descriptorSets->layoutHandle());
-
-        pbrPipeline = std::make_shared<RendererPipeline>();
-        return pbrPipeline->create(
-               device->handle(),
-               extent,
-               renderPass->handle(),
-               vulkanModels[0].mesh->vertexBindingDescription(),
-               vulkanModels[0].mesh->vertexAttributeDescriptions(),
-               pbrDescriptorSetLayouts,
-               "shaders/pbr.vert.spv",
-               "shaders/pbr.frag.spv");
     }
 
     bool createCommandPool()
     {
         graphicsCommandPool = std::make_shared<CommandPool>(device->handle());
         graphicsCommandPool->setQueueFamilyIndex(graphicsFamilyIndex);
-        if (!graphicsCommandPool->create())
-            return false;
-
-        if (transferFamilyIndex >= 0)
-        {
-            transferCommandPool = std::make_shared<CommandPool>(device->handle());
-            transferCommandPool->setQueueFamilyIndex(transferFamilyIndex);
-            if (!transferCommandPool->create())
-                return false;
-        }
-
-        return true;
+        return graphicsCommandPool->create();
     }
 
     bool createCommandBuffers()
@@ -1225,90 +345,8 @@ struct Renderer::Impl
             scissor.extent = extent;
             vkCmdSetScissor(commandBuffers[i], 0, 1, &scissor);
 
-            // Skybox
-            {
-                VkDescriptorSet descriptorHandle = skyBoxPipeline->descriptorSets->handle();
-                VkPipeline pipeline = skyBoxPipeline->pipeline->handle();
-                VkPipelineLayout pipelineLayout = skyBoxPipeline->pipeline->pipelineLayoutHandle();
-
-                vkCmdBindDescriptorSets(
-                    commandBuffers[i],
-                    VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    pipelineLayout, 0, 1,
-                    &descriptorHandle, 0, NULL);
-
-                vkCmdBindPipeline(
-                    commandBuffers[i],
-                    VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    pipeline);
-
-                const VkBuffer vertexBuffer = skyBoxPipeline->mesh->vertexBufferHandle();
-                const VkDeviceSize offsets[1] = { 0 };
-                vkCmdBindVertexBuffers(
-                    commandBuffers[i], 0, 1,
-                    &vertexBuffer,
-                    offsets);
-
-                const VkBuffer indexBuffer = skyBoxPipeline->mesh->indexBufferHandle();
-                vkCmdBindIndexBuffer(
-                    commandBuffers[i],
-                    indexBuffer,
-                    0, VK_INDEX_TYPE_UINT32);
-
-                vkCmdDrawIndexed(
-                    commandBuffers[i],
-                    skyBoxPipeline->indexCount,
-                    1, 0, 0, 1);
-            }
-
-            for (const RendererModel& m : vulkanModels)
-            {
-                VkDescriptorSet descriptorHandle = m.descriptorSets->handle();
-
-                VkPipeline pipeline = VK_NULL_HANDLE;
-                VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-                switch(m.model.material.type)
-                {
-                    case Material::Type::Diffuse:
-                        pipeline       = diffusePipeline->pipeline->handle();
-                        pipelineLayout = diffusePipeline->pipeline->pipelineLayoutHandle();
-                        break;
-
-                    case Material::Type::Pbr:
-                        pipeline       = pbrPipeline->pipeline->handle();
-                        pipelineLayout = pbrPipeline->pipeline->pipelineLayoutHandle();
-                        break;
-                }
-
-                vkCmdBindDescriptorSets(
-                    commandBuffers[i],
-                    VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    pipelineLayout, 0, 1,
-                    &descriptorHandle, 0, NULL);
-
-                vkCmdBindPipeline(
-                    commandBuffers[i],
-                    VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    pipeline);
-
-                const VkBuffer vertexBuffer = m.mesh->vertexBufferHandle();
-                const VkDeviceSize offsets[1] = { 0 };
-                vkCmdBindVertexBuffers(
-                    commandBuffers[i], 0, 1,
-                    &vertexBuffer,
-                    offsets);
-
-                const VkBuffer indexBuffer = m.mesh->indexBufferHandle();
-                vkCmdBindIndexBuffer(
-                    commandBuffers[i],
-                    indexBuffer,
-                    0, VK_INDEX_TYPE_UINT32);
-
-                vkCmdDrawIndexed(
-                    commandBuffers[i],
-                    m.indexCount,
-                    1, 0, 0, 1);
-            }
+            skyRenderer->recordCommands(commandBuffers[i]);
+            pbrRenderer->recordCommands(commandBuffers[i]);
 
             vkCmdEndRenderPass(commandBuffers[i]);
             const VkResult result = vkEndCommandBuffer(commandBuffers[i]);
@@ -1340,31 +378,8 @@ struct Renderer::Impl
 
     bool renderFrame()
     {
-        Light eyeLight = scene->light;
-        eyeLight.dir = scene->camera.viewMatrix() * eyeLight.dir;
-
-        //std::cout << glm::to_string(eyeLight.dir) << std::endl;
-
-        for (size_t i = 0; i < vulkanModels.size(); ++i)
-        {
-            RendererModel& m = vulkanModels[i];
-            const float aspect = extent.width / float(extent.height);
-            scene->camera.aspectRatio = aspect;
-            Matrices matrices;
-            matrices.view       = scene->camera.viewMatrix();
-            matrices.projection = scene->camera.projectionMatrix();
-            matrices.model      = scene->models[i].worldTransform;
-            matrices.normal     = glm::inverseTranspose(matrices.view * matrices.model);
-
-            m.matricesUniformBuffer->copyHostVisible(&matrices, m.matricesUniformBuffer->size());
-            if (m.model.material.type == Material::Type::Pbr)
-                m.lightUniformBuffer->copyHostVisible(&eyeLight, m.lightUniformBuffer->size());
-        }
-
-        Matrices matrices;
-        matrices.view       = glm::mat4(glm::mat3(scene->camera.viewMatrix()));
-        matrices.projection = scene->camera.projectionMatrix();
-        skyBoxPipeline->matricesUniformBuffer->copyHostVisible(&matrices, skyBoxPipeline->matricesUniformBuffer->size());
+        skyRenderer->updateUniformBuffers();
+        pbrRenderer->updateUniformBuffers();
 
         uint32_t imageIndex;
         VkResult result = vkAcquireNextImageKHR(
@@ -1408,11 +423,8 @@ struct Renderer::Impl
         this->extent = extent;
 
         graphicsCommandPool.reset();
-        transferCommandPool.reset();
         commandBuffers.clear();
-        diffusePipeline.reset();
-        pbrPipeline.reset();
-        skyBoxPipeline->pipeline->destroy();
+
         renderPass.reset();
         swapchain.reset();
 
@@ -1422,8 +434,10 @@ struct Renderer::Impl
             return false;
         if (!createCommandPool())
             return false;
-        if (!createPipelines())
-            return false;
+
+        pbrRenderer->resized(extent, renderPass->handle());
+        skyRenderer->resized(extent, renderPass->handle());
+
         if (!createCommandBuffers())
             return false;
 
@@ -1437,26 +451,14 @@ struct Renderer::Impl
 
         vkDeviceWaitIdle(device->handle());
 
+        skyRenderer.reset();
+        pbrRenderer.reset();
         atmosphereRenderer.reset();
-        irradianceRenderer.reset();
-        iblPrefilterRenderer.reset();
-        iblBrdfRenderer.reset();
 
-        skyBoxPipeline->destroy();
         graphicsCommandPool->destroy();
-        if (transferCommandPool)
-            transferCommandPool->destroy();
         commandBuffers.clear();
         renderingFinished->destroy();
         imageAvailable->destroy();
-        diffusePipeline->destroy();
-        pbrPipeline->destroy();
-        descriptorPool->destroy();
-
-        for (RendererModel& m : vulkanModels)
-            m.destroy();
-        vulkanModels.clear();
-        textures->destroy();
 
         swapchain->destroy();
         renderPass->destroy();
@@ -1465,16 +467,10 @@ struct Renderer::Impl
 
     bool isValid() const
     {
-        if (transferCommandPool && !transferCommandPool->isValid())
-            return false;
-
         return commandBuffers.size() > 0                             &&
                graphicsCommandPool && graphicsCommandPool->isValid() &&
                renderingFinished   && renderingFinished->isValid()   &&
                imageAvailable      && imageAvailable->isValid()      &&
-               diffusePipeline     && diffusePipeline->isValid()     &&
-               pbrPipeline         && pbrPipeline->isValid()         &&
-               descriptorPool      && descriptorPool->isValid()      &&
                swapchain           && swapchain->isValid()           &&
                renderPass          && renderPass->isValid()          &&
                device              && device->isValid();
@@ -1502,24 +498,12 @@ struct Renderer::Impl
     // Render pass.
     std::shared_ptr<RenderPass> renderPass;
 
-    // Pipelines
-    std::shared_ptr<RendererPipeline> diffusePipeline;
-    std::shared_ptr<RendererPipeline> pbrPipeline;
-    std::shared_ptr<SkyBoxPipeline> skyBoxPipeline;
-
-    // Textures
-    std::shared_ptr<RendererTextures> textures;
-
     // Swapchain
     std::shared_ptr<Swapchain> swapchain;
     uint32_t swapchainImageCount;
 
-    // Descriptor sets
-    std::shared_ptr<DescriptorPool> descriptorPool;
-
     // Commands
     std::shared_ptr<CommandPool> graphicsCommandPool;
-    std::shared_ptr<CommandPool> transferCommandPool;
     std::vector<VkCommandBuffer> commandBuffers;
 
     // Sync
@@ -1529,14 +513,10 @@ struct Renderer::Impl
     // Scene
     const std::shared_ptr<Scene> scene;
 
-    // Vulkan models.
-    std::vector<RendererModel> vulkanModels;
-
     // Sub-renderers
     std::shared_ptr<AtmosphereRenderer> atmosphereRenderer;
-    std::shared_ptr<IrradianceRenderer> irradianceRenderer;
-    std::shared_ptr<IblPrefilterRenderer> iblPrefilterRenderer;
-    std::shared_ptr<IblBrdfLutRenderer> iblBrdfRenderer;
+    std::shared_ptr<PbrRenderer> pbrRenderer;
+    std::shared_ptr<SkyRenderer> skyRenderer;
 };
 
 /* -------------------------------------------------------------------------- */

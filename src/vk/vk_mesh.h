@@ -29,10 +29,12 @@ public:
     // Sets and gets the vertex data.
     Mesh& setVertices(const std::vector<float>& vertices);
     std::vector<float> vertices() const;
+    uint32_t vertexCount() const;
 
     // Sets and gets the index data.
     Mesh& setIndices(const std::vector<uint32_t>& indices);
     std::vector<uint32_t> indices() const;
+    uint32_t indexCount() const;
 
     // Adds a vertex attribute description.
     Mesh& addVertexAttributeDescription(const VkVertexInputAttributeDescription& desc);

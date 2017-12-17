@@ -101,6 +101,9 @@ Mesh& Mesh::setVertices(const std::vector<float>& vertices)
 std::vector<float> Mesh::vertices() const
 { return impl->vertices; }
 
+uint32_t Mesh::vertexCount() const
+{ return uint32_t(impl->vertices.size()); }
+
 Mesh& Mesh::setIndices(const std::vector<uint32_t>& indices)
 {
     impl->indices = indices;
@@ -109,6 +112,9 @@ Mesh& Mesh::setIndices(const std::vector<uint32_t>& indices)
 
 std::vector<uint32_t> Mesh::indices() const
 { return impl->indices; }
+
+uint32_t Mesh::indexCount() const
+{ return uint32_t(impl->indices.size()); }
 
 Mesh& Mesh::addVertexAttributeDescription(const VkVertexInputAttributeDescription& desc)
 {

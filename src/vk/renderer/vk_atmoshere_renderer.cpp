@@ -14,19 +14,19 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include <iostream>
-#include "vk_buffer.h"
-#include "vk_command.h"
-#include "vk_descriptor_set.h"
-#include "vk_image.h"
-#include "vk_mesh.h"
-#include "vk_pipeline.h"
-#include "vk_queue.h"
-#include "vk_image.h"
-#include "vk_image_layout_transition.h"
-#include "vk_render_pass.h"
-#include "vk_shader_module.h"
-#include "vk_texture.h"
-#include "../common/mesh.h"
+#include "../vk_buffer.h"
+#include "../vk_command.h"
+#include "../vk_descriptor_set.h"
+#include "../vk_image.h"
+#include "../vk_mesh.h"
+#include "../vk_pipeline.h"
+#include "../vk_queue.h"
+#include "../vk_image.h"
+#include "../vk_image_layout_transition.h"
+#include "../vk_render_pass.h"
+#include "../vk_shader_module.h"
+#include "../vk_texture.h"
+#include "../../common/mesh.h"
 
 namespace kuu
 {
