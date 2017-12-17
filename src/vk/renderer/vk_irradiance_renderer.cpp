@@ -190,8 +190,8 @@ void IrradianceRenderer::render()
     //--------------------------------------------------------------------------
     // Shader modules.
 
-    const std::string vshFilePath = "shaders/irradiance.vert.spv";
-    const std::string fshFilePath = "shaders/irradiance.frag.spv";
+    const std::string vshFilePath = "shaders/pbr_ibl_irradiance.vert.spv";
+    const std::string fshFilePath = "shaders/pbr_ibl_irradiance.frag.spv";
 
     std::shared_ptr<ShaderModule> vshModule =
         std::make_shared<ShaderModule>(impl->device, vshFilePath);
