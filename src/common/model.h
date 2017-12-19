@@ -9,6 +9,7 @@
 #include "material.h"
 #include "mesh.h"
 #include <glm/mat4x4.hpp>
+#include <memory>
 
 namespace kuu
 {
@@ -18,10 +19,11 @@ namespace kuu
  * -------------------------------------------------------------------------- */
 struct Model
 {
+    Model();
     std::string name;
+    std::shared_ptr<Material> material;
+    std::shared_ptr<Mesh> mesh;
     glm::mat4 worldTransform;
-    Material material;
-    Mesh mesh;
 };
 
 } // namespace kuu

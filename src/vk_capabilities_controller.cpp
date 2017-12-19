@@ -233,9 +233,9 @@ void Controller::runDeviceTest(int deviceIndex)
     for (int i = 0; i < 6; ++i)
     {
         Model quad;
-        quad.material.diffuse.map = maps[i];
-        quad.mesh.vertices = quadVertices;
-        quad.mesh.indices = quadIndices;
+        quad.material->diffuse.map = maps[i];
+        quad.mesh->vertices = quadVertices;
+        quad.mesh->indices = quadIndices;
         quad.worldTransform = glm::translate(glm::mat4(1.0f), positions[i]);
 
         impl->scene->models.push_back(quad);
@@ -334,17 +334,18 @@ void Controller::runDeviceTest(int deviceIndex)
     };
 
     genSphere(sphereRadius, 32, 32);
-    Model pbrSphere;
-    pbrSphere.material.type = Material::Type::Pbr;
-    pbrSphere.material.pbr.ambientOcclusionMap = maps2[0];
-    pbrSphere.material.pbr.baseColorMap        = maps2[1];
-    pbrSphere.material.pbr.heightMap           = maps2[2];
-    pbrSphere.material.pbr.metallicMap         = maps2[3];
-    pbrSphere.material.pbr.normalMap           = maps2[4];
-    pbrSphere.material.pbr.roughnessMap        = maps2[5];
+
+    std::shared_ptr<Model> pbrSphere = std::make_shared<Model>();
+    pbrSphere->material->type = Material::Type::Pbr;
+    pbrSphere->material->pbr.ambientOcclusionMap = maps2[0];
+    pbrSphere->material->pbr.baseColorMap        = maps2[1];
+    pbrSphere->material->pbr.heightMap           = maps2[2];
+    pbrSphere->material->pbr.metallicMap         = maps2[3];
+    pbrSphere->material->pbr.normalMap           = maps2[4];
+    pbrSphere->material->pbr.roughnessMap        = maps2[5];
 
     quadRadius = 3.0f;
-    pbrSphere.mesh.vertices =
+    pbrSphere->mesh->vertices =
     {
         {  { quadRadius, -quadRadius, 0.0f}, { 1.0, 0.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } },
         {  { quadRadius,  quadRadius, 0.0f}, { 1.0, 1.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } },
@@ -352,11 +353,10 @@ void Controller::runDeviceTest(int deviceIndex)
         {  {-quadRadius, -quadRadius, 0.0f}, { 0.0, 0.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } }
     };
 
-    pbrSphere.mesh.vertices = sphereVertices;
-    pbrSphere.mesh.indices  = sphereIndices;
-
-    pbrSphere.mesh.generateTangents();
-    pbrSphere.worldTransform =
+    pbrSphere->mesh->vertices = sphereVertices;
+    pbrSphere->mesh->indices  = sphereIndices;
+    pbrSphere->mesh->generateTangents();
+    pbrSphere->worldTransform =
         glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f, -2.0f, 0.0f));
 
     impl->scene->models.push_back(pbrSphere);
@@ -371,15 +371,17 @@ void Controller::runDeviceTest(int deviceIndex)
         "textures/rustediron2_roughness.png"
     };
 
-    pbrSphere.material.pbr.ambientOcclusionMap = maps3[0];
-    pbrSphere.material.pbr.baseColorMap        = maps3[1];
-    pbrSphere.material.pbr.heightMap           = maps3[2];
-    pbrSphere.material.pbr.metallicMap         = maps3[3];
-    pbrSphere.material.pbr.normalMap           = maps3[4];
-    pbrSphere.material.pbr.roughnessMap        = maps3[5];
-    pbrSphere.worldTransform =
+    std::shared_ptr<Model> pbrSphere2 = std::make_shared<Model>();
+    pbrSphere2->material->pbr.ambientOcclusionMap = maps3[0];
+    pbrSphere2->material->pbr.baseColorMap        = maps3[1];
+    pbrSphere2->material->pbr.heightMap           = maps3[2];
+    pbrSphere2->material->pbr.metallicMap         = maps3[3];
+    pbrSphere2->material->pbr.normalMap           = maps3[4];
+    pbrSphere2->material->pbr.roughnessMap        = maps3[5];
+    pbrSphere2->mesh = pbrSphere->mesh;
+    pbrSphere2->worldTransform =
         glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, -2.0f, 0.0f));
-    impl->scene->models.push_back(pbrSphere);
+    impl->scene->models.push_back(pbrSphere2);
 
     std::vector<std::string> maps4 =
     {
@@ -392,16 +394,18 @@ void Controller::runDeviceTest(int deviceIndex)
     };
 
 
-    pbrSphere.material.pbr = Material::Pbr();
-    pbrSphere.material.pbr.ambientOcclusionMap = maps4[0];
-    pbrSphere.material.pbr.baseColorMap        = maps4[1];
-    pbrSphere.material.pbr.heightMap           = maps4[2];
-    pbrSphere.material.pbr.metallicMap         = maps4[3];
-    pbrSphere.material.pbr.normalMap           = maps4[4];
-    pbrSphere.material.pbr.roughnessMap        = maps4[5];
-    pbrSphere.worldTransform =
+    std::shared_ptr<Model> pbrSphere3 = std::make_shared<Model>();
+    pbrSphere3->material->pbr = Material::Pbr();
+    pbrSphere3->material->pbr.ambientOcclusionMap = maps4[0];
+    pbrSphere3->material->pbr.baseColorMap        = maps4[1];
+    pbrSphere3->material->pbr.heightMap           = maps4[2];
+    pbrSphere3->material->pbr.metallicMap         = maps4[3];
+    pbrSphere3->material->pbr.normalMap           = maps4[4];
+    pbrSphere3->material->pbr.roughnessMap        = maps4[5];
+    pbrSphere3->mesh = pbrSphere->mesh;
+    pbrSphere3->worldTransform =
         glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f, 2.0f, 0.0f));
-    impl->scene->models.push_back(pbrSphere);
+    impl->scene->models.push_back(pbrSphere3);
 
     std::vector<std::string> maps5 =
     {
@@ -413,54 +417,60 @@ void Controller::runDeviceTest(int deviceIndex)
         "textures/oakfloor_roughness.png"
     };
 
-    pbrSphere.material.pbr.ambientOcclusionMap = maps5[0];
-    pbrSphere.material.pbr.baseColorMap        = maps5[1];
-    pbrSphere.material.pbr.heightMap           = maps5[2];
-    pbrSphere.material.pbr.metallicMap         = maps5[3];
-    pbrSphere.material.pbr.normalMap           = maps5[4];
-    pbrSphere.material.pbr.roughnessMap        = maps5[5];
-    pbrSphere.worldTransform =
+    std::shared_ptr<Model> pbrSphere4 = std::make_shared<Model>();
+    pbrSphere4->material->pbr.ambientOcclusionMap = maps5[0];
+    pbrSphere4->material->pbr.baseColorMap        = maps5[1];
+    pbrSphere4->material->pbr.heightMap           = maps5[2];
+    pbrSphere4->material->pbr.metallicMap         = maps5[3];
+    pbrSphere4->material->pbr.normalMap           = maps5[4];
+    pbrSphere4->material->pbr.roughnessMap        = maps5[5];
+    pbrSphere4->mesh = pbrSphere->mesh;
+    pbrSphere4->worldTransform =
         glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 2.0f, 0.0f));
-    impl->scene->models.push_back(pbrSphere);
+    impl->scene->models.push_back(pbrSphere4);
 
-    pbrSphere.material.pbr = Material::Pbr();
-    pbrSphere.material.pbr.ao = 1.0f;
-    pbrSphere.material.pbr.metallic = 0.8f;
-    pbrSphere.material.pbr.roughness = 0.2f;
-    pbrSphere.material.pbr.albedo = glm::vec3(1.0);
-    pbrSphere.worldTransform =
+    std::shared_ptr<Model> pbrSphere5 = std::make_shared<Model>();
+    pbrSphere5->material->pbr = Material::Pbr();
+    pbrSphere5->material->pbr.ao = 1.0f;
+    pbrSphere5->material->pbr.metallic = 0.8f;
+    pbrSphere5->material->pbr.roughness = 0.2f;
+    pbrSphere5->material->pbr.albedo = glm::vec3(1.0);
+    pbrSphere5->mesh = pbrSphere->mesh;
+    pbrSphere5->worldTransform =
         glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f, 6.0f, 0.0f));
-    impl->scene->models.push_back(pbrSphere);
+    impl->scene->models.push_back(pbrSphere5);
 
-    pbrSphere.material.pbr = Material::Pbr();
-    pbrSphere.material.pbr.ao = 1.0f;
-    pbrSphere.material.pbr.metallic = 0.0f;
-    pbrSphere.material.pbr.roughness = 0.8f;
-    pbrSphere.material.pbr.albedo = glm::vec3(0.0f, 0.0f, 1.0f);
-    pbrSphere.worldTransform =
+    std::shared_ptr<Model> pbrSphere6 = std::make_shared<Model>();
+    pbrSphere6->material->pbr = Material::Pbr();
+    pbrSphere6->material->pbr.ao = 1.0f;
+    pbrSphere6->material->pbr.metallic = 0.0f;
+    pbrSphere6->material->pbr.roughness = 0.8f;
+    pbrSphere6->material->pbr.albedo = glm::vec3(0.0f, 0.0f, 1.0f);
+    pbrSphere6->mesh = pbrSphere->mesh;
+    pbrSphere6->worldTransform =
         glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 6.0f, 0.0f));
-    impl->scene->models.push_back(pbrSphere);
+    impl->scene->models.push_back(pbrSphere6);
 
 #if 0
     Model pbrQuad;
-    pbrQuad.material.type = Material::Type::Pbr;
-    pbrQuad.material.pbr.ambientOcclusion = maps[0];
-    pbrQuad.material.pbr.baseColor        = maps[1];
-    pbrQuad.material.pbr.height           = maps[2];
-    pbrQuad.material.pbr.metallic         = maps[3];
-    pbrQuad.material.pbr.normal           = maps[4];
-    pbrQuad.material.pbr.roughness        = maps[5];
+    pbrQuad.material->type = Material::Type::Pbr;
+    pbrQuad.material->pbr.ambientOcclusion = maps[0];
+    pbrQuad.material->pbr.baseColor        = maps[1];
+    pbrQuad.material->pbr.height           = maps[2];
+    pbrQuad.material->pbr.metallic         = maps[3];
+    pbrQuad.material->pbr.normal           = maps[4];
+    pbrQuad.material->pbr.roughness        = maps[5];
 
     quadRadius = 3.0f;
-    pbrQuad.mesh.vertices =
+    pbrQuad.mesh->vertices =
     {
         {  { quadRadius, -quadRadius, 0.0f}, { 1.0, 0.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } },
         {  { quadRadius,  quadRadius, 0.0f}, { 1.0, 1.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } },
         {  {-quadRadius,  quadRadius, 0.0f}, { 0.0, 1.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } },
         {  {-quadRadius, -quadRadius, 0.0f}, { 0.0, 0.0 }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f} , { 0.0f, 0.0f, 0.0f } }
     };
-    pbrQuad.mesh.indices  = quadIndices;
-    pbrQuad.mesh.generateTangents();
+    pbrQuad.mesh->indices  = quadIndices;
+    pbrQuad.mesh->generateTangents();
     pbrQuad.worldTransform =
         glm::translate(glm::mat4(1.0f), glm::vec3(3.1f, -3.0f, 2.0f)) *
         glm::mat4_cast(glm::angleAxis(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
@@ -536,13 +546,13 @@ void Controller::runDeviceTest(int deviceIndex)
         { { -bw,  bh,  bd },  { 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
     };
 
-    kuu::Mesh m;
+    std::shared_ptr<kuu::Mesh> m = std::make_shared<kuu::Mesh>();
     for (const Vertex& v : vertices)
-        m.addVertex(v);
-    m.generateTangents();
+        m->addVertex(v);
+    m->generateTangents();
 
     std::vector<float> vertexVector;
-    for (const Vertex& v : m.vertices)
+    for (const Vertex& v : m->vertices)
     {
         vertexVector.push_back(v.pos.x);
         vertexVector.push_back(v.pos.y);
@@ -551,16 +561,16 @@ void Controller::runDeviceTest(int deviceIndex)
         vertexVector.push_back(v.texCoord.y);
     }
 
-    Model pbrBox;
-    pbrBox.material.type = Material::Type::Pbr;
-    pbrBox.material.pbr.ambientOcclusionMap = maps[0];
-    pbrBox.material.pbr.baseColorMap        = maps[1];
-    pbrBox.material.pbr.heightMap           = maps[2];
-    pbrBox.material.pbr.metallicMap         = maps[3];
-    pbrBox.material.pbr.normalMap           = maps[4];
-    pbrBox.material.pbr.roughnessMap        = maps[5];
-    pbrBox.mesh = m;
-    pbrBox.worldTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -5.0f, 0.0f));
+    std::shared_ptr<Model> pbrBox = std::make_shared<Model>();
+    pbrBox->material->type = Material::Type::Pbr;
+    pbrBox->material->pbr.ambientOcclusionMap = maps[0];
+    pbrBox->material->pbr.baseColorMap        = maps[1];
+    pbrBox->material->pbr.heightMap           = maps[2];
+    pbrBox->material->pbr.metallicMap         = maps[3];
+    pbrBox->material->pbr.normalMap           = maps[4];
+    pbrBox->material->pbr.roughnessMap        = maps[5];
+    pbrBox->mesh = m;
+    pbrBox->worldTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -5.0f, 0.0f));
     impl->scene->models.push_back(pbrBox);
 
 #endif
@@ -570,6 +580,7 @@ void Controller::runDeviceTest(int deviceIndex)
     extent.height = uint32_t(impl->surfaceWidget->height());
     const float aspect = extent.width / float(extent.height);
     impl->scene->camera.aspectRatio = aspect;
+    impl->scene->camera.farPlane = 50.0f;
     impl->scene->camera.pos.y = 1.5f;
     impl->scene->camera.tPos.y = 1.5f;
     impl->scene->camera.pos.z += 4.0f;

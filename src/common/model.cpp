@@ -8,4 +8,11 @@
 namespace kuu
 {
 
+Model::Model()
+    : mesh(std::make_shared<Mesh>())
+    , material(std::make_shared<Material>())
+{
+
+}
+
 } // namespace kuu

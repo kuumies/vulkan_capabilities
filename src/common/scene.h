@@ -23,7 +23,7 @@ struct Scene
     std::string name;
     Camera camera;
     Light light;
-    std::vector<Model> models;
+    std::vector<std::shared_ptr<Model>> models;
 };
 
 } // namespace kuu
