@@ -43,6 +43,7 @@ layout(binding = 8)  uniform sampler2D roughnessMap;
 layout(binding = 9)  uniform samplerCube irradianceMap;
 layout(binding = 10)  uniform samplerCube prefilteredMap;
 layout(binding = 11) uniform sampler2D brdfLutMap;
+layout(binding = 12) uniform sampler2D shadowMap;
 
 // -----------------------------------------------------------------------------
 // Vertex shader outputs
@@ -50,7 +51,8 @@ layout(binding = 11) uniform sampler2D brdfLutMap;
 layout(location = 0) in vec2 texCoord;
 layout(location = 1) in vec3 eyeNormal;
 layout(location = 2) in vec3 eyePos;
-layout(location = 3) in mat3 tbn;
+layout(location = 3) in vec4 lightPos;
+layout(location = 4) in mat3 tbn;
 
 // -----------------------------------------------------------------------------
 // Fragment shader outputs
@@ -138,8 +140,41 @@ vec2 parallaxMapping(vec2 texCoords, vec3 viewDir)
      return finalTexCoords;
 }
 
+float LinearizeDepth(float depth)
+{
+  float n = 0.1; // camera z near
+  float f = 150.0; // camera z far
+  float z = depth;
+  return (2.0 * n) / (f + n - z * (f - n));
+}
+
+float shadowFactor(float epsilon)
+{
+    // Transform the vertex from the light points of view in UV space
+    vec3 ndc = lightPos.xyz / lightPos.w;
+    vec3 uv = 0.5 * ndc + 0.5;
+
+    // Vertex distance from the light point of view in UV space
+    float z = uv.z;
+
+    // The closest pixel from the light point of view in UV space.
+    float depth = texture(shadowMap, uv.xy).r;
+
+    return smoothstep(z - epsilon, z, depth);
+}
+
 void main()
 {
+//    float shadow = shadowFactor(0.001f);
+//    outColor = vec4(shadow, shadow, shadow, 1.0);
+////    //outColor = lightPos;
+//    outColor.a = 1.0;
+//    return;
+
+//    float d = texture(shadowMap, texCoord).r;
+//    outColor = vec4(vec3(d), 1.0);
+//    return;
+
     // Calculate vectors.
     vec3 v = normalize(-eyePos);
     vec3 l = normalize(-light.eyeDir.xyz);

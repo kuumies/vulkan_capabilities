@@ -37,6 +37,7 @@
 #include "vk_irradiance_renderer.h"
 #include "vk_ibl_brdf_lut_renderer.h"
 #include "vk_ibl_prefilter_renderer.h"
+#include "vk_mesh_manager.h"
 
 namespace kuu
 {
@@ -54,6 +55,7 @@ struct Matrices
     glm::mat4 view;
     glm::mat4 projection;
     glm::mat4 normal;
+    glm::mat4 light;
 };
 
 struct PbrParams
@@ -146,51 +148,24 @@ struct PbrModel
              const VkDevice& device,
              const VkDescriptorSetLayout& descriptorSetLayout,
              const VkDescriptorPool& descriptorPool,
-             const Model& model,
-             std::shared_ptr<TextureManager> textureManager)
+             std::shared_ptr<Model> model,
+             std::shared_ptr<TextureManager> textureManager,
+             std::shared_ptr<MeshManager> meshManager,
+             std::shared_ptr<Texture2D> shadowMap)
         : model(model)
     {
         // ---------------------------------------------------------------------
         // Params
 
-        pbrParams.albedo    = glm::vec4(model.material.pbr.albedo, 1.0);
-        pbrParams.ao        = model.material.pbr.ao;
-        pbrParams.metallic  = model.material.pbr.metallic;
-        pbrParams.roughness = model.material.pbr.roughness;
-
+        pbrParams.albedo    = glm::vec4(model->material->pbr.albedo, 1.0);
+        pbrParams.ao        = model->material->pbr.ao;
+        pbrParams.metallic  = model->material->pbr.metallic;
+        pbrParams.roughness = model->material->pbr.roughness;
 
         // ---------------------------------------------------------------------
         // Mesh
 
-        std::vector<float> vertexVector;
-        for (const Vertex& v : model.mesh.vertices)
-        {
-            vertexVector.push_back(v.pos.x);
-            vertexVector.push_back(v.pos.y);
-            vertexVector.push_back(v.pos.z);
-            vertexVector.push_back(v.texCoord.x);
-            vertexVector.push_back(v.texCoord.y);
-            vertexVector.push_back(v.normal.x);
-            vertexVector.push_back(v.normal.y);
-            vertexVector.push_back(v.normal.z);
-            vertexVector.push_back(v.tangent.x);
-            vertexVector.push_back(v.tangent.y);
-            vertexVector.push_back(v.tangent.z);
-            vertexVector.push_back(v.bitangent.x);
-            vertexVector.push_back(v.bitangent.y);
-            vertexVector.push_back(v.bitangent.z);
-        }
-
-        mesh = std::make_shared<vk::Mesh>(physicalDevice, device);
-        mesh->setVertices(vertexVector);
-        mesh->setIndices(model.mesh.indices);
-        mesh->addVertexAttributeDescription(0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0);
-        mesh->addVertexAttributeDescription(1, 0, VK_FORMAT_R32G32_SFLOAT,    3 * sizeof(float));
-        mesh->addVertexAttributeDescription(2, 0, VK_FORMAT_R32G32B32_SFLOAT, 5 * sizeof(float));
-        mesh->addVertexAttributeDescription(3, 0, VK_FORMAT_R32G32B32_SFLOAT, 8 * sizeof(float));
-        mesh->addVertexAttributeDescription(4, 0, VK_FORMAT_R32G32B32_SFLOAT, 11 * sizeof(float));
-        mesh->setVertexBindingDescription(0, 14 * sizeof(float), VK_VERTEX_INPUT_RATE_VERTEX);
-        mesh->create();
+        mesh = meshManager->mesh(model->mesh);
 
         // ---------------------------------------------------------------------
         // Descriptor sets.
@@ -266,12 +241,12 @@ struct PbrModel
         // ---------------------------------------------------------------------
         // Texture maps.
 
-        writeTexture(3, model.material.pbr.ambientOcclusionMap, true);
-        writeTexture(4, model.material.pbr.baseColorMap,        false);
-        writeTexture(5, model.material.pbr.heightMap,           true);
-        writeTexture(6, model.material.pbr.metallicMap,         true);
-        writeTexture(7, model.material.pbr.normalMap,           false);
-        writeTexture(8, model.material.pbr.roughnessMap,        true);
+        writeTexture(3, model->material->pbr.ambientOcclusionMap, true);
+        writeTexture(4, model->material->pbr.baseColorMap,        false);
+        writeTexture(5, model->material->pbr.heightMap,           true);
+        writeTexture(6, model->material->pbr.metallicMap,         true);
+        writeTexture(7, model->material->pbr.normalMap,           false);
+        writeTexture(8, model->material->pbr.roughnessMap,        true);
 
         descriptorSets->writeImage(
                 9,
@@ -290,10 +265,16 @@ struct PbrModel
                 textureManager->brdfLut->sampler,
                 textureManager->brdfLut->imageView,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+        descriptorSets->writeImage(
+                12,
+                shadowMap->sampler,
+                shadowMap->imageView,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
 
     // Model
-    Model model;
+    std::shared_ptr<Model> model;
 
     // Mesh
     std::shared_ptr<Mesh> mesh;
@@ -331,11 +312,13 @@ struct PbrRenderer::Impl
          const VkExtent2D& extent,
          const uint32_t queueFamilyIndex,
          const VkRenderPass& renderPass,
-         std::shared_ptr<TextureCube> environment)
+         std::shared_ptr<TextureCube> environment,
+         std::shared_ptr<MeshManager> meshManager)
         : physicalDevice(physicalDevice)
         , device(device)
         , extent(extent)
         , renderPass(renderPass)
+        , meshManager(meshManager)
     {
         createCommandPool(device, queueFamilyIndex);
         createTextureManager(queueFamilyIndex);
@@ -441,7 +424,7 @@ struct PbrRenderer::Impl
             { binding++, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL },
         };
 
-        const uint32_t images = 11;
+        const uint32_t images = 12;
         for (int i = 0; i < images; ++i)
             layoutBindings.push_back(
                 { binding++, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -552,6 +535,9 @@ struct PbrRenderer::Impl
 
     std::shared_ptr<Scene> scene;
     std::vector<std::shared_ptr<PbrModel>> models;
+    std::shared_ptr<MeshManager> meshManager;
+
+    std::shared_ptr<Texture2D> shadowMap;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -561,13 +547,15 @@ PbrRenderer::PbrRenderer(const VkPhysicalDevice& physicalDevice,
                          const uint32_t queueFamilyIndex,
                          const VkExtent2D& extent,
                          const VkRenderPass& renderPass,
-                         std::shared_ptr<TextureCube> environment)
+                         std::shared_ptr<TextureCube> environment,
+                         std::shared_ptr<MeshManager> meshManager)
     : impl(std::make_shared<Impl>(physicalDevice,
                                   device,
                                   extent,
                                   queueFamilyIndex,
                                   renderPass,
-                                  environment))
+                                  environment,
+                                  meshManager))
 {}
 
 /* -------------------------------------------------------------------------- */
@@ -584,13 +572,13 @@ void PbrRenderer::resized(const VkExtent2D& extent,
 
 void PbrRenderer::setScene(std::shared_ptr<Scene> scene)
 {
-    std::vector<Model> pbrModels;
-    for (const Model& m :scene->models)
-        if (m.material.type == Material::Type::Pbr)
+    std::vector<std::shared_ptr<Model>> pbrModels;
+    for (std::shared_ptr<Model> m :scene->models)
+        if (m->material->type == Material::Type::Pbr)
             pbrModels.push_back(m);
 
     uint32_t uniformBufferCount = 3 * uint32_t(pbrModels.size());
-    uint32_t imageSamplerCount  = 11 * uint32_t(pbrModels.size());
+    uint32_t imageSamplerCount  = 12 * uint32_t(pbrModels.size());
     impl->descriptorPool = std::make_shared<DescriptorPool>(impl->device);
     impl->descriptorPool->addTypeSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,          uniformBufferCount);
     impl->descriptorPool->addTypeSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,  imageSamplerCount);
@@ -598,7 +586,7 @@ void PbrRenderer::setScene(std::shared_ptr<Scene> scene)
     impl->descriptorPool->create();
 
     impl->scene = scene;
-    for (const Model& m :pbrModels)
+    for (std::shared_ptr<Model> m :pbrModels)
         impl->models.push_back(
             std::make_shared<PbrModel>(
                 impl->physicalDevice,
@@ -606,7 +594,9 @@ void PbrRenderer::setScene(std::shared_ptr<Scene> scene)
                 impl->descriptorSetLayout,
                 impl->descriptorPool->handle(),
                 m,
-                impl->textureManager));
+                impl->textureManager,
+                impl->meshManager,
+                impl->shadowMap));
 
    updateUniformBuffers();
 }
@@ -615,6 +605,13 @@ void PbrRenderer::setScene(std::shared_ptr<Scene> scene)
 
 std::shared_ptr<Scene> PbrRenderer::scene() const
 { return impl->scene; }
+
+/* -------------------------------------------------------------------------- */
+
+void PbrRenderer::setShadowMap(std::shared_ptr<Texture2D> shadowMap)
+{
+    impl->shadowMap = shadowMap;
+}
 
 /* -------------------------------------------------------------------------- */
 
@@ -653,7 +650,7 @@ void PbrRenderer::recordCommands(const VkCommandBuffer& commandBuffer)
             commandBuffer,
             model->mesh->indexCount(),
             1, 0, 0, 1);
-        }
+    }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -663,13 +660,17 @@ void PbrRenderer::updateUniformBuffers()
     Light eyeLight = impl->scene->light;
     eyeLight.dir   = impl->scene->camera.viewMatrix() * eyeLight.dir;
 
+    const glm::vec4& vp = glm::vec4(0, 0, 1024, 1024);
+    const glm::mat4 lightMatrix = impl->scene->light.orthoShadowMatrix(impl->scene->camera, vp, 1.0f);
+
     for (std::shared_ptr<PbrModel> m : impl->models)
     {
         Matrices matrices;
         matrices.view       = impl->scene->camera.viewMatrix();
         matrices.projection = impl->scene->camera.projectionMatrix();
-        matrices.model      = m->model.worldTransform;
+        matrices.model      = m->model->worldTransform;
         matrices.normal     = glm::inverseTranspose(matrices.view * matrices.model);
+        matrices.light      = lightMatrix;
 
         m->matricesUniformBuffer->copyHostVisible(&matrices, m->matricesUniformBuffer->size());
         m->lightUniformBuffer->copyHostVisible(&eyeLight, m->lightUniformBuffer->size());

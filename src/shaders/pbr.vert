@@ -11,6 +11,7 @@ layout(binding = 0) uniform Matrices
     mat4 view;
     mat4 projection;
     mat4 normal;
+    mat4 light;
 
 } matrices;
 
@@ -23,13 +24,8 @@ layout(location = 4) in vec3 inBitangent;
 layout(location = 0) out vec2 texCoord;
 layout(location = 1) out vec3 eyeNormal;
 layout(location = 2) out vec3 eyePos;
-layout(location = 3) out mat3 tbn;
-//layout(location = 4) out mat3 tbnInverse;
-
-out gl_PerVertex
-{
-    vec4 gl_Position;
-};
+layout(location = 3) out vec4 lightPos;
+layout(location = 4) out mat3 tbn;
 
 void main()
 {
@@ -48,5 +44,6 @@ void main()
     eyeNormal = mat3(matrices.normal) * inNormal;
     eyePos    = vec3(matrices.view * matrices.model * vec4(inPosition, 1.0));
     tbn        = mat3(t, b, n);
-//    tbnInverse = transpose(tbn);
+
+    lightPos = matrices.light * matrices.model * vec4(inPosition, 1.0);
 }

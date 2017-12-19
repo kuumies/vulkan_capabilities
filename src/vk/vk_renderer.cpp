@@ -15,7 +15,9 @@
 #include <iostream>
 #include <QtGui/QImage>
 #include "renderer/vk_atmoshere_renderer.h"
+#include "renderer/vk_mesh_manager.h"
 #include "renderer/vk_pbr_renderer.h"
+#include "renderer/vk_shadow_map_renderer.h"
 #include "renderer/vk_sky_renderer.h"
 #include "vk_buffer.h"
 #include "vk_command.h"
@@ -261,6 +263,16 @@ struct Renderer::Impl
 
     bool createSubRenderers()
     {
+        std::shared_ptr<MeshManager> meshManager =
+            std::make_shared<MeshManager>(
+                physicalDevice,
+                device->handle(),
+                graphicsFamilyIndex);
+
+        for (std::shared_ptr<Model> m : scene->models)
+            if (m->material->type == Material::Type::Pbr)
+                meshManager->addPbrMesh(m->mesh);
+
         atmosphereRenderer = std::make_shared<AtmosphereRenderer>(
             physicalDevice,
             device->handle(),
@@ -277,14 +289,24 @@ struct Renderer::Impl
             atmosphereRenderer->textureCube());
         skyRenderer->setScene(scene);
 
+        shadowMapRenderer = std::make_shared<ShadowMapRenderer>(
+                    physicalDevice,
+                    device->handle(),
+                    graphicsFamilyIndex,
+                    meshManager);
+        shadowMapRenderer->setScene(scene);
+
         pbrRenderer = std::make_shared<PbrRenderer>(
             physicalDevice,
             device->handle(),
             graphicsFamilyIndex,
             extent,
             renderPass->handle(),
-            atmosphereRenderer->textureCube());
+            atmosphereRenderer->textureCube(),
+            meshManager);
+        pbrRenderer->setShadowMap(shadowMapRenderer->texture());
         pbrRenderer->setScene(scene);
+
 
         return true;
     }
@@ -411,6 +433,8 @@ struct Renderer::Impl
         skyRenderer->updateUniformBuffers();
         pbrRenderer->updateUniformBuffers();
 
+        shadowMapRenderer->render();
+
         // Render
         Queue graphicsQueue(device->handle(), graphicsFamilyIndex, 0);
         graphicsQueue.create();
@@ -463,6 +487,7 @@ struct Renderer::Impl
 
         vkDeviceWaitIdle(device->handle());
 
+        shadowMapRenderer.reset();
         skyRenderer.reset();
         pbrRenderer.reset();
         atmosphereRenderer.reset();
@@ -529,6 +554,7 @@ struct Renderer::Impl
     std::shared_ptr<AtmosphereRenderer> atmosphereRenderer;
     std::shared_ptr<PbrRenderer> pbrRenderer;
     std::shared_ptr<SkyRenderer> skyRenderer;
+    std::shared_ptr<ShadowMapRenderer> shadowMapRenderer;
 };
 
 /* -------------------------------------------------------------------------- */
