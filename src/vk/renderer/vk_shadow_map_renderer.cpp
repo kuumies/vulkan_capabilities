@@ -565,7 +565,7 @@ void ShadowMapRenderer::setScene(std::shared_ptr<Scene> scene)
 
 void ShadowMapRenderer::render()
 {
-    const glm::vec4& vp = glm::vec4(0, 0, impl->extent.width, impl->extent.height);
+    const glm::vec4& vp = impl->scene->viewport;
     const glm::mat4 lightMatrix = impl->scene->light.orthoShadowMatrix(impl->scene->camera, vp, 1.0f);
 
     for (std::shared_ptr<ShadowMapModel> m : impl->models)
