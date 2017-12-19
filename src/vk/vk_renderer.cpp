@@ -9,6 +9,7 @@
 #include "renderer/vk_atmoshere_renderer.h"
 #include "renderer/vk_mesh_manager.h"
 #include "renderer/vk_pbr_renderer.h"
+#include "renderer/vk_shadow_map_depth.h"
 #include "renderer/vk_shadow_map_renderer.h"
 #include "renderer/vk_sky_renderer.h"
 #include "vk_buffer.h"
@@ -288,6 +289,13 @@ struct Renderer::Impl
                     meshManager);
         shadowMapRenderer->setScene(scene);
 
+        shadowMapDepthRenderer = std::make_shared<ShadowMapDepth>(
+                    physicalDevice,
+                    device->handle(),
+                    graphicsFamilyIndex,
+                    renderPass->handle());
+        shadowMapDepthRenderer->setShadowMap(shadowMapRenderer->texture());
+
         pbrRenderer = std::make_shared<PbrRenderer>(
             physicalDevice,
             device->handle(),
@@ -298,7 +306,6 @@ struct Renderer::Impl
             meshManager);
         pbrRenderer->setShadowMap(shadowMapRenderer->texture());
         pbrRenderer->setScene(scene);
-
 
         return true;
     }
@@ -362,6 +369,7 @@ struct Renderer::Impl
 
             skyRenderer->recordCommands(commandBuffers[i]);
             pbrRenderer->recordCommands(commandBuffers[i]);
+            shadowMapDepthRenderer->recordCommands(commandBuffers[i]);
 
             vkCmdEndRenderPass(commandBuffers[i]);
             const VkResult result = vkEndCommandBuffer(commandBuffers[i]);
@@ -480,6 +488,7 @@ struct Renderer::Impl
         vkDeviceWaitIdle(device->handle());
 
         shadowMapRenderer.reset();
+        shadowMapDepthRenderer.reset();
         skyRenderer.reset();
         pbrRenderer.reset();
         atmosphereRenderer.reset();
@@ -547,6 +556,7 @@ struct Renderer::Impl
     std::shared_ptr<PbrRenderer> pbrRenderer;
     std::shared_ptr<SkyRenderer> skyRenderer;
     std::shared_ptr<ShadowMapRenderer> shadowMapRenderer;
+    std::shared_ptr<ShadowMapDepth> shadowMapDepthRenderer;
 };
 
 /* -------------------------------------------------------------------------- */

@@ -7,6 +7,7 @@
 
 #include "vk_shadow_map_renderer.h"
 #include <iostream>
+#include <glm/gtx/string_cast.hpp>
 #include "../vk_buffer.h"
 #include "../vk_command.h"
 #include "../vk_descriptor_set.h"
@@ -560,6 +561,7 @@ void ShadowMapRenderer::render()
 {
     const glm::vec4& vp = impl->scene->viewport;
     const glm::mat4 lightMatrix = impl->scene->light.orthoShadowMatrix(impl->scene->camera, vp, 1.0f);
+    //std::cout << __FUNCTION__ << ": " << glm::to_string(lightMatrix) << std::endl;
 
     for (std::shared_ptr<ShadowMapModel> m : impl->models)
     {

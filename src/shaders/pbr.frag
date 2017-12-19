@@ -51,7 +51,7 @@ layout(binding = 12) uniform sampler2D shadowMap;
 layout(location = 0) in vec2 texCoord;
 layout(location = 1) in vec3 eyeNormal;
 layout(location = 2) in vec3 eyePos;
-//layout(location = 3) in vec4 lightPos;
+layout(location = 3) in vec4 lightPos;
 layout(location = 4) in mat3 tbn;
 
 // -----------------------------------------------------------------------------
@@ -140,8 +140,6 @@ vec2 parallaxMapping(vec2 texCoords, vec3 viewDir)
      return finalTexCoords;
 }
 
-const vec4 lightPos = vec4(0.0);
-
 float LinearizeDepth(float depth)
 {
   float n = 0.1; // camera z near
@@ -200,6 +198,21 @@ float isInShadow()
 
 void main()
 {
+//    vec3 projCoords = lightPos.xyz / lightPos.w;
+//    projCoords = projCoords * 0.5 + 0.5;
+
+//    float s = texture(shadowMap, projCoords.xy).r;
+//    //s = projCoords.z;
+
+//    outColor.rgb = vec3(s, s, s);
+//    outColor.a = 1.0;
+//    return;
+
+//    vec3 p = lightPos.xyz / lightPos.w;
+//    outColor.rgb = p;
+//    outColor.a = 1.0;
+//    return;
+
 //    float shadow = LinearizeDepth(texture(shadowMap, texCoord).r);
 //    outColor = vec4(shadow, shadow, shadow, 1.0);
 //    return;

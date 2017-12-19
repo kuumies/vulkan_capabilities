@@ -8,10 +8,8 @@
 
 /* -------------------------------------------------------------------------- */
 
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/gtc/matrix_inverse.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/string_cast.hpp>
 #include <iostream>
 
 /* -------------------------------------------------------------------------- */
@@ -662,6 +660,7 @@ void PbrRenderer::updateUniformBuffers()
 
     const glm::vec4& vp = impl->scene->viewport;
     const glm::mat4 lightMatrix = impl->scene->light.orthoShadowMatrix(impl->scene->camera, vp, 1.0f);
+    //std::cout << __FUNCTION__ << ": " << glm::to_string(lightMatrix) << std::endl;
 
     for (std::shared_ptr<PbrModel> m : impl->models)
     {
