@@ -579,6 +579,7 @@ void Controller::runDeviceTest(int deviceIndex)
     extent.width  = uint32_t(impl->surfaceWidget->width());
     extent.height = uint32_t(impl->surfaceWidget->height());
     const float aspect = extent.width / float(extent.height);
+    impl->scene->viewport = glm::vec4(0, 0, width, height);
     impl->scene->camera.aspectRatio = aspect;
     impl->scene->camera.farPlane = 50.0f;
     impl->scene->camera.pos.y = 1.5f;
@@ -606,6 +607,7 @@ void Controller::onSurfaceResized()
 
     if (impl->scene)
     {
+        impl->scene->viewport = glm::vec4(0, 0, extent.width, extent.height);
         const float aspect = extent.width / float(extent.height);
         impl->scene->camera.aspectRatio = aspect;
     }

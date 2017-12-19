@@ -24,6 +24,7 @@ struct Scene
     Camera camera;
     Light light;
     std::vector<std::shared_ptr<Model>> models;
+    glm::vec4 viewport;
 };
 
 } // namespace kuu
