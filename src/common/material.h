@@ -44,7 +44,7 @@ struct Material
 
     } pbr;
 
-    Type type = Type::Diffuse;
+    Type type = Type::Pbr;
 };
 
 } // namespace kuu
