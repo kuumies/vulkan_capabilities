@@ -45,7 +45,12 @@ struct Texture2D
               VkFilter magFilter,
               VkFilter minFilter,
               VkSamplerAddressMode addressModeU,
-              VkSamplerAddressMode addressModeV);
+              VkSamplerAddressMode addressModeV,
+              VkImageUsageFlags usageFlags =
+                    VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                    VK_IMAGE_USAGE_SAMPLED_BIT,
+             VkImageAspectFlags aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT);
 
     VkFormat format;
     VkExtent2D extent;
