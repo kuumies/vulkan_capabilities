@@ -46,4 +46,9 @@ glm::mat4 Camera::projectionMatrix() const
     return m;
 }
 
+glm::mat4 Camera::cameraMatrix() const
+{
+    return projectionMatrix() * viewMatrix();
+}
+
 } // namespace kuu

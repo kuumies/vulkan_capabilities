@@ -42,6 +42,8 @@ struct Camera
     glm::mat4 viewMatrix() const;
     // Returns projection transform.
     glm::mat4 projectionMatrix() const;
+    // Returns the camera matrix (projection x view)
+    glm::mat4 cameraMatrix() const;
 
     // Perspective projection parameters
     float fieldOfview = 56.0f;
