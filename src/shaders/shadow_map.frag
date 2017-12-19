@@ -9,5 +9,5 @@ layout(location = 0) out float outDepth;
 
 void main()
 {
-    outDepth = 1.0f; //gl_FragDepth;
+    outDepth = gl_FragCoord.z;
 }

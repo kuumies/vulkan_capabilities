@@ -16,7 +16,7 @@ glm::mat4 Light::orthoShadowMatrix(const Camera& camera,
                                    float nearClipOffset) const
 {
     Frustum frustum(camera, viewport);
-    return frustum.orthoShadowMatrix(dir, nearClipOffset);
+    return frustum.orthoShadowMatrix(-dir, nearClipOffset);
 }
 
 } // namespace kuu

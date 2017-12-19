@@ -660,7 +660,7 @@ void PbrRenderer::updateUniformBuffers()
     Light eyeLight = impl->scene->light;
     eyeLight.dir   = impl->scene->camera.viewMatrix() * eyeLight.dir;
 
-    const glm::vec4& vp = glm::vec4(0, 0, 1024, 1024);
+    const glm::vec4& vp = impl->scene->viewport;
     const glm::mat4 lightMatrix = impl->scene->light.orthoShadowMatrix(impl->scene->camera, vp, 1.0f);
 
     for (std::shared_ptr<PbrModel> m : impl->models)

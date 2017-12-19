@@ -22,7 +22,7 @@
 #include "frustum.h"
 
 #define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+//#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/trigonometric.hpp>
 #include <iostream>
@@ -124,11 +124,16 @@ glm::mat4 Frustum::orthoShadowMatrix(const glm::vec3& ld,
     // the max X, Bottom would be min Y, Top would be max Y, near would -maxZ,
     // far would -minZ.
 
-    glm::mat4 projection = glm::ortho(
+    glm::mat4 clip = glm::mat4(1.0f, 0.0f, 0.0f, 0.0f,
+                               0.0f,-1.0f, 0.0f, 0.0f,
+                               0.0f, 0.0f, 0.5f, 0.0f,
+                               0.0f, 0.0f, 0.5f, 1.0f);
+
+    glm::mat4 projection = clip * glm::ortho(
          min.x,                   max.x,
          min.y,                   max.y,
         -max.z - nearClipOffset, -min.z);
-    projection[1][1] *= -1;
+
 
     // Use these view and projection matrices to render geometry to the
     // shadow buffer.

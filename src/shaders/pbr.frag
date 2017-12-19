@@ -51,7 +51,7 @@ layout(binding = 12) uniform sampler2D shadowMap;
 layout(location = 0) in vec2 texCoord;
 layout(location = 1) in vec3 eyeNormal;
 layout(location = 2) in vec3 eyePos;
-layout(location = 3) in vec4 lightPos;
+//layout(location = 3) in vec4 lightPos;
 layout(location = 4) in mat3 tbn;
 
 // -----------------------------------------------------------------------------
@@ -140,10 +140,12 @@ vec2 parallaxMapping(vec2 texCoords, vec3 viewDir)
      return finalTexCoords;
 }
 
+const vec4 lightPos = vec4(0.0);
+
 float LinearizeDepth(float depth)
 {
   float n = 0.1; // camera z near
-  float f = 150.0; // camera z far
+  float f = 50.0; // camera z far
   float z = depth;
   return (2.0 * n) / (f + n - z * (f - n));
 }
@@ -163,17 +165,57 @@ float shadowFactor(float epsilon)
     return smoothstep(z - epsilon, z, depth);
 }
 
+/* ---------------------------------------------------------------- */
+
+
+float textureProj(vec4 P, vec2 off)
+{
+        float shadow = 1.0;
+        vec4 shadowCoord = P / P.w;
+        if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 )
+        {
+                float dist = texture( shadowMap, shadowCoord.st + off ).r;
+                if ( shadowCoord.w > 0.0 && dist < shadowCoord.z )
+                {
+                        shadow = 0.1;
+                }
+        }
+        return shadow;
+}
+
+float isInShadow()
+{
+    vec3 projCoords = lightPos.xyz / lightPos.w;
+    projCoords = projCoords * 0.5 + 0.5;
+
+    float closestDepth = texture(shadowMap, projCoords.xy).r;
+    float currentDepth = projCoords.z;
+
+    float shadow = (currentDepth-0.001) > closestDepth  ? 1.0 : 0.0;
+    if(projCoords.z > 1.0)
+        shadow = 0.0;
+
+    return shadow;
+}
+
 void main()
 {
-//    float shadow = shadowFactor(0.001f);
+//    float shadow = LinearizeDepth(texture(shadowMap, texCoord).r);
 //    outColor = vec4(shadow, shadow, shadow, 1.0);
+//    return;
 ////    //outColor = lightPos;
+
+//    float shadow = textureProj(lightPos / lightPos.w, vec2(0, 0));
+//    if (shadow > 0.0f)
+//        outColor = vec4(0.0f, 0.0f, 0.0f, 1.0);
+//    else
+//        outColor = vec4(1.0f, 1.0f, 1.0f, 1.0);
 //    outColor.a = 1.0;
 //    return;
 
-//    float d = texture(shadowMap, texCoord).r;
-//    outColor = vec4(vec3(d), 1.0);
-//    return;
+//    //float d = texture(shadowMap, texCoord).r;
+//    //outColor = vec4(vec3(d), 1.0);
+//    //return;
 
     // Calculate vectors.
     vec3 v = normalize(-eyePos);

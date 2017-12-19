@@ -101,7 +101,7 @@ glm::vec3 Projector::unproject(const glm::vec3& point, bool topDown) const
     // Map to range -1 to 1
     a = a * 2.0f - 1.0f;
     b = b * 2.0f - 1.0f;
-    c = c * 2.0f - 1.0f;
+    //c = c * 2.0f - 1.0f;
 
     glm::vec4 p = invCameraMatrix * glm::vec4(a, b, c, 1.0f);
 

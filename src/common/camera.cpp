@@ -6,7 +6,7 @@
 #include "camera.h"
 
 #define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+//#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/geometric.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -45,8 +45,12 @@ glm::mat4 Camera::projectionMatrix() const
         aspectRatio,
         nearPlane,
         farPlane);
-    m[1][1] *= -1;
-    return m;
+//    m[1][1] *= -1;
+    glm::mat4 clip = glm::mat4(1.0f, 0.0f, 0.0f, 0.0f,
+                               0.0f,-1.0f, 0.0f, 0.0f,
+                               0.0f, 0.0f, 0.5f, 0.0f,
+                               0.0f, 0.0f, 0.5f, 1.0f);
+    return clip * m;
 }
 
 glm::mat4 Camera::cameraMatrix() const

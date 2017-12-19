@@ -4,14 +4,6 @@
  * -------------------------------------------------------------------------- */
 
 #include "vk_renderer.h"
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/mat4x4.hpp>
-#include <glm/geometric.hpp>
-#include <glm/gtc/matrix_inverse.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/string_cast.hpp>
 #include <iostream>
 #include <QtGui/QImage>
 #include "renderer/vk_atmoshere_renderer.h"

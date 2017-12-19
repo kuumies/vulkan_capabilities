@@ -8,7 +8,7 @@
 /* -------------------------------------------------------------------------- */
 
 #define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+//#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/mat4x4.hpp>
 #include <glm/geometric.hpp>
 #include <glm/trigonometric.hpp>
@@ -201,7 +201,9 @@ void Controller::runDeviceTest(int deviceIndex)
     impl->scene = std::make_shared<Scene>();
     impl->scene->name = "pbr_maps_scene";
     //impl->scene->light.dir = glm::vec4(1.0, -0.5, 1.0, 0.0);
-    impl->scene->light.dir = glm::normalize(glm::vec4(0.3, -0.2, -1.0, 0.0));
+    impl->scene->light.dir =
+        glm::normalize(glm::vec4(0.0,  0.0,  0.0, 0.0) -
+                       glm::vec4(0.0, 10.0, 10.0, 0.0));
 
     float quadRadius = 1.0f;
 #if 0
