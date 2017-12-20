@@ -542,9 +542,9 @@ std::vector<Data::Entry> getQueues(const vk::PhysicalDevice& device)
             { Data::Cell::Style::NameLabel,  familyIndex,                 "" },
             { Data::Cell::Style::ValueLabel, queueCount,                  "" },
             { Data::Cell::Style::ValueLabel, presentation,                "" },
-            { Data::Cell::Style::ValueLabel, timestampValidBits,          "" },
             { Data::Cell::Style::ValueLabel, flags,                       "" },
             { Data::Cell::Style::ValueLabel, minImageTransferGranularity, "" },
+             { Data::Cell::Style::ValueLabel, timestampValidBits,          "" },
         }});
     };
 
