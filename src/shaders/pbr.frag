@@ -137,22 +137,17 @@ vec2 parallaxMapping(vec2 texCoords, vec3 viewDir)
      float weight = afterDepth / (afterDepth - beforeDepth);
      vec2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
 
-     return finalTexCoords;
-}
+//     if(finalTexCoords.x > 1.0 || finalTexCoords.y > 1.0 || finalTexCoords.x < 0.0 || finalTexCoords.y < 0.0)
+//         return texCoord;
 
-float LinearizeDepth(float depth)
-{
-  float n = 0.1; // camera z near
-  float f = 50.0; // camera z far
-  float z = depth;
-  return (2.0 * n) / (f + n - z * (f - n));
+     return finalTexCoords;
 }
 
 float shadowFactor(float epsilon)
 {
     // Transform the vertex from the light points of view in UV space
     vec3 ndc = lightPos.xyz / lightPos.w;
-    vec3 uv = 0.5 * ndc + 0.5;
+    vec3 uv = ndc;
 
     // Vertex distance from the light point of view in UV space
     float z = uv.z;
@@ -165,71 +160,8 @@ float shadowFactor(float epsilon)
 
 /* ---------------------------------------------------------------- */
 
-
-float textureProj(vec4 P, vec2 off)
-{
-        float shadow = 1.0;
-        vec4 shadowCoord = P / P.w;
-        if ( shadowCoord.z > -1.0 && shadowCoord.z < 1.0 )
-        {
-                float dist = texture( shadowMap, shadowCoord.st + off ).r;
-                if ( shadowCoord.w > 0.0 && dist < shadowCoord.z )
-                {
-                        shadow = 0.1;
-                }
-        }
-        return shadow;
-}
-
-float isInShadow()
-{
-    vec3 projCoords = lightPos.xyz / lightPos.w;
-    projCoords = projCoords * 0.5 + 0.5;
-
-    float closestDepth = texture(shadowMap, projCoords.xy).r;
-    float currentDepth = projCoords.z;
-
-    float shadow = (currentDepth-0.001) > closestDepth  ? 1.0 : 0.0;
-    if(projCoords.z > 1.0)
-        shadow = 0.0;
-
-    return shadow;
-}
-
 void main()
 {
-//    vec3 projCoords = lightPos.xyz / lightPos.w;
-//    projCoords = projCoords * 0.5 + 0.5;
-
-//    float s = texture(shadowMap, projCoords.xy).r;
-//    //s = projCoords.z;
-
-//    outColor.rgb = vec3(s, s, s);
-//    outColor.a = 1.0;
-//    return;
-
-//    vec3 p = lightPos.xyz / lightPos.w;
-//    outColor.rgb = p;
-//    outColor.a = 1.0;
-//    return;
-
-//    float shadow = LinearizeDepth(texture(shadowMap, texCoord).r);
-//    outColor = vec4(shadow, shadow, shadow, 1.0);
-//    return;
-////    //outColor = lightPos;
-
-//    float shadow = textureProj(lightPos / lightPos.w, vec2(0, 0));
-//    if (shadow > 0.0f)
-//        outColor = vec4(0.0f, 0.0f, 0.0f, 1.0);
-//    else
-//        outColor = vec4(1.0f, 1.0f, 1.0f, 1.0);
-//    outColor.a = 1.0;
-//    return;
-
-//    //float d = texture(shadowMap, texCoord).r;
-//    //outColor = vec4(vec3(d), 1.0);
-//    //return;
-
     // Calculate vectors.
     vec3 v = normalize(-eyePos);
     vec3 l = normalize(-light.eyeDir.xyz);
@@ -291,10 +223,16 @@ void main()
 
     // Calc. light diffuse and specular radiance
     vec3 radianceDiffuse  = kD * albedo / PI;
+
+    // Mix shadow
+    vec3 shadowColor = vec3(0.01, 0.01, 0.01);
+    float shadow = shadowFactor(0.005);
+
     vec3 radianceSpecular = (ndf * g * f )/ max(4.0 * nDotV * nDotL, 0.001);
 
     // Calc. light radiance
     vec3 radiance = (radianceDiffuse + radianceSpecular) * light.intensity.rgb * nDotL;
+    radiance = mix(shadowColor, radiance, shadow);
 
     // Use precalculated diffuse light irradiance
     vec3 irradianceDiffuse  = texture(irradianceMap, n).rgb * albedo;

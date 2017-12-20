@@ -45,5 +45,11 @@ void main()
     eyePos    = vec3(matrices.view * matrices.model * vec4(inPosition, 1.0));
     tbn        = mat3(t, b, n);
 
-    lightPos = matrices.light * matrices.model * vec4(inPosition, 1.0);
+    const mat4 biasMat = mat4(
+        0.5, 0.0, 0.0, 0.0,
+        0.0, 0.5, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.5, 0.5, 0.0, 1.0);
+
+    lightPos = biasMat * matrices.light * matrices.model * vec4(inPosition, 1.0);
 }
