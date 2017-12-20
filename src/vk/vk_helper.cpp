@@ -50,7 +50,7 @@ int findPresentationQueueFamilyIndex(
         const VkPhysicalDevice& physicalDevice,
         const VkSurfaceKHR& surface,
         const std::vector<VkQueueFamilyProperties>& queueFamilies,
-    const std::vector<int>& ignoreIndices)
+        const std::vector<int>& ignoreIndices)
 {
     int index = -1;
     for(size_t i = 0; i < queueFamilies.size(); ++i)
@@ -72,6 +72,11 @@ int findPresentationQueueFamilyIndex(
         if (result == VK_SUCCESS && supported == VK_TRUE)
             index = int(i);
     }
+
+    if (index == -1 && ignoreIndices.size())
+        return findPresentationQueueFamilyIndex(
+            physicalDevice, surface, queueFamilies);
+
     return index;
 }
 

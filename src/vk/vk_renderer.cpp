@@ -138,26 +138,19 @@ struct Renderer::Impl
             physicalDevice,
             surface,
             queueFamilies,
-            { graphics });
-
-        const int transfer = helper::findQueueFamilyIndex(
-            VK_QUEUE_TRANSFER_BIT,
-            queueFamilies,
-            { presentation, graphics });
+            { int(graphicsFamilyIndex) });
 
         if (presentation == -1)
             return false;
 
         graphicsFamilyIndex     = graphics;
         presentationFamilyIndex = presentation;
-        transferFamilyIndex    = transfer;
 
         device = std::make_shared<LogicalDevice>(physicalDevice);
         device->setExtensions( { VK_KHR_SWAPCHAIN_EXTENSION_NAME });
         device->addQueueFamily(graphicsFamilyIndex,     1, 1.0f);
-        device->addQueueFamily(presentationFamilyIndex, 1, 1.0f);
-        if (transferFamilyIndex >= 0)
-            device->addQueueFamily(transferFamilyIndex, 1, 1.0f);
+        if (graphicsFamilyIndex != presentationFamilyIndex)
+            device->addQueueFamily(presentationFamilyIndex, 1, 1.0f);
         return device->create();
     }
 
@@ -526,7 +519,6 @@ struct Renderer::Impl
     VkExtent2D extent;
 
     // Queue family indices.
-    uint32_t transferFamilyIndex;
     uint32_t graphicsFamilyIndex;
     uint32_t presentationFamilyIndex;
 
