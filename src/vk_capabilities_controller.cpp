@@ -622,7 +622,13 @@ void Controller::onSurfaceWheel(int delta)
 {
     const float amount = 1.0f;
     if (impl->scene)
-        impl->scene->camera.tPos.z += (delta > 0 ? -amount : amount);
+    {
+        glm::vec3 moveDir;
+        moveDir.z = (delta > 0 ? -amount : amount);
+        moveDir = impl->scene->camera.rotation() * moveDir;
+
+        impl->scene->camera.tPos += moveDir;
+    }
 }
 
 void Controller::onSurfaceMouseMove(const QPoint& offset, int buttons, int modifiers)
@@ -632,8 +638,13 @@ void Controller::onSurfaceMouseMove(const QPoint& offset, int buttons, int modif
         if (buttons & Qt::LeftButton)
         {
             const float scale = 0.01f;
-            impl->scene->camera.tPos.x -= float(offset.x()) * scale;
-            impl->scene->camera.tPos.y += float(offset.y()) * scale;
+
+            glm::vec3 moveDir;
+            moveDir.x -= float(offset.x()) * scale;
+            moveDir.y += float(offset.y()) * scale;
+
+            moveDir = impl->scene->camera.rotation() * moveDir;
+            impl->scene->camera.tPos += moveDir;
         }
         if (buttons & Qt::RightButton)
         {
@@ -654,13 +665,14 @@ void Controller::onSurfaceKey(int key, int modifiers, bool down)
 {
     if (down)
     {
+        float amount = 0.5f;
         glm::vec3 moveDir;
         switch(key)
         {
-            case Qt::Key_W: moveDir.z = -1.0f; break;
-            case Qt::Key_S: moveDir.z =  1.0f; break;
-            case Qt::Key_A: moveDir.x = -1.0f; break;
-            case Qt::Key_D: moveDir.x =  1.0f; break;
+            case Qt::Key_W: moveDir.z = -amount; break;
+            case Qt::Key_S: moveDir.z =  amount; break;
+            case Qt::Key_A: moveDir.x = -amount; break;
+            case Qt::Key_D: moveDir.x =  amount; break;
         }
 
         moveDir = impl->scene->camera.rotation() * moveDir;
