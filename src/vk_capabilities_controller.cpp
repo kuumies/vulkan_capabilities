@@ -572,7 +572,7 @@ void Controller::runDeviceTest(int deviceIndex)
     pbrBox->material->pbr.normalMap           = maps[4];
     pbrBox->material->pbr.roughnessMap        = maps[5];
     pbrBox->mesh = m;
-    pbrBox->worldTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -5.0f, 0.0f));
+    pbrBox->worldTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -4.2f, 0.0f));
     impl->scene->models.push_back(pbrBox);
 
 #endif
