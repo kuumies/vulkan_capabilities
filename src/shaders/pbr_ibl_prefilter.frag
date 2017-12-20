@@ -1,15 +1,23 @@
-/* ---------------------------------------------------------------- *
+/* -------------------------------------------------------------------------- *
    Antti Jumpponen <kuumies@gmail.com>
    IBL prefilter fragment shader.
- * ---------------------------------------------------------------- */
+ * -------------------------------------------------------------------------- */
 
 #version 450
 
+// -----------------------------------------------------------------------------
+
 layout(binding = 1) uniform samplerCube skyboxMap;
+
+// -----------------------------------------------------------------------------
 
 layout(location = 0) in vec3 texCoord;
 
+// -----------------------------------------------------------------------------
+
 layout(location = 0) out vec4 outColor;
+
+// -----------------------------------------------------------------------------
 
 layout(binding = 0) uniform Uniforms
 {
@@ -18,10 +26,13 @@ layout(binding = 0) uniform Uniforms
     float roughness;
 } data;
 
+// -----------------------------------------------------------------------------
+
 const float PI = 3.14159265359;
 
 // -----------------------------------------------------------------------------
-float RadicalInverse_VdC(uint bits)
+
+float radicalInverse_VdC(uint bits)
 {
     bits = (bits << 16u) | (bits >> 16u);
     bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
@@ -32,55 +43,59 @@ float RadicalInverse_VdC(uint bits)
 }
 
 // -----------------------------------------------------------------------------
-vec2 Hammersley(uint i, uint N)
+
+vec2 hammersley(uint i, uint n)
 {
-    return vec2(float(i)/float(N), RadicalInverse_VdC(i));
+    return vec2(float(i)/float(n), radicalInverse_VdC(i));
 }
 
 // -----------------------------------------------------------------------------
-vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness)
+
+vec3 importanceSampleGGX(vec2 xi, vec3 n, float roughness)
 {
     float a = roughness*roughness;
 
-    float phi = 2.0 * PI * Xi.x;
-    float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a*a - 1.0) * Xi.y));
+    float phi = 2.0 * PI * xi.x;
+    float cosTheta = sqrt((1.0 - xi.y) / (1.0 + (a*a - 1.0) * xi.y));
     float sinTheta = sqrt(1.0 - cosTheta*cosTheta);
 
     // from spherical coordinates to cartesian coordinates
-    vec3 H;
-    H.x = cos(phi) * sinTheta;
-    H.y = sin(phi) * sinTheta;
-    H.z = cosTheta;
+    vec3 h;
+    h.x = cos(phi) * sinTheta;
+    h.y = sin(phi) * sinTheta;
+    h.z = cosTheta;
 
     // from tangent-space vector to world-space sample vector
-    vec3 up        = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
-    vec3 tangent   = normalize(cross(up, N));
-    vec3 bitangent = cross(N, tangent);
+    vec3 up        = abs(n.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+    vec3 tangent   = normalize(cross(up, n));
+    vec3 bitangent = cross(n, tangent);
 
-    vec3 sampleVec = tangent * H.x + bitangent * H.y + N * H.z;
+    vec3 sampleVec = tangent * h.x + bitangent * h.y + n * h.z;
     return normalize(sampleVec);
 }
 
+// -----------------------------------------------------------------------------
+
 void main()
 {
-    vec3 N = normalize(texCoord);
-    vec3 R = N;
-    vec3 V = R;
+    vec3 n = normalize(texCoord);
+    vec3 r = n;
+    vec3 v = r;
 
     const uint SAMPLE_COUNT = 1024u;
     float totalWeight = 0.0;
     vec3 prefilteredColor = vec3(0.0);
     for(uint i = 0u; i < SAMPLE_COUNT; ++i)
     {
-        vec2 Xi = Hammersley(i, SAMPLE_COUNT);
-        vec3 H  = ImportanceSampleGGX(Xi, N, data.roughness);
-        vec3 L  = normalize(2.0 * dot(V, H) * H - V);
+        vec2 xi = hammersley(i, SAMPLE_COUNT);
+        vec3 h  = importanceSampleGGX(xi, n, data.roughness);
+        vec3 l  = normalize(2.0 * dot(v, h) * h - v);
 
-        float NdotL = max(dot(N, L), 0.0);
-        if(NdotL > 0.0)
+        float nDotL = max(dot(n, l), 0.0);
+        if(nDotL > 0.0)
         {
-            prefilteredColor += texture(skyboxMap, L).rgb * NdotL;
-            totalWeight      += NdotL;
+            prefilteredColor += texture(skyboxMap, l).rgb * nDotL;
+            totalWeight      += nDotL;
         }
     }
     prefilteredColor = prefilteredColor / totalWeight;
