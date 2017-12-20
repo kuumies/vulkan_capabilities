@@ -369,7 +369,7 @@ struct Renderer::Impl
 
             skyRenderer->recordCommands(commandBuffers[i]);
             pbrRenderer->recordCommands(commandBuffers[i]);
-            shadowMapDepthRenderer->recordCommands(commandBuffers[i]);
+            //shadowMapDepthRenderer->recordCommands(commandBuffers[i]);
 
             vkCmdEndRenderPass(commandBuffers[i]);
             const VkResult result = vkEndCommandBuffer(commandBuffers[i]);
