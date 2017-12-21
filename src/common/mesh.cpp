@@ -9,20 +9,25 @@
 namespace kuu
 {
 
-void Mesh::addVertex(const Vertex &v)
+void Mesh::addVertex(const Vertex& v)
 {
-    indices.push_back(vertices.size());
+    indices.push_back(unsigned int(vertices.size()));
     vertices.push_back(v);
 }
 
-void Mesh::addTriangle(const Vertex &a, const Vertex &b, const Vertex &c)
+void Mesh::addTriangle(const Vertex& a,
+                       const Vertex& b,
+                       const Vertex& c)
 {
     addVertex(a);
     addVertex(b);
     addVertex(c);
 }
 
-void Mesh::addQuad(const Vertex &a, const Vertex &b, const Vertex &c, const Vertex &d)
+void Mesh::addQuad(const Vertex& a,
+                   const Vertex& b,
+                   const Vertex& c,
+                   const Vertex& d)
 {
     addTriangle(a, d, c);
     addTriangle(c, b, a);
