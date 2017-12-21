@@ -236,12 +236,12 @@ void main()
     radiance = mix(shadowColor, radiance, shadow);
 
     // Use precalculated diffuse light irradiance
-    vec3 r = reflect(-v, n);
-    r.z = -r.z;
     vec3 irradianceDiffuse  = texture(irradianceMap, n).rgb * albedo;
+
 
     // Use precalculated specular light irradiance
     vec3 r = reflect(-v, n);
+    r.z = -r.z;
     vec3 fr = brdfFresnelRoughness(nDotV, f0, roughness);
     vec3 prefilteredColor = textureLod(prefilteredMap, r, roughness * MAX_REFLECTION_LOD).rgb;
     vec2 envBRDF  = texture(brdfLutMap, vec2(nDotV, roughness)).rg;
