@@ -243,7 +243,8 @@ void main()
     vec3 r = reflect(-v, n);
     r.z = -r.z;
     vec3 fr = brdfFresnelRoughness(nDotV, f0, roughness);
-    vec3 prefilteredColor = textureLod(prefilteredMap, r, roughness * MAX_REFLECTION_LOD).rgb;
+    //vec3 prefilteredColor = textureLod(prefilteredMap, r, roughness * MAX_REFLECTION_LOD).rgb;
+    vec3 prefilteredColor = texture(prefilteredMap, r).rgb;
     vec2 envBRDF  = texture(brdfLutMap, vec2(nDotV, roughness)).rg;
     vec3 irradianceSpecular = prefilteredColor * (fr * envBRDF.x + envBRDF.y);
 
