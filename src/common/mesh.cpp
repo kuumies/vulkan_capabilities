@@ -74,4 +74,84 @@ void Mesh::generateTangents()
     }
 }
 
+std::shared_ptr<Mesh> createBox(float width, float height, float depth)
+{
+    float bw = width  / 2.0f;
+    float bh = height / 2.0f;
+    float bd = depth  / 2.0f;
+
+    std::vector<Vertex> vertices =
+    {
+        // -------------------------------------------------------
+        // Back
+        { { -bw, -bh, -bd },  { 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f } },
+        { {  bw,  bh, -bd },  { 1.0f, 1.0f }, { 0.0f, 0.0f, -1.0f } },
+        { {  bw, -bh, -bd },  { 1.0f, 0.0f }, { 0.0f, 0.0f, -1.0f } },
+        { {  bw,  bh, -bd },  { 1.0f, 1.0f }, { 0.0f, 0.0f, -1.0f } },
+        { { -bw, -bh, -bd },  { 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f } },
+        { { -bw,  bh, -bd },  { 0.0f, 1.0f }, { 0.0f, 0.0f, -1.0f } },
+
+        // -------------------------------------------------------
+        // Front
+        { { -bw, -bh,  bd },  { 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
+        { {  bw, -bh,  bd },  { 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
+        { {  bw,  bh,  bd },  { 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+        { {  bw,  bh,  bd },  { 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+        { { -bw,  bh,  bd },  { 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+        { { -bw, -bh,  bd },  { 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
+
+        // -------------------------------------------------------
+        // Left
+        { { -bw,  bh,  bd },  { 1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f } },
+        { { -bw,  bh, -bd },  { 1.0f, 1.0f }, { -1.0f, 0.0f, 0.0f } },
+        { { -bw, -bh, -bd },  { 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f } },
+        { { -bw, -bh, -bd },  { 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f } },
+        { { -bw, -bh,  bd },  { 0.0f, 0.0f }, { -1.0f, 0.0f, 0.0f } },
+        { { -bw,  bh,  bd },  { 1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f } },
+
+        // -------------------------------------------------------
+        // Right
+        { {  bw,  bh,  bd },  { 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f } },
+        { {  bw, -bh, -bd },  { 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f } },
+        { {  bw,  bh, -bd },  { 1.0f, 1.0f }, { 1.0f, 0.0f, 0.0f } },
+        { {  bw, -bh, -bd },  { 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f } },
+        { {  bw,  bh,  bd },  { 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f } },
+        { {  bw, -bh,  bd },  { 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f } },
+
+        // -------------------------------------------------------
+        // Bottom
+        { { -bw, -bh, -bd },  { 0.0f, 1.0f }, { 0.0f, -1.0f, 0.0f } },
+        { {  bw, -bh, -bd },  { 1.0f, 1.0f }, { 0.0f, -1.0f, 0.0f } },
+        { {  bw, -bh,  bd },  { 1.0f, 0.0f }, { 0.0f, -1.0f, 0.0f } },
+        { {  bw, -bh,  bd },  { 1.0f, 0.0f }, { 0.0f, -1.0f, 0.0f } },
+        { { -bw, -bh,  bd },  { 0.0f, 0.0f }, { 0.0f, -1.0f, 0.0f } },
+        { { -bw, -bh, -bd },  { 0.0f, 1.0f }, { 0.0f, -1.0f, 0.0f } },
+
+        // -------------------------------------------------------
+        // Top
+        { { -bw,  bh, -bd },  { 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } },
+        { {  bw,  bh,  bd },  { 1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
+        { {  bw,  bh, -bd },  { 1.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } },
+        { {  bw,  bh,  bd },  { 1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
+        { { -bw,  bh, -bd },  { 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } },
+        { { -bw,  bh,  bd },  { 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
+    };
+
+    std::shared_ptr<kuu::Mesh> m = std::make_shared<kuu::Mesh>();
+    for (const Vertex& v : vertices)
+        m->addVertex(v);
+    m->generateTangents();
+
+    std::vector<float> vertexVector;
+    for (const Vertex& v : m->vertices)
+    {
+        vertexVector.push_back(v.pos.x);
+        vertexVector.push_back(v.pos.y);
+        vertexVector.push_back(v.pos.z);
+        vertexVector.push_back(v.texCoord.x);
+        vertexVector.push_back(v.texCoord.y);
+    }
+    return m;
+}
+
 } // namespace kuu

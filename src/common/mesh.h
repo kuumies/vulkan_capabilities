@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <memory>
 #include <vector>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -45,5 +46,7 @@ struct Mesh
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
 };
+
+std::shared_ptr<Mesh> createBox(float width, float height, float depth);
 
 } // namespace kuu
