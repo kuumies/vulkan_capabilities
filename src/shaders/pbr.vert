@@ -28,8 +28,8 @@ layout(location = 4) in vec3 inBitangent;
 // -----------------------------------------------------------------------------
 
 layout(location = 0) out vec2 texCoord;
-layout(location = 1) out vec3 eyeNormal;
-layout(location = 2) out vec3 eyePos;
+layout(location = 1) out vec3 worldNormal;
+layout(location = 2) out vec3 worldPos;
 layout(location = 3) out vec4 lightPos;
 layout(location = 4) out mat3 tbn;
 
@@ -49,8 +49,8 @@ void main()
                   matrices.view *
                   matrices.model * vec4(inPosition, 1.0);
     texCoord  = inTexCoord * 4.0;
-    eyeNormal = mat3(matrices.normal) * inNormal;
-    eyePos    = vec3(matrices.view * matrices.model * vec4(inPosition, 1.0));
+    worldNormal = mat3(matrices.normal) * inNormal;
+    worldPos    = vec3(matrices.model * vec4(inPosition, 1.0));
     tbn        = mat3(t, b, n);
 
     const mat4 biasMat = mat4(

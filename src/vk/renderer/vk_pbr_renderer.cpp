@@ -58,7 +58,8 @@ struct Matrices
 
 struct PbrParams
 {
-    glm::vec4  albedo;
+    glm::vec4 cameraPos;
+    glm::vec4 albedo;
     float metallic;
     float roughness;
     float ao;
@@ -655,9 +656,6 @@ void PbrRenderer::recordCommands(const VkCommandBuffer& commandBuffer)
 
 void PbrRenderer::updateUniformBuffers()
 {
-    Light eyeLight = impl->scene->light;
-    eyeLight.dir   = impl->scene->camera.viewMatrix() * eyeLight.dir;
-
     const glm::vec4& vp = impl->scene->viewport;
     const glm::mat4 lightMatrix = impl->scene->light.orthoShadowMatrix(impl->scene->camera, vp, 1.0f);
     //std::cout << __FUNCTION__ << ": " << glm::to_string(lightMatrix) << std::endl;
@@ -668,11 +666,14 @@ void PbrRenderer::updateUniformBuffers()
         matrices.view       = impl->scene->camera.viewMatrix();
         matrices.projection = impl->scene->camera.projectionMatrix();
         matrices.model      = m->model->worldTransform;
-        matrices.normal     = glm::inverseTranspose(matrices.view * matrices.model);
+        matrices.normal     = glm::inverseTranspose(matrices.model);
         matrices.light      = lightMatrix;
 
+        m->pbrParams.cameraPos = glm::vec4(impl->scene->camera.pos, 1.0);
+
+        m->paramsUniformBuffer->copyHostVisible(&m->pbrParams, m->paramsUniformBuffer->size());
         m->matricesUniformBuffer->copyHostVisible(&matrices, m->matricesUniformBuffer->size());
-        m->lightUniformBuffer->copyHostVisible(&eyeLight, m->lightUniformBuffer->size());
+        m->lightUniformBuffer->copyHostVisible(&impl->scene->light, m->lightUniformBuffer->size());
     }
 }
 

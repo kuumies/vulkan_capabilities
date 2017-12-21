@@ -10,7 +10,7 @@
 
 layout(binding = 1) uniform Light
 {
-    vec4 eyeDir;    // Direction of light in eye space.
+    vec4 worldDir;  // Direction of light in world space.
     vec4 intensity; // Itensity of light (values can be over 1.0)
 
 } light;
@@ -20,7 +20,8 @@ layout(binding = 1) uniform Light
 
 layout(binding = 2) uniform PbrParams
 {
-    vec4  albedo;
+    vec4 camPos;
+    vec4 albedo;
     float metallic;
     float roughness;
     float ao;
@@ -49,8 +50,8 @@ layout(binding = 12) uniform sampler2D shadowMap;
 // Vertex shader outputs
 
 layout(location = 0) in vec2 texCoord;
-layout(location = 1) in vec3 eyeNormal;
-layout(location = 2) in vec3 eyePos;
+layout(location = 1) in vec3 worldNormal;
+layout(location = 2) in vec3 worldPos;
 layout(location = 3) in vec4 lightPos;
 layout(location = 4) in mat3 tbn;
 
@@ -163,10 +164,10 @@ float shadowFactor(float epsilon)
 void main()
 {
     // Calculate vectors.
-    vec3 v = normalize(-eyePos);
-    vec3 l = normalize(-light.eyeDir.xyz);
+    vec3 v = normalize(pbrParams.camPos.xyz - worldPos);
+    vec3 l = normalize(-light.worldDir.xyz);
     vec3 h = normalize(l + v);
-    vec3 n = normalize(eyeNormal);
+    vec3 n = normalize(worldNormal);
 
     // Offset texture coordinates if height map exits
     vec2 tc = texCoord;
@@ -235,6 +236,8 @@ void main()
     radiance = mix(shadowColor, radiance, shadow);
 
     // Use precalculated diffuse light irradiance
+    vec3 r = reflect(-v, n);
+    r.z = -r.z;
     vec3 irradianceDiffuse  = texture(irradianceMap, n).rgb * albedo;
 
     // Use precalculated specular light irradiance
