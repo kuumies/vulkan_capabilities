@@ -4,6 +4,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "vk_descriptor_set.h"
+#include <algorithm>
 #include <iostream>
 #include "vk_stringify.h"
 
@@ -95,14 +96,14 @@ DescriptorPool& DescriptorPool::addTypeSize(const VkDescriptorPoolSize& size)
 DescriptorPool& DescriptorPool::addTypeSize(
         VkDescriptorType type,
         uint32_t size)
-{ return addTypeSize( { type, size } ); }
+{ return addTypeSize( { type, std::max(uint32_t(1), size) } ); }
 
 std::vector<VkDescriptorPoolSize> DescriptorPool::typeSizes() const
 { return impl->typeSizes; }
 
 DescriptorPool& DescriptorPool::setMaxCount(uint32_t count)
 {
-    impl->maxCount = count;
+    impl->maxCount = std::max(uint32_t(1), count);
     return *this;
 }
 
@@ -281,7 +282,7 @@ DescriptorSets& DescriptorSets::addLayoutBinding(
 {
     return addLayoutBinding( { binding,
                                descriptorType,
-                               descriptorCount,
+                               std::max(uint32_t(1), descriptorCount),
                                stageFlags,
                                immutableSamplers } );
 }
